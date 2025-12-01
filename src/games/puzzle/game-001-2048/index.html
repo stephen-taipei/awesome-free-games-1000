@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="2048 - 經典數字合併益智遊戲。滑動方塊合併數字，挑戰達到 2048！">
+  <meta name="keywords" content="2048, puzzle game, 益智遊戲, 數字遊戲, 免費遊戲">
+  <meta name="theme-color" content="#faf8ef">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="2048 - 經典益智遊戲">
+  <meta property="og:description" content="滑動方塊合併數字，挑戰達到 2048！">
+  <meta property="og:type" content="website">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <title>2048 - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 頂部標題區 -->
+    <header class="header">
+      <div class="title-section">
+        <h1 class="title" data-i18n="game.title">2048</h1>
+        <p class="subtitle" data-i18n="game.subtitle">滑動合併數字，挑戰 2048！</p>
+      </div>
+      <div class="scores-section">
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.score">分數</span>
+          <span class="score-value" id="score">0</span>
+        </div>
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.best">最高分</span>
+          <span class="score-value" id="best-score">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 控制區 -->
+    <div class="controls">
+      <button class="btn btn-primary" id="new-game-btn" data-i18n="game.newGame">新遊戲</button>
+      <button class="btn btn-secondary" id="help-btn" data-i18n="game.howToPlay">遊戲說明</button>
+      <div class="language-selector">
+        <select id="language-select">
+          <option value="zh-TW">繁體中文</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 遊戲資訊 -->
+    <div class="game-info">
+      <div class="info-item">
+        <span class="info-label" data-i18n="game.moves">步數</span>
+        <span class="info-value" id="moves">0</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label" data-i18n="game.time">時間</span>
+        <span class="info-value" id="time">00:00</span>
+      </div>
+    </div>
+
+    <!-- 遊戲容器 -->
+    <div class="game-container" id="game-container">
+      <div class="grid-background">
+        <!-- 4x4 網格背景 -->
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+      </div>
+      <div class="tile-container" id="tile-container">
+        <!-- 動態方塊會在這裡產生 -->
+      </div>
+
+      <!-- 遊戲結束/獲勝覆蓋層 -->
+      <div class="game-overlay" id="game-overlay" style="display: none;">
+        <div class="overlay-content">
+          <h2 class="overlay-title" id="overlay-title">遊戲結束</h2>
+          <p class="overlay-score">分數: <span id="final-score">0</span></p>
+          <div class="overlay-buttons">
+            <button class="btn btn-primary" id="retry-btn" data-i18n="game.tryAgain">再試一次</button>
+            <button class="btn btn-secondary" id="continue-btn" data-i18n="game.keepPlaying" style="display: none;">繼續遊戲</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作說明 -->
+    <p class="instructions" data-i18n="game.instructions">使用方向鍵或滑動來移動方塊</p>
+
+    <!-- 說明彈窗 -->
+    <div class="modal" id="help-modal" style="display: none;">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">&times;</button>
+        <h2 data-i18n="game.howToPlay">遊戲說明</h2>
+        <p data-i18n="game.howToPlayContent">使用方向鍵（或在觸控裝置上滑動）移動方塊。當兩個相同數字的方塊碰撞時，它們會合併成一個！目標是合併出 2048 方塊。</p>
+        <div class="controls-guide">
+          <div class="control-item">
+            <span class="key">↑</span>
+            <span class="key">↓</span>
+            <span class="key">←</span>
+            <span class="key">→</span>
+          </div>
+          <p>或使用手指滑動</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="footer">
+      <p>Game #001 | <a href="https://github.com/awesome-free-games" target="_blank">Awesome Free Games 1000</a></p>
+    </footer>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
