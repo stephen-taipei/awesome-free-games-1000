@@ -1,0 +1,25 @@
+{
+  "name": "俄羅斯方塊 Tetris - Awesome Free Games",
+  "short_name": "Tetris",
+  "description": "經典方塊消除益智遊戲 - 旋轉排列方塊，消除完整行！",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["games", "puzzle"],
+  "lang": "zh-TW",
+  "dir": "ltr"
+}
