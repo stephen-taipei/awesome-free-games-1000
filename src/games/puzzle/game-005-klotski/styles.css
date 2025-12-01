@@ -1,0 +1,536 @@
+/**
+ * 華容道遊戲樣式
+ * Klotski/Sliding Block Puzzle - Styles
+ */
+
+:root {
+  --cell-size: 70px;
+  --board-width: calc(var(--cell-size) * 4);
+  --board-height: calc(var(--cell-size) * 5);
+  --border-width: 8px;
+
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-board: #0f3460;
+  --bg-exit: #1a5c3a;
+
+  --color-caocao: #e63946;
+  --color-general-v: #2a9d8f;
+  --color-general-h: #e9c46a;
+  --color-soldier: #457b9d;
+
+  --text-primary: #f1faee;
+  --text-secondary: #a8dadc;
+  --text-muted: #6c757d;
+
+  --border-color: #8b7355;
+  --border-inner: #654321;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-primary);
+  padding: 10px;
+  user-select: none;
+}
+
+/* Header */
+.game-header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.game-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--color-caocao);
+  text-shadow: 2px 2px 4px var(--shadow-color);
+  margin-bottom: 5px;
+}
+
+.game-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Stats bar */
+.stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-secondary);
+  padding: 8px 15px;
+  border-radius: 8px;
+  min-width: 80px;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+/* Game container */
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+/* Board wrapper with wooden frame effect */
+.board-wrapper {
+  background: linear-gradient(145deg, #8b7355 0%, #654321 50%, #8b7355 100%);
+  padding: var(--border-width);
+  border-radius: 10px;
+  box-shadow:
+    0 8px 20px var(--shadow-color),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+}
+
+/* Game board */
+.game-board {
+  width: var(--board-width);
+  height: var(--board-height);
+  background: var(--bg-board);
+  position: relative;
+  border-radius: 4px;
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Exit indicator */
+.exit-zone {
+  position: absolute;
+  bottom: -20px;
+  left: calc(var(--cell-size) * 1);
+  width: calc(var(--cell-size) * 2);
+  height: 20px;
+  background: var(--bg-exit);
+  border-radius: 0 0 8px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #90ee90;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.exit-zone::before {
+  content: '出口 EXIT';
+}
+
+/* Blocks */
+.block {
+  position: absolute;
+  border-radius: 6px;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow:
+    0 3px 6px var(--shadow-color),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  z-index: 1;
+}
+
+.block:hover {
+  z-index: 10;
+  box-shadow:
+    0 6px 12px var(--shadow-color),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.block:active, .block.dragging {
+  cursor: grabbing;
+  transform: scale(1.02);
+  z-index: 100;
+  box-shadow:
+    0 10px 20px var(--shadow-color),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.block.selected {
+  box-shadow:
+    0 0 0 3px #fff,
+    0 6px 12px var(--shadow-color);
+}
+
+/* Cao Cao - 2x2 */
+.block.caocao {
+  background: linear-gradient(145deg, #ff6b6b 0%, var(--color-caocao) 50%, #c1121f 100%);
+  width: calc(var(--cell-size) * 2 - 6px);
+  height: calc(var(--cell-size) * 2 - 6px);
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+/* General Vertical - 1x2 */
+.block.general_v {
+  background: linear-gradient(145deg, #3ec9b7 0%, var(--color-general-v) 50%, #1e7a6d 100%);
+  width: calc(var(--cell-size) - 6px);
+  height: calc(var(--cell-size) * 2 - 6px);
+  font-size: 1rem;
+  color: #fff;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+}
+
+/* General Horizontal - 2x1 */
+.block.general_h {
+  background: linear-gradient(145deg, #f4d58d 0%, var(--color-general-h) 50%, #c9a227 100%);
+  width: calc(var(--cell-size) * 2 - 6px);
+  height: calc(var(--cell-size) - 6px);
+  font-size: 1rem;
+  color: #333;
+}
+
+/* Soldier - 1x1 */
+.block.soldier {
+  background: linear-gradient(145deg, #6b9dc4 0%, var(--color-soldier) 50%, #355c7d 100%);
+  width: calc(var(--cell-size) - 6px);
+  height: calc(var(--cell-size) - 6px);
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn {
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-primary {
+  background: linear-gradient(145deg, #e63946, #c1121f);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(145deg, #ff6b6b, #e63946);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: linear-gradient(145deg, #457b9d, #355c7d);
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(145deg, #6b9dc4, #457b9d);
+  transform: translateY(-2px);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--text-secondary);
+  color: var(--text-secondary);
+}
+
+.btn-outline:hover {
+  background: var(--text-secondary);
+  color: var(--bg-primary);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Puzzle selector */
+.puzzle-selector {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0;
+  max-width: 400px;
+}
+
+.puzzle-btn {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.puzzle-btn:hover {
+  background: var(--bg-board);
+  border-color: var(--text-secondary);
+}
+
+.puzzle-btn.active {
+  background: var(--color-caocao);
+  color: #fff;
+  border-color: var(--color-caocao);
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal {
+  background: var(--bg-secondary);
+  padding: 30px;
+  border-radius: 15px;
+  text-align: center;
+  max-width: 90%;
+  width: 350px;
+  transform: scale(0.8);
+  transition: transform 0.3s ease;
+  box-shadow: 0 10px 30px var(--shadow-color);
+}
+
+.modal-overlay.active .modal {
+  transform: scale(1);
+}
+
+.modal-title {
+  font-size: 1.8rem;
+  color: var(--color-caocao);
+  margin-bottom: 15px;
+}
+
+.modal-content {
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.modal-stats {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+.modal-stat {
+  text-align: center;
+}
+
+.modal-stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.modal-stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* Help panel */
+.help-panel {
+  max-width: 400px;
+  margin-top: 20px;
+  padding: 15px;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.help-title {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.help-content {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.help-content ul {
+  margin-top: 10px;
+  padding-left: 20px;
+}
+
+.help-content li {
+  margin-bottom: 5px;
+}
+
+/* Language selector */
+.language-selector {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+}
+
+.language-selector select {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.language-selector select:focus {
+  outline: none;
+  border-color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  :root {
+    --cell-size: 60px;
+  }
+
+  .game-title {
+    font-size: 1.5rem;
+  }
+
+  .stats-bar {
+    gap: 10px;
+  }
+
+  .stat-item {
+    padding: 6px 10px;
+    min-width: 65px;
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
+  }
+
+  .btn {
+    padding: 8px 15px;
+    font-size: 0.8rem;
+  }
+
+  .puzzle-btn {
+    padding: 6px 10px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 320px) {
+  :root {
+    --cell-size: 50px;
+  }
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.game-container {
+  animation: slideIn 0.5s ease;
+}
+
+.block.caocao.winning {
+  animation: pulse 0.5s ease infinite;
+}
+
+/* Touch feedback */
+@media (hover: none) {
+  .block:hover {
+    box-shadow:
+      0 3px 6px var(--shadow-color),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .block:active {
+    transform: scale(0.98);
+  }
+}
