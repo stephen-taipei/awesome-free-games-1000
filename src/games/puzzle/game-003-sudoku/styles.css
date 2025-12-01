@@ -1,0 +1,492 @@
+/**
+ * 數獨遊戲樣式
+ * 響應式設計，支援手機與電腦
+ */
+
+:root {
+  --bg-color: #f5f7fa;
+  --panel-bg: #ffffff;
+  --text-color: #2c3e50;
+  --text-muted: #7f8c8d;
+  --border-color: #bdc3c7;
+  --border-thick: #34495e;
+  --accent-color: #3498db;
+  --accent-light: #e8f4fc;
+  --success-color: #27ae60;
+  --error-color: #e74c3c;
+  --error-bg: #fde8e8;
+  --highlight-color: #fff3cd;
+  --fixed-color: #2c3e50;
+  --input-color: #3498db;
+  --note-color: #7f8c8d;
+
+  /* 尺寸 */
+  --cell-size: min(44px, 10vw);
+  --grid-gap: 1px;
+  --box-gap: 3px;
+  --border-radius: 12px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* 標題區 */
+.header {
+  text-align: center;
+  width: 100%;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--text-color);
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* 控制區 */
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--accent-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2980b9;
+}
+
+.btn-secondary {
+  background: var(--panel-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: #ecf0f1;
+}
+
+.btn-small {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+.difficulty-selector select {
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.language-selector select {
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* 遊戲資訊列 */
+.game-info {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  padding: 12px;
+  background: var(--panel-bg);
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.info-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+.info-value.error {
+  color: var(--error-color);
+}
+
+.info-value.success {
+  color: var(--success-color);
+}
+
+/* 遊戲容器 */
+.game-container {
+  position: relative;
+  background: var(--panel-bg);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* 數獨網格 */
+.sudoku-grid {
+  display: grid;
+  grid-template-columns: repeat(9, var(--cell-size));
+  grid-template-rows: repeat(9, var(--cell-size));
+  gap: var(--grid-gap);
+  background: var(--border-color);
+  border: 3px solid var(--border-thick);
+  border-radius: 4px;
+}
+
+/* 格子 */
+.cell {
+  background: var(--panel-bg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.cell:hover {
+  background: #f8f9fa;
+}
+
+/* 3x3 宮格邊框 */
+.cell:nth-child(3n) {
+  border-right: 2px solid var(--border-thick);
+}
+
+.cell:nth-child(n+19):nth-child(-n+27),
+.cell:nth-child(n+46):nth-child(-n+54) {
+  border-bottom: 2px solid var(--border-thick);
+}
+
+/* 選中的格子 */
+.cell.selected {
+  background: var(--accent-light) !important;
+  box-shadow: inset 0 0 0 2px var(--accent-color);
+}
+
+/* 高亮的格子 */
+.cell.highlighted {
+  background: var(--highlight-color);
+}
+
+/* 固定數字（題目給的） */
+.cell.fixed .cell-value {
+  color: var(--fixed-color);
+}
+
+/* 玩家輸入的數字 */
+.cell:not(.fixed) .cell-value {
+  color: var(--input-color);
+}
+
+/* 錯誤的格子 */
+.cell.error {
+  background: var(--error-bg) !important;
+}
+
+.cell.error .cell-value {
+  color: var(--error-color) !important;
+}
+
+/* 筆記 */
+.cell-notes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+}
+
+.note {
+  font-size: 0.55rem;
+  color: var(--note-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 數字鍵盤 */
+.number-pad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.num-btn {
+  padding: 16px;
+  font-size: 1.3rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.num-btn:hover {
+  background: var(--accent-light);
+  transform: translateY(-2px);
+}
+
+.num-btn:active {
+  transform: translateY(0);
+}
+
+.num-btn.action {
+  font-size: 0.9rem;
+  background: #ecf0f1;
+}
+
+.num-btn.action.active {
+  background: var(--accent-color);
+  color: white;
+}
+
+.num-btn.hint {
+  background: #f39c12;
+  color: white;
+}
+
+.num-btn.hint:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+
+/* 覆蓋層 */
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  border-radius: var(--border-radius);
+  z-index: 10;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.overlay-title.win {
+  color: var(--success-color);
+}
+
+.overlay-title.lose {
+  color: var(--error-color);
+}
+
+.overlay-stats {
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* 說明彈窗 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--panel-bg);
+  border-radius: var(--border-radius);
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.modal-content h2 {
+  margin-bottom: 16px;
+  color: var(--text-color);
+}
+
+.modal-content p {
+  line-height: 1.6;
+  margin-bottom: 16px;
+  color: var(--text-muted);
+}
+
+/* 頁尾 */
+.footer {
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.footer a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  color: var(--accent-color);
+}
+
+/* 響應式設計 */
+@media (max-width: 480px) {
+  :root {
+    --cell-size: min(38px, 10vw);
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .cell {
+    font-size: 1.2rem;
+  }
+
+  .num-btn {
+    padding: 12px;
+    font-size: 1.1rem;
+  }
+
+  .controls {
+    gap: 6px;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 360px) {
+  :root {
+    --cell-size: 34px;
+  }
+
+  .number-pad {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+  }
+
+  .num-btn {
+    padding: 10px;
+    font-size: 1rem;
+  }
+}
+
+/* 動畫減少偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .num-btn,
+  .cell {
+    transition: none;
+  }
+}
+
+/* 深色模式（可選） */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #1a1a2e;
+    --panel-bg: #16213e;
+    --text-color: #ecf0f1;
+    --text-muted: #95a5a6;
+    --border-color: #34495e;
+    --border-thick: #7f8c8d;
+    --highlight-color: #2c3e50;
+    --accent-light: #1a3a5c;
+    --error-bg: #4a1a1a;
+  }
+
+  .cell:hover {
+    background: #1e2a3a;
+  }
+}
