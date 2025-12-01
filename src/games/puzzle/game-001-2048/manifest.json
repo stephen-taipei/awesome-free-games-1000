@@ -1,0 +1,25 @@
+{
+  "name": "2048 - Awesome Free Games",
+  "short_name": "2048",
+  "description": "經典數字合併益智遊戲 - 滑動方塊合併數字，挑戰達到 2048！",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#faf8ef",
+  "theme_color": "#faf8ef",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["games", "puzzle"],
+  "lang": "zh-TW",
+  "dir": "ltr"
+}
