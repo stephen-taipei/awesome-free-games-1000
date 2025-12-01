@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="掃雷 - 經典邏輯推理益智遊戲。找出所有地雷，小心別踩到！">
+  <meta name="keywords" content="Minesweeper, 掃雷, puzzle game, 益智遊戲, 邏輯遊戲, 免費遊戲">
+  <meta name="theme-color" content="#c0c0c0">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="掃雷 Minesweeper - 經典益智遊戲">
+  <meta property="og:description" content="找出所有地雷，小心別踩到！經典 Windows 掃雷遊戲重現。">
+  <meta property="og:type" content="website">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <title>掃雷 Minesweeper - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 標題區 -->
+    <header class="header">
+      <h1 class="title" data-i18n="game.title">掃雷</h1>
+      <p class="subtitle" data-i18n="game.subtitle">找出所有地雷，小心別踩到！</p>
+    </header>
+
+    <!-- 控制區 -->
+    <div class="controls">
+      <div class="difficulty-selector">
+        <select id="difficulty-select">
+          <option value="easy" data-i18n="game.easy">簡單 (9×9)</option>
+          <option value="medium" data-i18n="game.medium">中等 (16×16)</option>
+          <option value="hard" data-i18n="game.hard">困難 (16×30)</option>
+        </select>
+      </div>
+      <button class="btn" id="help-btn">?</button>
+      <div class="language-selector">
+        <select id="language-select">
+          <option value="zh-TW">繁體中文</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 遊戲面板 -->
+    <div class="game-panel">
+      <!-- 狀態列 -->
+      <div class="status-bar">
+        <div class="counter" id="mine-counter">010</div>
+        <button class="face-btn" id="face-btn">😊</button>
+        <div class="counter" id="time-counter">000</div>
+      </div>
+
+      <!-- 遊戲容器 -->
+      <div class="game-container" id="game-container">
+        <div class="grid" id="grid">
+          <!-- 格子會由 JavaScript 生成 -->
+        </div>
+
+        <!-- 覆蓋層 -->
+        <div class="game-overlay" id="game-overlay" style="display: none;">
+          <h2 class="overlay-title" id="overlay-title">遊戲結束</h2>
+          <p class="overlay-stats" id="overlay-stats"></p>
+          <button class="btn btn-primary" id="retry-btn" data-i18n="game.tryAgain">再試一次</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 觸控提示（行動裝置） -->
+    <div class="touch-hint" id="touch-hint" style="display: none;">
+      <p>長按 = 標記旗標</p>
+    </div>
+
+    <!-- 說明彈窗 -->
+    <div class="modal" id="help-modal" style="display: none;">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">×</button>
+        <h2 data-i18n="game.howToPlay">遊戲說明</h2>
+        <p data-i18n="game.howToPlayContent">左鍵點擊揭開格子，右鍵標記地雷。數字代表周圍 8 格有幾顆地雷。揭開所有非地雷格子即可獲勝！</p>
+        <ul>
+          <li data-i18n="game.leftClick">左鍵：揭開格子</li>
+          <li data-i18n="game.rightClick">右鍵：標記旗標</li>
+          <li data-i18n="game.middleClick">中鍵/雙擊：快速揭開</li>
+          <li data-i18n="game.firstClickSafe">首次點擊保證安全</li>
+        </ul>
+        <h3 data-i18n="game.difficulty">難度</h3>
+        <ul>
+          <li data-i18n="game.easy9x9">9×9 · 10 顆地雷</li>
+          <li data-i18n="game.medium16x16">16×16 · 40 顆地雷</li>
+          <li data-i18n="game.hard16x30">16×30 · 99 顆地雷</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="footer">
+      <p>Game #004 | <a href="https://github.com/awesome-free-games" target="_blank">Awesome Free Games 1000</a></p>
+    </footer>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>

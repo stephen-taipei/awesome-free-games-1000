@@ -1,0 +1,25 @@
+{
+  "name": "掃雷 Minesweeper - Awesome Free Games",
+  "short_name": "Minesweeper",
+  "description": "經典邏輯推理益智遊戲 - 找出所有地雷，小心別踩到！",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#c0c0c0",
+  "theme_color": "#c0c0c0",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["games", "puzzle"],
+  "lang": "zh-TW",
+  "dir": "ltr"
+}

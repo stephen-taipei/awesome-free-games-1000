@@ -1,0 +1,367 @@
+/**
+ * 掃雷遊戲樣式
+ * 響應式設計，支援手機與電腦
+ */
+
+:root {
+  --bg-color: #c0c0c0;
+  --panel-bg: #c0c0c0;
+  --border-light: #ffffff;
+  --border-dark: #808080;
+  --border-darker: #404040;
+  --text-color: #000000;
+  --cell-bg: #c0c0c0;
+  --cell-revealed: #bdbdbd;
+  --mine-color: #000000;
+  --flag-color: #ff0000;
+  --number-1: #0000ff;
+  --number-2: #008000;
+  --number-3: #ff0000;
+  --number-4: #000080;
+  --number-5: #800000;
+  --number-6: #008080;
+  --number-7: #000000;
+  --number-8: #808080;
+
+  /* 尺寸 */
+  --cell-size: 28px;
+  --border-width: 3px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 標題區 */
+.header {
+  text-align: center;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--text-color);
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: #404040;
+}
+
+/* 控制區 */
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  background: var(--panel-bg);
+  border: var(--border-width) solid;
+  border-color: var(--border-light) var(--border-dark) var(--border-dark) var(--border-light);
+}
+
+.btn:active {
+  border-color: var(--border-dark) var(--border-light) var(--border-light) var(--border-dark);
+}
+
+.btn-primary {
+  background: #d4d4d4;
+}
+
+select {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  background: var(--panel-bg);
+  border: var(--border-width) solid;
+  border-color: var(--border-dark) var(--border-light) var(--border-light) var(--border-dark);
+  cursor: pointer;
+}
+
+/* 遊戲面板 */
+.game-panel {
+  background: var(--panel-bg);
+  border: var(--border-width) solid;
+  border-color: var(--border-dark) var(--border-light) var(--border-light) var(--border-dark);
+  padding: 8px;
+}
+
+/* 狀態列 */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px;
+  margin-bottom: 8px;
+  background: var(--panel-bg);
+  border: 2px solid;
+  border-color: var(--border-dark) var(--border-light) var(--border-light) var(--border-dark);
+}
+
+.counter {
+  background: #000;
+  color: #ff0000;
+  font-family: 'Courier New', monospace;
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 2px 8px;
+  min-width: 60px;
+  text-align: center;
+  border: 2px solid;
+  border-color: var(--border-darker) var(--border-light) var(--border-light) var(--border-darker);
+}
+
+.face-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--panel-bg);
+  border: var(--border-width) solid;
+  border-color: var(--border-light) var(--border-dark) var(--border-dark) var(--border-light);
+  cursor: pointer;
+}
+
+.face-btn:active {
+  border-color: var(--border-dark) var(--border-light) var(--border-light) var(--border-dark);
+}
+
+/* 遊戲網格 */
+.game-container {
+  position: relative;
+  border: var(--border-width) solid;
+  border-color: var(--border-dark) var(--border-light) var(--border-light) var(--border-dark);
+  overflow: auto;
+  max-width: 100%;
+}
+
+.grid {
+  display: grid;
+  gap: 0;
+}
+
+/* 格子 */
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  background: var(--cell-bg);
+  border: var(--border-width) solid;
+  border-color: var(--border-light) var(--border-dark) var(--border-dark) var(--border-light);
+}
+
+.cell:active:not(.revealed):not(.flagged) {
+  border-color: var(--border-dark);
+  border-width: 1px;
+}
+
+.cell.revealed {
+  background: var(--cell-revealed);
+  border: 1px solid var(--border-dark);
+}
+
+.cell.flagged {
+  color: var(--flag-color);
+}
+
+.cell.mine {
+  background: #ff0000;
+}
+
+.cell.mine-hit {
+  background: #ff0000;
+}
+
+/* 數字顏色 */
+.cell.num-1 { color: var(--number-1); }
+.cell.num-2 { color: var(--number-2); }
+.cell.num-3 { color: var(--number-3); }
+.cell.num-4 { color: var(--number-4); }
+.cell.num-5 { color: var(--number-5); }
+.cell.num-6 { color: var(--number-6); }
+.cell.num-7 { color: var(--number-7); }
+.cell.num-8 { color: var(--number-8); }
+
+/* 覆蓋層 */
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(192, 192, 192, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  z-index: 10;
+}
+
+.overlay-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.overlay-title.win {
+  color: #008000;
+}
+
+.overlay-title.lose {
+  color: #ff0000;
+}
+
+.overlay-stats {
+  font-size: 1rem;
+  color: #404040;
+}
+
+/* 說明彈窗 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--panel-bg);
+  border: var(--border-width) solid;
+  border-color: var(--border-light) var(--border-dark) var(--border-dark) var(--border-light);
+  padding: 20px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.modal-close {
+  float: right;
+  background: var(--panel-bg);
+  border: 2px solid;
+  border-color: var(--border-light) var(--border-dark) var(--border-dark) var(--border-light);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px 8px;
+}
+
+.modal-content h2 {
+  margin-bottom: 12px;
+}
+
+.modal-content p {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.modal-content ul {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+
+.modal-content li {
+  margin-bottom: 4px;
+}
+
+/* 頁尾 */
+.footer {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: #404040;
+  text-align: center;
+}
+
+.footer a {
+  color: #404040;
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+/* 響應式設計 */
+@media (max-width: 600px) {
+  :root {
+    --cell-size: 24px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .counter {
+    font-size: 1.2rem;
+    min-width: 50px;
+  }
+
+  .face-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 400px) {
+  :root {
+    --cell-size: 20px;
+  }
+
+  .cell {
+    font-size: 0.8rem;
+  }
+
+  .btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+/* 觸控優化 */
+@media (pointer: coarse) {
+  :root {
+    --cell-size: 32px;
+  }
+
+  .cell {
+    font-size: 1.1rem;
+  }
+}
