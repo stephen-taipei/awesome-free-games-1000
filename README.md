@@ -32,7 +32,7 @@
 
 | 類別 | 計劃數量 | 已完成 | 進度 |
 |------|---------|--------|------|
-| 🧩 益智遊戲 (Puzzle) | 150 | 1 | 0.7% |
+| 🧩 益智遊戲 (Puzzle) | 150 | 5 | 3.3% |
 | 🕹️ 街機遊戲 (Arcade) | 120 | 0 | 0% |
 | 🎯 動作遊戲 (Action) | 100 | 0 | 0% |
 | 🏃 跑酷遊戲 (Runner) | 80 | 0 | 0% |
@@ -46,7 +46,7 @@
 | 🏀 運動遊戲 (Sports) | 50 | 0 | 0% |
 | 🎪 模擬遊戲 (Simulation) | 40 | 0 | 0% |
 | 👻 恐怖遊戲 (Horror) | 30 | 0 | 0% |
-| **總計 (Total)** | **1000** | **1** | **0.1%** |
+| **總計 (Total)** | **1000** | **5** | **0.5%** |
 
 ---
 
@@ -103,6 +103,26 @@
 **技術**: Vanilla TypeScript + CSS Grid
 **特色**: 經典數字合併遊戲，支援觸控滑動操作，多國語言支援
 **遊玩連結**: [Play 2048](./src/games/puzzle/game-001-2048/)
+
+#### #002 俄羅斯方塊 Tetris
+**技術**: Canvas 2D + TypeScript
+**特色**: 經典方塊消除遊戲，支援暫存、影子預覽、觸控控制
+**遊玩連結**: [Play Tetris](./src/games/puzzle/game-002-tetris/)
+
+#### #003 數獨 Sudoku
+**技術**: Vanilla TypeScript + CSS Grid
+**特色**: 經典數字邏輯遊戲，四種難度、筆記模式、提示系統、深色模式
+**遊玩連結**: [Play Sudoku](./src/games/puzzle/game-003-sudoku/)
+
+#### #004 掃雷 Minesweeper
+**技術**: Vanilla TypeScript + DOM
+**特色**: 經典邏輯推理遊戲，三種難度、首擊保護、經典 Windows 風格
+**遊玩連結**: [Play Minesweeper](./src/games/puzzle/game-004-minesweeper/)
+
+#### #005 華容道 Klotski
+**技術**: Vanilla TypeScript + DOM
+**特色**: 經典滑塊解謎遊戲，10種經典棋局、拖曳操作、三國主題
+**遊玩連結**: [Play Klotski](./src/games/puzzle/game-005-klotski/)
 
 ---
 
@@ -385,7 +405,7 @@ VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
 
 | 範圍 | 狀態 | 數量 | 遊戲類型 |
 |------|------|------|----------|
-| #001-#150 | 🔄 開發中 | 1/150 | 益智遊戲 |
+| #001-#150 | 🔄 開發中 | 5/150 | 益智遊戲 |
 | #151-#270 | 📋 待開始 | 0/120 | 街機遊戲 |
 | #271-#370 | 📋 待開始 | 0/100 | 動作遊戲 |
 | #371-#450 | 📋 待開始 | 0/80 | 跑酷遊戲 |

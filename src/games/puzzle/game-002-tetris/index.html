@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="俄羅斯方塊 - 經典方塊消除益智遊戲。旋轉排列方塊，消除完整行！">
+  <meta name="keywords" content="Tetris, 俄羅斯方塊, puzzle game, 益智遊戲, 方塊遊戲, 免費遊戲">
+  <meta name="theme-color" content="#1a1a2e">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="俄羅斯方塊 - Tetris">
+  <meta property="og:description" content="經典方塊消除益智遊戲，旋轉排列方塊消除完整行！">
+  <meta property="og:type" content="website">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <title>俄羅斯方塊 Tetris - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 標題區 -->
+    <header class="header">
+      <h1 class="title" data-i18n="game.title">俄羅斯方塊</h1>
+      <p class="subtitle" data-i18n="game.subtitle">旋轉排列方塊，消除完整行！</p>
+    </header>
+
+    <!-- 控制區 -->
+    <div class="controls">
+      <button class="btn btn-primary" id="new-game-btn" data-i18n="game.newGame">新遊戲</button>
+      <button class="btn btn-secondary" id="pause-btn" data-i18n="game.pause">暫停</button>
+      <button class="btn btn-secondary" id="help-btn" data-i18n="game.controls">操作說明</button>
+      <div class="language-selector">
+        <select id="language-select">
+          <option value="zh-TW">繁體中文</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 遊戲主區域 -->
+    <div class="game-area">
+      <!-- 左側面板 - 暫存 -->
+      <div class="left-panel">
+        <div class="panel">
+          <div class="panel-title" data-i18n="game.hold">暫存</div>
+          <div class="preview-box">
+            <canvas id="hold-canvas" class="preview-canvas" width="80" height="80"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 遊戲畫布 -->
+      <div class="game-container" id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- 覆蓋層 -->
+        <div class="game-overlay" id="game-overlay" style="display: none;">
+          <h2 class="overlay-title" id="overlay-title">遊戲結束</h2>
+          <p class="overlay-score">分數: <span id="final-score">0</span></p>
+          <button class="btn btn-primary" id="retry-btn" data-i18n="game.tryAgain">再試一次</button>
+        </div>
+      </div>
+
+      <!-- 右側面板 - 分數與下一個 -->
+      <div class="right-panel">
+        <div class="panel">
+          <div class="panel-title" data-i18n="game.next">下一個</div>
+          <div class="preview-box">
+            <canvas id="next-canvas" class="preview-canvas" width="80" height="80"></canvas>
+          </div>
+        </div>
+
+        <div class="panel stats-panel">
+          <div class="stat-item">
+            <span class="stat-label" data-i18n="game.score">分數</span>
+            <span class="stat-value score" id="score">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label" data-i18n="game.level">等級</span>
+            <span class="stat-value level" id="level">1</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label" data-i18n="game.lines">消除行數</span>
+            <span class="stat-value lines" id="lines">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 觸控控制（行動裝置） -->
+    <div class="touch-controls" id="touch-controls">
+      <div class="touch-row">
+        <button class="touch-btn rotate" id="touch-rotate">↻</button>
+      </div>
+      <div class="touch-row">
+        <button class="touch-btn" id="touch-left">←</button>
+        <button class="touch-btn drop" id="touch-drop">↓↓</button>
+        <button class="touch-btn" id="touch-right">→</button>
+      </div>
+      <div class="touch-row">
+        <button class="touch-btn" id="touch-down">↓</button>
+        <button class="touch-btn" id="touch-hold">H</button>
+      </div>
+    </div>
+
+    <!-- 說明彈窗 -->
+    <div class="modal" id="help-modal" style="display: none;">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">&times;</button>
+        <h2 data-i18n="game.controls">操作說明</h2>
+        <div class="controls-list">
+          <span class="key">←</span><span class="key-desc" data-i18n="game.left">左移</span>
+          <span class="key">→</span><span class="key-desc" data-i18n="game.right">右移</span>
+          <span class="key">↓</span><span class="key-desc" data-i18n="game.down">軟降</span>
+          <span class="key">↑</span><span class="key-desc" data-i18n="game.rotate">旋轉</span>
+          <span class="key">Space</span><span class="key-desc" data-i18n="game.hardDrop">硬降</span>
+          <span class="key">C</span><span class="key-desc" data-i18n="game.holdKey">暫存</span>
+          <span class="key">P / Esc</span><span class="key-desc" data-i18n="game.pauseKey">暫停</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="footer">
+      <p>Game #002 | <a href="https://github.com/awesome-free-games" target="_blank">Awesome Free Games 1000</a></p>
+    </footer>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
