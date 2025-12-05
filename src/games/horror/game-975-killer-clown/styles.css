@@ -1,0 +1,351 @@
+:root {
+  --bg-color: #0f0a15;
+  --text-color: #aa88cc;
+  --clown-color: #cc3366;
+  --health-color: #cc4444;
+  --fear-color: #aa44aa;
+  --balloon-color: #ff6688;
+  --danger-color: #ff3366;
+  --success-color: #55aa77;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(180deg, #1a1020 0%, var(--bg-color) 100%);
+  color: var(--text-color);
+  font-family: 'Georgia', serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 15px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+header h1 {
+  color: var(--clown-color);
+  text-shadow: 0 0 15px var(--clown-color);
+  letter-spacing: 2px;
+  font-size: 22px;
+  margin: 0;
+}
+
+header p {
+  color: #665577;
+  font-size: 12px;
+  margin: 5px 0 0;
+}
+
+.game-container {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.circus-view {
+  position: relative;
+  height: 140px;
+  background: linear-gradient(180deg, #1a0f20 0%, #0f0515 100%);
+  border: 2px solid #2a1a30;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.spotlights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(255, 102, 136, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 0%, rgba(102, 136, 255, 0.1) 0%, transparent 50%);
+  animation: spotlight-move 4s ease-in-out infinite;
+}
+
+@keyframes spotlight-move {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.location-display {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 2;
+}
+
+.location-icon {
+  font-size: 35px;
+}
+
+.location-name {
+  font-size: 12px;
+  color: var(--clown-color);
+  margin-top: 5px;
+}
+
+.player {
+  position: absolute;
+  bottom: 15px;
+  left: 25%;
+  font-size: 28px;
+  z-index: 5;
+}
+
+.clown {
+  position: absolute;
+  bottom: 15px;
+  right: 25%;
+  font-size: 40px;
+  z-index: 4;
+  transition: all 0.5s;
+}
+
+.clown.hidden {
+  right: -60px;
+  opacity: 0;
+}
+
+.clown.attacking {
+  animation: clown-dance 0.3s infinite;
+}
+
+@keyframes clown-dance {
+  0%, 100% { transform: rotate(-5deg) scale(1); }
+  50% { transform: rotate(5deg) scale(1.1); }
+}
+
+.status-panel {
+  background: #1a0f20;
+  border: 1px solid #2a1a30;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.stat-row:last-child {
+  margin-bottom: 0;
+}
+
+.stat-row > span:first-child {
+  font-size: 16px;
+}
+
+.bar-container {
+  flex: 1;
+  height: 12px;
+  background: #0f0515;
+  border: 1px solid #2a1a30;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.bar.health { background: linear-gradient(90deg, #662222, var(--health-color)); }
+.bar.fear { background: linear-gradient(90deg, #552255, var(--fear-color)); }
+
+.items-panel {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  background: #1a0f20;
+  border: 1px solid #2a1a30;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.item-slot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 18px;
+  opacity: 0.3;
+  transition: opacity 0.3s;
+}
+
+.item-slot.has-item {
+  opacity: 1;
+}
+
+.item-slot small {
+  font-size: 11px;
+  color: var(--balloon-color);
+}
+
+.navigation {
+  background: #1a0f20;
+  border: 1px solid #2a1a30;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.navigation > p {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: #665577;
+}
+
+.nav-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nav-btn {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+  background: #2a1a30;
+  color: var(--text-color);
+  border: 1px solid #3a2a40;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: #3a2a40;
+  border-color: var(--clown-color);
+}
+
+.nav-btn.escape {
+  background: #1a2a25;
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+
+.nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 12px 6px;
+  font-size: 11px;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+  background: #1a0f20;
+  color: var(--text-color);
+  border: 2px solid #2a1a30;
+  border-radius: 5px;
+  transition: all 0.2s;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: #2a1a30;
+  border-color: var(--clown-color);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.status-msg {
+  min-height: 18px;
+  font-size: 12px;
+  text-align: center;
+  font-style: italic;
+}
+
+.status-msg.danger { color: var(--danger-color); }
+.status-msg.warning { color: var(--balloon-color); }
+.status-msg.success { color: var(--success-color); }
+
+.btn {
+  padding: 10px 20px;
+  font-size: 13px;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+  background: #1a0f20;
+  color: var(--clown-color);
+  border: 2px solid var(--clown-color);
+  border-radius: 5px;
+  transition: all 0.3s;
+}
+
+.btn:hover {
+  background: rgba(204, 51, 102, 0.2);
+  box-shadow: 0 0 15px rgba(204, 51, 102, 0.4);
+}
+
+footer {
+  font-size: 10px;
+  color: #443355;
+  margin-top: auto;
+  padding: 10px;
+}
+
+a { color: #554466; }
+
+/* Clown chase */
+.clown-chase .circus-view {
+  animation: circus-strobe 0.3s infinite;
+  border-color: var(--clown-color);
+}
+
+@keyframes circus-strobe {
+  0%, 100% {
+    box-shadow: inset 0 0 20px rgba(204, 51, 102, 0.3);
+  }
+  50% {
+    box-shadow: inset 0 0 40px rgba(204, 51, 102, 0.6);
+  }
+}
+
+/* High fear */
+.high-fear .spotlights {
+  animation: spotlight-move 1s ease-in-out infinite;
+}
+
+.high-fear .circus-view {
+  filter: hue-rotate(20deg);
+}
+
+/* Escaped */
+.escaped .circus-view {
+  background: linear-gradient(180deg, #152025 0%, #0a1015 100%);
+  border-color: var(--success-color);
+}
+
+.escaped .spotlights {
+  opacity: 0;
+}
