@@ -1,0 +1,151 @@
+:root {
+  --bg-color: #111;
+  --text-color: #eee;
+  --demon-color: #f00;
+  --faith-color: #0ff;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Courier New', Courier, monospace;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.game-container {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.possessed-person {
+  width: 200px;
+  height: 200px;
+  border: 5px solid #333;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #200;
+  position: relative;
+  overflow: hidden;
+}
+
+.demon-face {
+  font-size: 100px;
+  transition: transform 0.1s;
+}
+
+.bars {
+  width: 100%;
+}
+
+.bar-group {
+  margin-bottom: 10px;
+}
+
+.bar-container {
+  width: 100%;
+  height: 20px;
+  background: #333;
+  border: 1px solid #555;
+  margin-top: 5px;
+}
+
+.bar {
+  height: 100%;
+  width: 100%;
+  transition: width 0.3s;
+}
+
+.bar.demon { background: var(--demon-color); }
+.bar.faith { background: var(--faith-color); }
+
+.typing-area {
+  width: 100%;
+  text-align: center;
+}
+
+.word-display {
+  font-size: 24px;
+  margin-bottom: 10px;
+  color: #fff;
+  text-shadow: 0 0 5px var(--faith-color);
+  min-height: 30px;
+  letter-spacing: 2px;
+}
+
+.word-input {
+  font-size: 20px;
+  padding: 10px;
+  width: 80%;
+  background: #222;
+  border: 2px solid #555;
+  color: #fff;
+  text-align: center;
+  outline: none;
+}
+
+.word-input:focus {
+  border-color: var(--faith-color);
+}
+
+.status-msg {
+  height: 30px;
+  font-style: italic;
+}
+
+.btn {
+  padding: 15px 30px;
+  font-size: 18px;
+  cursor: pointer;
+  background: #444;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+}
+
+.btn:hover {
+  background: #666;
+}
+
+.shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+footer {
+  font-size: 12px;
+  color: #555;
+  margin-top: auto;
+}
+
+a { color: #777; }

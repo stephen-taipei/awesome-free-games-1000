@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exorcism - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Exorcism</h1>
+      <p data-i18n="game.subtitle">Type the sacred words to expel the demon</p>
+    </header>
+
+    <div class="game-container">
+      <div class="possessed-person">
+        <div id="demon-face" class="demon-face">👿</div>
+      </div>
+      
+      <div class="bars">
+        <div class="bar-group">
+          <span data-i18n="game.demonStrength">Demon:</span>
+          <div class="bar-container"><div id="demon-bar" class="bar demon" style="width: 100%"></div></div>
+        </div>
+        <div class="bar-group">
+          <span data-i18n="game.playerFaith">Faith:</span>
+          <div class="bar-container"><div id="faith-bar" class="bar faith" style="width: 100%"></div></div>
+        </div>
+      </div>
+
+      <div class="typing-area">
+        <div id="word-display" class="word-display"></div>
+        <input type="text" id="word-input" class="word-input" placeholder="Type the holy words..." autocomplete="off" spellcheck="false">
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+      
+      <button id="start-btn" class="btn" data-i18n="game.start">Start Exorcism</button>
+    </div>
+
+    <footer>
+      <p>Game #996 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
