@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Séance - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Séance</h1>
+      <p data-i18n="game.subtitle">Communicate with spirits from beyond</p>
+    </header>
+
+    <div class="game-container">
+      <div class="seance-table">
+        <div class="candles">
+          <div class="candle left" id="candle-left">🕯️</div>
+          <div class="candle right" id="candle-right">🕯️</div>
+        </div>
+
+        <div class="crystal-ball" id="crystal-ball">
+          <div class="ball-inner">
+            <div id="spirit-message" class="spirit-message"></div>
+          </div>
+        </div>
+
+        <div class="spirit-energy">
+          <span data-i18n="game.spiritEnergy">Spirit Energy</span>
+          <div class="energy-bar">
+            <div id="energy-fill" class="energy-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="question-area">
+        <div id="question-prompt" class="question-prompt" data-i18n="game.askQuestion">Ask the spirits a question...</div>
+        <div class="question-options" id="question-options"></div>
+      </div>
+
+      <div class="spirit-responses">
+        <div id="response-area" class="response-area"></div>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Begin Séance</button>
+    </div>
+
+    <footer>
+      <p>Game #994 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
