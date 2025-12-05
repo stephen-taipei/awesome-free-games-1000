@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Urban Legend - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Urban Legend</h1>
+      <p data-i18n="game.subtitle">Choose wisely or face the consequences</p>
+    </header>
+
+    <div class="game-container">
+      <div class="story-card" id="story-card">
+        <div class="card-header">
+          <span class="legend-icon" id="legend-icon">👻</span>
+          <h2 id="legend-title" class="legend-title"></h2>
+        </div>
+        <div class="card-body">
+          <p id="story-text" class="story-text"></p>
+        </div>
+        <div class="card-image" id="card-image"></div>
+      </div>
+
+      <div class="choices" id="choices"></div>
+
+      <div class="stats">
+        <div class="stat">
+          <span data-i18n="game.courage">Courage</span>
+          <div class="stat-bar"><div id="courage-bar" class="bar courage"></div></div>
+        </div>
+        <div class="stat">
+          <span data-i18n="game.survival">Survival</span>
+          <div class="stat-bar"><div id="survival-bar" class="bar survival"></div></div>
+        </div>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Begin Investigation</button>
+      <button id="next-btn" class="btn hidden" data-i18n="game.next">Next Legend</button>
+    </div>
+
+    <footer>
+      <p>Game #991 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
