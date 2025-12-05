@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Horror - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Space Horror</h1>
+      <p data-i18n="game.subtitle">Something is aboard the station...</p>
+    </header>
+
+    <div class="game-container">
+      <div class="ship-status">
+        <div class="status-row">
+          <div class="status-item">
+            <span data-i18n="game.oxygen">O2</span>
+            <div class="mini-bar"><div id="oxygen-bar" class="bar oxygen"></div></div>
+          </div>
+          <div class="status-item">
+            <span data-i18n="game.hull">HULL</span>
+            <div class="mini-bar"><div id="hull-bar" class="bar hull"></div></div>
+          </div>
+          <div class="status-item">
+            <span data-i18n="game.power">PWR</span>
+            <div class="mini-bar"><div id="power-bar" class="bar power"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="station-map" id="station-map">
+        <div class="room" id="room-bridge" data-room="bridge">
+          <span class="room-name">Bridge</span>
+          <div class="room-icon">🎛️</div>
+        </div>
+        <div class="room" id="room-airlock" data-room="airlock">
+          <span class="room-name">Airlock</span>
+          <div class="room-icon">🚪</div>
+        </div>
+        <div class="room" id="room-quarters" data-room="quarters">
+          <span class="room-name">Quarters</span>
+          <div class="room-icon">🛏️</div>
+        </div>
+        <div class="room" id="room-engineering" data-room="engineering">
+          <span class="room-name">Engineering</span>
+          <div class="room-icon">⚙️</div>
+        </div>
+        <div class="room" id="room-medbay" data-room="medbay">
+          <span class="room-name">Med Bay</span>
+          <div class="room-icon">🏥</div>
+        </div>
+        <div class="room" id="room-cargo" data-room="cargo">
+          <span class="room-name">Cargo</span>
+          <div class="room-icon">📦</div>
+        </div>
+        <div class="player-marker" id="player-marker">👨‍🚀</div>
+        <div class="creature-marker hidden" id="creature-marker">👾</div>
+      </div>
+
+      <div class="action-panel">
+        <div id="room-info" class="room-info"></div>
+        <div class="actions" id="actions"></div>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Begin Mission</button>
+    </div>
+
+    <footer>
+      <p>Game #989 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>

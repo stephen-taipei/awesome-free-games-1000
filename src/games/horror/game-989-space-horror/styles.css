@@ -1,0 +1,269 @@
+:root {
+  --bg-color: #05050a;
+  --text-color: #8899aa;
+  --panel-bg: #0a0a12;
+  --border-color: #1a2a3a;
+  --oxygen-color: #00aaff;
+  --hull-color: #ffaa00;
+  --power-color: #00ff88;
+  --danger-color: #ff3344;
+  --creature-color: #ff00ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(ellipse at center, #0a0a15 0%, var(--bg-color) 100%);
+  color: var(--text-color);
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 15px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+header h1 {
+  color: var(--oxygen-color);
+  text-shadow: 0 0 20px var(--oxygen-color);
+  letter-spacing: 5px;
+  font-size: 22px;
+}
+
+header p {
+  color: #556;
+  font-size: 12px;
+}
+
+.game-container {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ship-status {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.status-row {
+  display: flex;
+  gap: 15px;
+}
+
+.status-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-item span {
+  font-size: 10px;
+  color: #556;
+  width: 35px;
+}
+
+.mini-bar {
+  flex: 1;
+  height: 12px;
+  background: #111;
+  border: 1px solid #222;
+}
+
+.bar {
+  height: 100%;
+  width: 100%;
+  transition: width 0.3s;
+}
+
+.bar.oxygen { background: var(--oxygen-color); }
+.bar.hull { background: var(--hull-color); }
+.bar.power { background: var(--power-color); }
+
+.station-map {
+  background: var(--panel-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 10px;
+  position: relative;
+  min-height: 200px;
+}
+
+.room {
+  background: #0f1520;
+  border: 2px solid #1a2535;
+  border-radius: 5px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.room:hover {
+  border-color: var(--oxygen-color);
+  box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
+}
+
+.room.current {
+  border-color: var(--power-color);
+  background: #0a1a15;
+}
+
+.room.danger {
+  border-color: var(--danger-color);
+  animation: pulse-danger 1s infinite;
+}
+
+@keyframes pulse-danger {
+  0%, 100% { box-shadow: 0 0 5px var(--danger-color); }
+  50% { box-shadow: 0 0 20px var(--danger-color); }
+}
+
+.room-name {
+  font-size: 10px;
+  color: #667;
+}
+
+.room-icon {
+  font-size: 24px;
+}
+
+.player-marker, .creature-marker {
+  position: absolute;
+  font-size: 20px;
+  transition: all 0.5s;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.creature-marker {
+  filter: drop-shadow(0 0 10px var(--creature-color));
+}
+
+.creature-marker.hidden {
+  display: none;
+}
+
+.action-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  padding: 12px;
+}
+
+.room-info {
+  font-size: 12px;
+  margin-bottom: 10px;
+  min-height: 40px;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 8px 15px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  background: #1a1a25;
+  color: var(--text-color);
+  border: 1px solid #2a3a4a;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: #2a2a35;
+  border-color: var(--oxygen-color);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.status-msg {
+  min-height: 25px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.status-msg.danger { color: var(--danger-color); }
+.status-msg.warning { color: var(--hull-color); }
+.status-msg.success { color: var(--power-color); }
+
+.btn {
+  padding: 12px 25px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  background: #1a1a25;
+  color: var(--oxygen-color);
+  border: 2px solid var(--border-color);
+  border-radius: 5px;
+  letter-spacing: 2px;
+  transition: all 0.3s;
+}
+
+.btn:hover {
+  background: #2a2a35;
+  border-color: var(--oxygen-color);
+  box-shadow: 0 0 15px rgba(0, 170, 255, 0.3);
+}
+
+footer {
+  font-size: 11px;
+  color: #333;
+  margin-top: auto;
+  padding: 10px;
+}
+
+a { color: #445; }
+
+/* Alert effects */
+.low-oxygen .station-map {
+  animation: oxygen-warning 2s infinite;
+}
+
+@keyframes oxygen-warning {
+  0%, 100% { border-color: var(--border-color); }
+  50% { border-color: var(--oxygen-color); }
+}
+
+.creature-nearby .station-map {
+  box-shadow: 0 0 30px rgba(255, 0, 255, 0.3);
+}
