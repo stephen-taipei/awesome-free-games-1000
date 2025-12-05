@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Killer Clown 殺手小丑</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">殺手小丑</h1>
+      <p data-i18n="game.subtitle">逃離馬戲團的恐懼...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="circus-view">
+        <div class="spotlights"></div>
+        <div id="location-display" class="location-display">
+          <div class="location-icon">🎪</div>
+          <div id="location-name" class="location-name">入口</div>
+        </div>
+        <div id="clown" class="clown hidden">🤡</div>
+        <div id="player" class="player">👤</div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>❤️</span>
+          <div class="bar-container">
+            <div id="health-bar" class="bar health" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>😰</span>
+          <span data-i18n="game.fear">恐懼</span>
+          <div class="bar-container">
+            <div id="fear-bar" class="bar fear" style="width: 20%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="items-panel">
+        <div class="item-slot" id="item-flashlight">
+          <span>🔦</span>
+        </div>
+        <div class="item-slot" id="item-balloon">
+          <span>🎈</span>
+          <small id="balloon-count">0</small>
+        </div>
+        <div class="item-slot" id="item-horn">
+          <span>📯</span>
+          <small id="horn-count">0</small>
+        </div>
+      </div>
+
+      <div class="navigation">
+        <p data-i18n="game.goto">前往：</p>
+        <div id="nav-buttons" class="nav-buttons"></div>
+      </div>
+
+      <div class="actions">
+        <button id="search-btn" class="action-btn" data-i18n="game.search">搜索</button>
+        <button id="hide-btn" class="action-btn" data-i18n="game.hide">躲藏</button>
+        <button id="distract-btn" class="action-btn" data-i18n="game.distract">分散注意</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">進入馬戲團</button>
+    </main>
+
+    <footer>
+      <p>Game #975 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
