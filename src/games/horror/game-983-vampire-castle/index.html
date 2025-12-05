@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vampire Castle 吸血鬼城堡</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">吸血鬼城堡</h1>
+      <p data-i18n="game.subtitle">在日出前逃離城堡...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="castle-view">
+        <div class="window-light"></div>
+        <div class="window-light" style="left: 70%"></div>
+        <div id="room-display" class="room-display">
+          <div class="room-icon">🚪</div>
+          <div id="room-name" class="room-name">入口大廳</div>
+        </div>
+        <div id="vampire" class="vampire hidden">🧛</div>
+        <div id="player" class="player">🏃</div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>❤️</span>
+          <div class="bar-container">
+            <div id="health-bar" class="bar health" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>🧄</span>
+          <div id="garlic-count" class="item-count">0</div>
+          <span>✝️</span>
+          <div id="cross-count" class="item-count">0</div>
+          <span>🪞</span>
+          <div id="mirror-count" class="item-count">0</div>
+        </div>
+      </div>
+
+      <div class="room-info">
+        <p id="room-desc" class="room-desc">你站在城堡的入口大廳...</p>
+      </div>
+
+      <div class="exits-panel">
+        <p data-i18n="game.exits">出口：</p>
+        <div id="exits" class="exits"></div>
+      </div>
+
+      <div class="actions">
+        <button id="search-btn" class="action-btn" data-i18n="game.search">搜索</button>
+        <button id="hide-btn" class="action-btn" data-i18n="game.hide">躲藏</button>
+        <button id="use-item-btn" class="action-btn" data-i18n="game.useItem">使用道具</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">進入城堡</button>
+    </main>
+
+    <footer>
+      <p>Game #983 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
