@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cult Ritual - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Cult Ritual</h1>
+      <p data-i18n="game.subtitle">Complete the ritual before the Old Ones awaken</p>
+    </header>
+
+    <div class="game-container">
+      <div class="status-bar">
+        <div class="stat">
+          <span data-i18n="game.progress">Progress:</span>
+          <div class="bar-container"><div id="progress-bar" class="bar" style="width: 0%"></div></div>
+        </div>
+        <div class="stat">
+          <span data-i18n="game.corruption">Corruption:</span>
+          <div class="bar-container"><div id="corruption-bar" class="bar corruption" style="width: 0%"></div></div>
+        </div>
+      </div>
+
+      <div id="ritual-circle" class="ritual-circle">
+        <div id="center-sigil" class="center-sigil">👁️</div>
+        <!-- Runes will be placed here -->
+      </div>
+
+      <div id="message-area" class="message-area"></div>
+      
+      <div class="controls">
+        <button id="start-btn" class="btn" data-i18n="game.start">Begin Ritual</button>
+      </div>
+    </div>
+
+    <div id="game-over-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2 id="modal-title"></h2>
+        <p id="modal-msg"></p>
+        <button id="restart-btn" class="btn" data-i18n="game.retry">Try Again</button>
+      </div>
+    </div>
+
+    <footer>
+      <p>Game #997 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
