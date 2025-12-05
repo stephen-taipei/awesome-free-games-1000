@@ -1,0 +1,259 @@
+:root {
+  --bg-color: #0f0f14;
+  --text-color: #c8c8d0;
+  --card-bg: #1a1a22;
+  --accent-color: #7744aa;
+  --danger-color: #aa3344;
+  --courage-color: #44aa66;
+  --survival-color: #4488cc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(180deg, #0a0a0f 0%, var(--bg-color) 100%);
+  color: var(--text-color);
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 15px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+header h1 {
+  color: var(--accent-color);
+  text-shadow: 0 0 15px var(--accent-color);
+  letter-spacing: 2px;
+}
+
+header p {
+  color: #666;
+  font-size: 14px;
+}
+
+.game-container {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.story-card {
+  width: 100%;
+  background: var(--card-bg);
+  border: 2px solid #333;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+}
+
+.card-header {
+  padding: 15px;
+  background: linear-gradient(90deg, #222, #1a1a22);
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legend-icon {
+  font-size: 30px;
+}
+
+.legend-title {
+  margin: 0;
+  font-size: 18px;
+  color: var(--accent-color);
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.story-text {
+  margin: 0;
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+.card-image {
+  height: 100px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.8)),
+              linear-gradient(45deg, #1a1a22, #222);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 50px;
+}
+
+.choices {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.choice-btn {
+  width: 100%;
+  padding: 15px 20px;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  background: linear-gradient(90deg, #222, #2a2a33);
+  color: var(--text-color);
+  border: 2px solid #444;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.choice-btn:hover {
+  background: linear-gradient(90deg, #2a2a33, #333);
+  border-color: var(--accent-color);
+  transform: translateX(5px);
+}
+
+.choice-btn.correct {
+  border-color: var(--courage-color);
+  background: linear-gradient(90deg, #1a3322, #2a3a2a);
+}
+
+.choice-btn.wrong {
+  border-color: var(--danger-color);
+  background: linear-gradient(90deg, #331a1a, #3a2a2a);
+}
+
+.choice-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.stats {
+  width: 100%;
+  display: flex;
+  gap: 20px;
+}
+
+.stat {
+  flex: 1;
+}
+
+.stat span {
+  font-size: 12px;
+  color: #777;
+}
+
+.stat-bar {
+  height: 12px;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+
+.bar {
+  height: 100%;
+  transition: width 0.5s;
+}
+
+.bar.courage {
+  background: linear-gradient(90deg, #226633, var(--courage-color));
+  width: 100%;
+}
+
+.bar.survival {
+  background: linear-gradient(90deg, #224477, var(--survival-color));
+  width: 100%;
+}
+
+.status-msg {
+  min-height: 25px;
+  font-size: 14px;
+  text-align: center;
+  font-style: italic;
+}
+
+.status-msg.danger { color: var(--danger-color); }
+.status-msg.success { color: var(--courage-color); }
+
+.btn {
+  padding: 15px 30px;
+  font-size: 16px;
+  cursor: pointer;
+  background: linear-gradient(180deg, #333, #222);
+  color: #fff;
+  border: 2px solid #555;
+  border-radius: 5px;
+  transition: all 0.3s;
+}
+
+.btn:hover {
+  background: linear-gradient(180deg, #444, #333);
+  border-color: var(--accent-color);
+}
+
+.btn.hidden {
+  display: none;
+}
+
+footer {
+  font-size: 12px;
+  color: #444;
+  margin-top: auto;
+  padding: 10px;
+}
+
+a { color: #555; }
+
+/* Animations */
+.story-card.shake {
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.story-card.success-glow {
+  box-shadow: 0 0 30px rgba(68, 170, 102, 0.5);
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.game-over .story-card {
+  border-color: var(--danger-color);
+  box-shadow: 0 0 30px rgba(170, 51, 68, 0.5);
+}
+
+.victory .story-card {
+  border-color: var(--courage-color);
+  box-shadow: 0 0 30px rgba(68, 170, 102, 0.5);
+}
