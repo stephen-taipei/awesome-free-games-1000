@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deep Sea Horror - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Deep Sea Horror</h1>
+      <p data-i18n="game.subtitle">Something stirs in the abyss...</p>
+    </header>
+
+    <div class="game-container">
+      <div class="depth-display">
+        <span data-i18n="game.depth">Depth</span>
+        <div id="depth-value" class="depth-value">0m</div>
+      </div>
+
+      <div class="submarine-view" id="submarine-view">
+        <div class="water-overlay"></div>
+        <div class="bubbles" id="bubbles"></div>
+        <div class="submarine-window">
+          <div class="window-content" id="window-content">
+            <div class="creature-shadow hidden" id="creature-shadow"></div>
+          </div>
+          <div class="sonar-ping" id="sonar-ping"></div>
+        </div>
+        <div class="depth-particles" id="depth-particles"></div>
+      </div>
+
+      <div class="sub-status">
+        <div class="status-item">
+          <span>🔋</span>
+          <div class="status-bar"><div id="power-bar" class="bar power"></div></div>
+        </div>
+        <div class="status-item">
+          <span>🛡️</span>
+          <div class="status-bar"><div id="hull-bar" class="bar hull"></div></div>
+        </div>
+        <div class="status-item">
+          <span>💨</span>
+          <div class="status-bar"><div id="oxygen-bar" class="bar oxygen"></div></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="descend-btn" class="control-btn" data-i18n="game.descend">Descend</button>
+        <button id="lights-btn" class="control-btn" data-i18n="game.lights">Toggle Lights</button>
+        <button id="sonar-btn" class="control-btn" data-i18n="game.sonar">Sonar Ping</button>
+        <button id="ascend-btn" class="control-btn" data-i18n="game.ascend">Ascend</button>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Begin Descent</button>
+    </div>
+
+    <footer>
+      <p>Game #988 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
