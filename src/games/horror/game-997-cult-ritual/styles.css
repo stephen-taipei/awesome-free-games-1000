@@ -1,0 +1,183 @@
+:root {
+  --bg-color: #050005;
+  --text-color: #a0a;
+  --accent-color: #808;
+  --corruption-color: #f00;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Georgia', serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 20px;
+  text-shadow: 0 0 5px var(--accent-color);
+}
+
+.game-container {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.status-bar {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-container {
+  flex-grow: 1;
+  height: 15px;
+  background: #202;
+  border: 1px solid #404;
+}
+
+.bar {
+  height: 100%;
+  background: #a0a;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+.bar.corruption {
+  background: var(--corruption-color);
+}
+
+.ritual-circle {
+  width: 300px;
+  height: 300px;
+  border: 2px dashed #404;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+  background: radial-gradient(circle, #101 0%, #000 70%);
+}
+
+.center-sigil {
+  font-size: 50px;
+  opacity: 0.5;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+  100% { opacity: 0.3; transform: scale(1); }
+}
+
+.rune {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  cursor: pointer;
+  background: #202;
+  border: 1px solid #606;
+  border-radius: 50%;
+  transition: all 0.2s;
+  color: #d0d;
+}
+
+.rune:hover {
+  background: #404;
+  transform: scale(1.2);
+  box-shadow: 0 0 10px #a0a;
+}
+
+.rune.correct {
+  background: #0f0;
+  color: #000;
+}
+
+.rune.wrong {
+  background: #f00;
+  color: #fff;
+}
+
+.message-area {
+  height: 30px;
+  text-align: center;
+  color: #fff;
+  font-style: italic;
+}
+
+.btn {
+  background: #303;
+  color: #d0d;
+  border: 1px solid #606;
+  padding: 15px 30px;
+  font-size: 18px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+
+.btn:hover {
+  background: #505;
+  box-shadow: 0 0 10px #a0a;
+}
+
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background: #101;
+  padding: 40px;
+  border: 2px solid #808;
+  text-align: center;
+}
+
+.hidden {
+  display: none !important;
+}
+
+footer {
+  font-size: 12px;
+  color: #505;
+  margin-top: auto;
+}
+
+a { color: #707; }
