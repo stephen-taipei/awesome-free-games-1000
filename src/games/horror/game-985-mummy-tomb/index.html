@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mummy Tomb - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Mummy Tomb</h1>
+      <p data-i18n="game.subtitle">Escape the cursed pyramid!</p>
+    </header>
+
+    <div class="game-container">
+      <div class="tomb-stats">
+        <div class="stat">
+          <span>🏃</span>
+          <span data-i18n="game.stamina">Stamina</span>
+          <div class="stat-bar"><div id="stamina-bar" class="bar stamina"></div></div>
+        </div>
+        <div class="stat">
+          <span>🔦</span>
+          <span data-i18n="game.torch">Torch</span>
+          <div class="stat-bar"><div id="torch-bar" class="bar torch"></div></div>
+        </div>
+      </div>
+
+      <div class="tomb-view" id="tomb-view">
+        <div class="tomb-darkness" id="tomb-darkness"></div>
+        <div class="corridor">
+          <div class="treasures" id="treasures"></div>
+          <div class="traps" id="traps"></div>
+          <div class="player" id="player">🧑‍🔬</div>
+          <div class="mummy hidden" id="mummy">🧟</div>
+          <div class="exit" id="exit">🚪</div>
+        </div>
+        <div class="distance-display">
+          <span data-i18n="game.distance">Distance:</span>
+          <span id="distance-value">0</span>m / <span id="exit-distance">100</span>m
+        </div>
+      </div>
+
+      <div class="treasure-count">
+        <span>💎</span>
+        <span id="treasure-value">0</span>
+      </div>
+
+      <div class="controls">
+        <button id="walk-btn" class="control-btn" data-i18n="game.walk">Walk</button>
+        <button id="run-btn" class="control-btn run" data-i18n="game.run">Run!</button>
+        <button id="hide-btn" class="control-btn hide" data-i18n="game.hide">Hide</button>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Enter Tomb</button>
+    </div>
+
+    <footer>
+      <p>Game #985 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
