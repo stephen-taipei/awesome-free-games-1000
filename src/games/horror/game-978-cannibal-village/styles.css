@@ -1,0 +1,347 @@
+:root {
+  --bg-color: #1a0f0a;
+  --text-color: #aa9988;
+  --village-color: #885533;
+  --health-color: #cc4444;
+  --stealth-color: #446688;
+  --fire-color: #ff6622;
+  --danger-color: #ff3322;
+  --success-color: #55aa55;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(180deg, #2a1a10 0%, var(--bg-color) 100%);
+  color: var(--text-color);
+  font-family: 'Georgia', serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 15px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+header h1 {
+  color: var(--fire-color);
+  text-shadow: 0 0 15px var(--fire-color);
+  letter-spacing: 2px;
+  font-size: 22px;
+  margin: 0;
+}
+
+header p {
+  color: #665544;
+  font-size: 12px;
+  margin: 5px 0 0;
+}
+
+.game-container {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.village-view {
+  position: relative;
+  height: 150px;
+  background: linear-gradient(180deg, #2a1a10 0%, #1a0f0a 100%);
+  border: 2px solid #3a2a1a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.torches {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle at 20% 20%, rgba(255, 102, 34, 0.2) 0%, transparent 30%),
+                    radial-gradient(circle at 80% 30%, rgba(255, 102, 34, 0.2) 0%, transparent 30%);
+  animation: torch-flicker 2s ease-in-out infinite;
+}
+
+@keyframes torch-flicker {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.location-display {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 2;
+}
+
+.location-icon {
+  font-size: 40px;
+}
+
+.location-name {
+  font-size: 13px;
+  color: var(--village-color);
+  margin-top: 5px;
+}
+
+.player {
+  position: absolute;
+  bottom: 15px;
+  left: 25%;
+  font-size: 28px;
+  z-index: 5;
+}
+
+.villager {
+  position: absolute;
+  bottom: 15px;
+  right: 25%;
+  font-size: 35px;
+  z-index: 4;
+  transition: all 0.5s;
+}
+
+.villager.hidden {
+  right: -50px;
+  opacity: 0;
+}
+
+.villager.hunting {
+  animation: villager-hunt 0.5s infinite;
+}
+
+@keyframes villager-hunt {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-10px); }
+}
+
+.status-panel {
+  background: #2a1a10;
+  border: 1px solid #3a2a1a;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.stat-row:last-child {
+  margin-bottom: 0;
+}
+
+.stat-row > span:first-child {
+  font-size: 14px;
+}
+
+.bar-container {
+  flex: 1;
+  height: 12px;
+  background: #1a0f0a;
+  border: 1px solid #3a2a1a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.bar.health { background: linear-gradient(90deg, #662222, var(--health-color)); }
+.bar.stealth { background: linear-gradient(90deg, #223344, var(--stealth-color)); }
+
+.items-panel {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  background: #2a1a10;
+  border: 1px solid #3a2a1a;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.item-slot {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 18px;
+  opacity: 0.3;
+  transition: opacity 0.3s;
+}
+
+.item-slot.has-item {
+  opacity: 1;
+}
+
+.item-slot small {
+  font-size: 12px;
+  color: var(--fire-color);
+}
+
+.navigation {
+  background: #2a1a10;
+  border: 1px solid #3a2a1a;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.navigation > p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #665544;
+}
+
+.nav-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nav-btn {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+  background: #3a2a1a;
+  color: var(--text-color);
+  border: 1px solid #4a3a2a;
+  border-radius: 5px;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: #4a3a2a;
+  border-color: var(--fire-color);
+}
+
+.nav-btn.escape {
+  background: #2a3a2a;
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+
+.nav-btn.locked {
+  opacity: 0.5;
+}
+
+.nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 12px 8px;
+  font-size: 12px;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+  background: #2a1a10;
+  color: var(--text-color);
+  border: 2px solid #3a2a1a;
+  border-radius: 5px;
+  transition: all 0.2s;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: #3a2a1a;
+  border-color: var(--village-color);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.status-msg {
+  min-height: 20px;
+  font-size: 12px;
+  text-align: center;
+  font-style: italic;
+}
+
+.status-msg.danger { color: var(--danger-color); }
+.status-msg.warning { color: var(--fire-color); }
+.status-msg.success { color: var(--success-color); }
+
+.btn {
+  padding: 12px 25px;
+  font-size: 14px;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+  background: #2a1a10;
+  color: var(--fire-color);
+  border: 2px solid var(--fire-color);
+  border-radius: 5px;
+  transition: all 0.3s;
+}
+
+.btn:hover {
+  background: rgba(255, 102, 34, 0.2);
+  box-shadow: 0 0 20px rgba(255, 102, 34, 0.4);
+}
+
+footer {
+  font-size: 11px;
+  color: #443322;
+  margin-top: auto;
+  padding: 10px;
+}
+
+a { color: #554433; }
+
+/* Hunt state */
+.hunt .village-view {
+  animation: hunt-shake 0.3s infinite;
+  border-color: var(--danger-color);
+}
+
+@keyframes hunt-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* Low stealth */
+.exposed .torches {
+  animation: torch-flicker 0.5s ease-in-out infinite;
+}
+
+/* Escaped */
+.escaped .village-view {
+  background: linear-gradient(180deg, #1a2a1a 0%, #0f1a0f 100%);
+  border-color: var(--success-color);
+}
+
+.escaped .torches {
+  opacity: 0;
+}
