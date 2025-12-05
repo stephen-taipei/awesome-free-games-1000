@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alien Horror - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Alien Horror</h1>
+      <p data-i18n="game.subtitle">They came from beyond the stars...</p>
+    </header>
+
+    <div class="game-container">
+      <div class="invasion-status">
+        <div class="status-item">
+          <span data-i18n="game.survivors">Survivors</span>
+          <div id="survivors-count" class="count-display">10</div>
+        </div>
+        <div class="status-item">
+          <span data-i18n="game.aliens">Aliens</span>
+          <div id="aliens-count" class="count-display danger">0</div>
+        </div>
+        <div class="status-item">
+          <span data-i18n="game.wave">Wave</span>
+          <div id="wave-count" class="count-display">1</div>
+        </div>
+      </div>
+
+      <div class="radar-screen" id="radar-screen">
+        <div class="radar-grid"></div>
+        <div class="radar-sweep" id="radar-sweep"></div>
+        <div class="radar-center">🏠</div>
+        <div id="blips-container"></div>
+      </div>
+
+      <div class="defense-panel">
+        <div class="ammo-display">
+          <span data-i18n="game.ammo">Ammo</span>
+          <div id="ammo-bar" class="ammo-bar">
+            <div class="ammo-fill"></div>
+          </div>
+        </div>
+        <div class="barrier-display">
+          <span data-i18n="game.barrier">Barrier</span>
+          <div class="barrier-bar">
+            <div id="barrier-fill" class="barrier-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="shoot-btn" class="action-btn shoot" data-i18n="game.shoot">SHOOT</button>
+        <button id="reload-btn" class="action-btn reload" data-i18n="game.reload">RELOAD</button>
+        <button id="barrier-btn" class="action-btn barrier" data-i18n="game.reinforce">REINFORCE</button>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Defend Base</button>
+    </div>
+
+    <footer>
+      <p>Game #987 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
