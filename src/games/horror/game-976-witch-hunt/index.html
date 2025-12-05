@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Witch Hunt 獵巫行動</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">獵巫行動</h1>
+      <p data-i18n="game.subtitle">在被處刑前逃離小鎮...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="village-view">
+        <div class="fire-glow"></div>
+        <div id="location-display" class="location-display">
+          <div class="location-icon">🏘️</div>
+          <div id="location-name" class="location-name">村莊廣場</div>
+        </div>
+        <div id="mob" class="mob hidden">🔥</div>
+        <div id="witch" class="witch">🧙‍♀️</div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>😨</span>
+          <span data-i18n="game.suspicion">懷疑</span>
+          <div class="bar-container">
+            <div id="suspicion-bar" class="bar suspicion" style="width: 30%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>✨</span>
+          <span data-i18n="game.magic">魔力</span>
+          <div class="bar-container">
+            <div id="magic-bar" class="bar magic" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="spell-panel">
+        <p data-i18n="game.spells">法術：</p>
+        <div class="spell-slots">
+          <button class="spell-btn" id="spell-disguise" data-i18n="game.disguise">偽裝</button>
+          <button class="spell-btn" id="spell-charm" data-i18n="game.charm">魅惑</button>
+          <button class="spell-btn" id="spell-escape" data-i18n="game.teleport">傳送</button>
+        </div>
+      </div>
+
+      <div class="items-panel">
+        <div class="item-slot" id="item-herbs">
+          <span>🌿</span>
+          <small id="herbs-count">0</small>
+        </div>
+        <div class="item-slot" id="item-potion">
+          <span>🧪</span>
+          <small id="potion-count">0</small>
+        </div>
+        <div class="item-slot" id="item-talisman">
+          <span>📿</span>
+          <small id="talisman-count">0</small>
+        </div>
+      </div>
+
+      <div class="navigation">
+        <p data-i18n="game.goto">前往：</p>
+        <div id="nav-buttons" class="nav-buttons"></div>
+      </div>
+
+      <div class="actions">
+        <button id="search-btn" class="action-btn" data-i18n="game.search">搜索</button>
+        <button id="blend-btn" class="action-btn" data-i18n="game.blend">混入人群</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">開始逃亡</button>
+    </main>
+
+    <footer>
+      <p>Game #976 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
