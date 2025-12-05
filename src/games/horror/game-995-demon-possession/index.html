@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demon Possession - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Demon Possession</h1>
+      <p data-i18n="game.subtitle">Resist the demon's control before it takes over</p>
+    </header>
+
+    <div class="game-container">
+      <div class="possession-meter">
+        <div class="meter-label" data-i18n="game.possessionLevel">Possession Level</div>
+        <div class="meter-bar">
+          <div id="possession-bar" class="bar"></div>
+        </div>
+        <div id="possession-percent" class="percent">0%</div>
+      </div>
+
+      <div id="host-body" class="host-body">
+        <div class="body-silhouette">
+          <div id="demon-shadow" class="demon-shadow"></div>
+          <div class="human-icon">🧍</div>
+        </div>
+        <div id="control-points" class="control-points"></div>
+      </div>
+
+      <div class="resistance-area">
+        <div id="resist-prompt" class="resist-prompt" data-i18n="game.clickToResist">Click rapidly to resist!</div>
+        <button id="resist-btn" class="resist-btn" data-i18n="game.resist">RESIST</button>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Begin Ritual</button>
+    </div>
+
+    <footer>
+      <p>Game #995 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
