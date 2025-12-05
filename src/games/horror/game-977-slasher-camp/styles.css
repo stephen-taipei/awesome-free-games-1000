@@ -1,0 +1,364 @@
+:root {
+  --bg-color: #0a0f0a;
+  --text-color: #88aa88;
+  --camp-color: #558855;
+  --health-color: #cc4444;
+  --stamina-color: #44aa88;
+  --blood-color: #aa2222;
+  --danger-color: #ff3333;
+  --success-color: #55cc55;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(180deg, #151a15 0%, var(--bg-color) 100%);
+  color: var(--text-color);
+  font-family: 'Arial', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 15px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+header h1 {
+  color: var(--blood-color);
+  text-shadow: 0 0 15px var(--blood-color);
+  letter-spacing: 2px;
+  font-size: 22px;
+  margin: 0;
+}
+
+header p {
+  color: #556655;
+  font-size: 12px;
+  margin: 5px 0 0;
+}
+
+.game-container {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.camp-view {
+  position: relative;
+  height: 140px;
+  background: linear-gradient(180deg, #0a150a 0%, #051005 100%);
+  border: 2px solid #1a2a1a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.trees-bg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 60%;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 20px,
+    rgba(20, 40, 20, 0.5) 20px,
+    rgba(20, 40, 20, 0.5) 25px
+  );
+}
+
+.location-display {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 2;
+}
+
+.location-icon {
+  font-size: 35px;
+}
+
+.location-name {
+  font-size: 12px;
+  color: var(--camp-color);
+  margin-top: 5px;
+}
+
+.counselor {
+  position: absolute;
+  bottom: 15px;
+  left: 25%;
+  font-size: 28px;
+  z-index: 5;
+}
+
+.killer {
+  position: absolute;
+  bottom: 15px;
+  right: 25%;
+  font-size: 35px;
+  z-index: 4;
+  transition: all 0.5s;
+}
+
+.killer.hidden {
+  right: -50px;
+  opacity: 0;
+}
+
+.killer.chasing {
+  animation: killer-stalk 0.8s infinite;
+}
+
+@keyframes killer-stalk {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-15px); }
+}
+
+.hud {
+  display: flex;
+  justify-content: space-between;
+  background: #1a1f1a;
+  border: 1px solid #2a352a;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.hud-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.hud-item .value {
+  font-weight: bold;
+  color: #aaccaa;
+}
+
+.status-panel {
+  background: #1a1f1a;
+  border: 1px solid #2a352a;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.stat-row:last-child {
+  margin-bottom: 0;
+}
+
+.stat-row > span {
+  font-size: 16px;
+}
+
+.bar-container {
+  flex: 1;
+  height: 12px;
+  background: #0a0f0a;
+  border: 1px solid #2a352a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.bar.health { background: linear-gradient(90deg, #662222, var(--health-color)); }
+.bar.stamina { background: linear-gradient(90deg, #225544, var(--stamina-color)); }
+
+.items-panel {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  background: #1a1f1a;
+  border: 1px solid #2a352a;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.item-slot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 18px;
+  opacity: 0.3;
+  transition: opacity 0.3s;
+}
+
+.item-slot.has-item {
+  opacity: 1;
+}
+
+.item-slot small {
+  font-size: 11px;
+  color: var(--camp-color);
+}
+
+.navigation {
+  background: #1a1f1a;
+  border: 1px solid #2a352a;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.navigation > p {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: #556655;
+}
+
+.nav-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nav-btn {
+  padding: 6px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  background: #2a352a;
+  color: var(--text-color);
+  border: 1px solid #3a453a;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: #3a453a;
+  border-color: var(--camp-color);
+}
+
+.nav-btn.escape {
+  background: #2a3a2a;
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+
+.nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 12px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  background: #1a1f1a;
+  color: var(--text-color);
+  border: 2px solid #2a352a;
+  border-radius: 5px;
+  transition: all 0.2s;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: #2a352a;
+  border-color: var(--camp-color);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.status-msg {
+  min-height: 18px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.status-msg.danger { color: var(--danger-color); }
+.status-msg.warning { color: #ccaa44; }
+.status-msg.success { color: var(--success-color); }
+
+.btn {
+  padding: 10px 20px;
+  font-size: 13px;
+  cursor: pointer;
+  background: #1a1f1a;
+  color: var(--blood-color);
+  border: 2px solid var(--blood-color);
+  border-radius: 5px;
+  transition: all 0.3s;
+}
+
+.btn:hover {
+  background: rgba(170, 34, 34, 0.2);
+  box-shadow: 0 0 15px rgba(170, 34, 34, 0.4);
+}
+
+footer {
+  font-size: 10px;
+  color: #334433;
+  margin-top: auto;
+  padding: 10px;
+}
+
+a { color: #445544; }
+
+/* Chase state */
+.chase .camp-view {
+  animation: chase-shake 0.2s infinite;
+  border-color: var(--blood-color);
+}
+
+@keyframes chase-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+/* Dawn */
+.dawn .camp-view {
+  background: linear-gradient(180deg, #1a2520 0%, #0f1a15 100%);
+}
+
+.dawn .trees-bg {
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 20px,
+    rgba(30, 50, 30, 0.5) 20px,
+    rgba(30, 50, 30, 0.5) 25px
+  );
+}
+
+/* Escaped */
+.escaped .camp-view {
+  background: linear-gradient(180deg, #2a3a2a 0%, #1a2a1a 100%);
+  border-color: var(--success-color);
+}
