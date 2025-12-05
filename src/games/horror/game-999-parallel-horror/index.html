@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parallel Horror - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Parallel Horror</h1>
+      <p data-i18n="game.subtitle">Switch between worlds to escape</p>
+    </header>
+
+    <div class="game-container">
+      <div id="game-view" class="view light">
+        <div id="status-bar" class="status-bar">
+          <span id="world-indicator">Light World</span>
+          <span id="inventory">Inventory: []</span>
+        </div>
+
+        <div id="room" class="room">
+          <!-- Room content injected by JS -->
+        </div>
+      </div>
+      
+      <div class="controls">
+        <button id="switch-btn" class="btn" data-i18n="game.switch">Switch World</button>
+        <div id="message-log" class="message-log"></div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Game #999 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
