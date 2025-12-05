@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slasher Camp 殺手夏令營</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">殺手夏令營</h1>
+      <p data-i18n="game.subtitle">在黎明前活下來...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="camp-view">
+        <div class="trees-bg"></div>
+        <div id="location-display" class="location-display">
+          <div class="location-icon">🏕️</div>
+          <div id="location-name" class="location-name">營火區</div>
+        </div>
+        <div id="killer" class="killer hidden">🔪</div>
+        <div id="counselor" class="counselor">👤</div>
+      </div>
+
+      <div class="hud">
+        <div class="hud-item">
+          <span>👥</span>
+          <span data-i18n="game.survivors">生還者</span>
+          <span id="survivor-count" class="value">5</span>
+        </div>
+        <div class="hud-item">
+          <span>⏰</span>
+          <span id="time-display" class="value">12:00 AM</span>
+        </div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>❤️</span>
+          <div class="bar-container">
+            <div id="health-bar" class="bar health" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>🔋</span>
+          <div class="bar-container">
+            <div id="stamina-bar" class="bar stamina" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="items-panel">
+        <div class="item-slot" id="item-flashlight">
+          <span>🔦</span>
+        </div>
+        <div class="item-slot" id="item-medkit">
+          <span>🩹</span>
+          <small id="medkit-count">0</small>
+        </div>
+        <div class="item-slot" id="item-keys">
+          <span>🚗</span>
+          <small id="keys-count">0</small>
+        </div>
+      </div>
+
+      <div class="navigation">
+        <p data-i18n="game.goto">前往：</p>
+        <div id="nav-buttons" class="nav-buttons"></div>
+      </div>
+
+      <div class="actions">
+        <button id="search-btn" class="action-btn" data-i18n="game.search">搜索</button>
+        <button id="hide-btn" class="action-btn" data-i18n="game.hide">躲藏</button>
+        <button id="run-btn" class="action-btn" data-i18n="game.run">快跑</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">開始夜晚</button>
+    </main>
+
+    <footer>
+      <p>Game #977 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
