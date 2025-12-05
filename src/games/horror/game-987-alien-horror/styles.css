@@ -1,0 +1,338 @@
+:root {
+  --bg-color: #050508;
+  --text-color: #88aa88;
+  --radar-color: #00ff44;
+  --alien-color: #ff00ff;
+  --danger-color: #ff3333;
+  --barrier-color: #4488ff;
+  --ammo-color: #ffaa00;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(ellipse at center, #0a0a10 0%, var(--bg-color) 100%);
+  color: var(--text-color);
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 15px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+header h1 {
+  color: var(--radar-color);
+  text-shadow: 0 0 20px var(--radar-color);
+  letter-spacing: 3px;
+  font-size: 22px;
+}
+
+header p {
+  color: #446;
+  font-size: 12px;
+}
+
+.game-container {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.invasion-status {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.status-item {
+  text-align: center;
+}
+
+.status-item span {
+  font-size: 10px;
+  color: #556;
+}
+
+.count-display {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--radar-color);
+  text-shadow: 0 0 10px var(--radar-color);
+}
+
+.count-display.danger {
+  color: var(--alien-color);
+  text-shadow: 0 0 10px var(--alien-color);
+}
+
+.radar-screen {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0a1a0a 0%, #050a05 100%);
+  border: 4px solid #1a3a1a;
+  box-shadow: 0 0 30px rgba(0, 255, 68, 0.2),
+              inset 0 0 50px rgba(0, 255, 68, 0.1);
+  overflow: hidden;
+}
+
+.radar-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle, transparent 20%, rgba(0, 255, 68, 0.1) 20.5%, transparent 21%),
+    radial-gradient(circle, transparent 40%, rgba(0, 255, 68, 0.1) 40.5%, transparent 41%),
+    radial-gradient(circle, transparent 60%, rgba(0, 255, 68, 0.1) 60.5%, transparent 61%),
+    radial-gradient(circle, transparent 80%, rgba(0, 255, 68, 0.1) 80.5%, transparent 81%);
+}
+
+.radar-grid::before,
+.radar-grid::after {
+  content: '';
+  position: absolute;
+  background: rgba(0, 255, 68, 0.1);
+}
+
+.radar-grid::before {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+}
+
+.radar-grid::after {
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 100%;
+}
+
+.radar-sweep {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--radar-color), transparent);
+  transform-origin: left center;
+  animation: sweep 3s linear infinite;
+  box-shadow: 0 0 20px var(--radar-color);
+}
+
+@keyframes sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.radar-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  z-index: 5;
+}
+
+#blips-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.blip {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--alien-color);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: blip-pulse 1s infinite;
+  box-shadow: 0 0 10px var(--alien-color);
+  cursor: pointer;
+  z-index: 10;
+}
+
+.blip::after {
+  content: '👽';
+  font-size: 14px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes blip-pulse {
+  0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.3); }
+}
+
+.blip.hit {
+  animation: blip-explode 0.3s forwards;
+}
+
+@keyframes blip-explode {
+  to { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+}
+
+.defense-panel {
+  display: flex;
+  gap: 20px;
+}
+
+.ammo-display, .barrier-display {
+  flex: 1;
+}
+
+.ammo-display span, .barrier-display span {
+  font-size: 11px;
+  color: #556;
+}
+
+.ammo-bar, .barrier-bar {
+  height: 15px;
+  background: #111;
+  border: 1px solid #333;
+  margin-top: 5px;
+  display: flex;
+}
+
+.ammo-fill {
+  width: 10%;
+  height: 100%;
+  background: var(--ammo-color);
+  margin-right: 2px;
+}
+
+.ammo-bar {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+}
+
+.barrier-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--barrier-color);
+  transition: width 0.3s;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 15px 10px;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  cursor: pointer;
+  border: 2px solid;
+  border-radius: 5px;
+  transition: all 0.2s;
+}
+
+.action-btn.shoot {
+  background: #1a0a0a;
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.action-btn.reload {
+  background: #1a1a0a;
+  color: var(--ammo-color);
+  border-color: var(--ammo-color);
+}
+
+.action-btn.barrier {
+  background: #0a0a1a;
+  color: var(--barrier-color);
+  border-color: var(--barrier-color);
+}
+
+.action-btn:hover {
+  filter: brightness(1.3);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.status-msg {
+  min-height: 25px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.status-msg.danger { color: var(--danger-color); }
+.status-msg.warning { color: var(--ammo-color); }
+.status-msg.success { color: var(--radar-color); }
+
+.btn {
+  padding: 12px 25px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  background: #0a1a0a;
+  color: var(--radar-color);
+  border: 2px solid #1a3a1a;
+  border-radius: 5px;
+  transition: all 0.3s;
+}
+
+.btn:hover {
+  background: #0f2a0f;
+  border-color: var(--radar-color);
+  box-shadow: 0 0 15px rgba(0, 255, 68, 0.3);
+}
+
+footer {
+  font-size: 11px;
+  color: #223;
+  margin-top: auto;
+  padding: 10px;
+}
+
+a { color: #334; }
+
+/* Alert effects */
+.under-attack .radar-screen {
+  animation: radar-alert 0.5s infinite;
+}
+
+@keyframes radar-alert {
+  0%, 100% { border-color: #1a3a1a; }
+  50% { border-color: var(--danger-color); }
+}
+
+.wave-complete .radar-screen {
+  box-shadow: 0 0 50px rgba(0, 255, 68, 0.5);
+}
