@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cannibal Village 食人村落</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">食人村落</h1>
+      <p data-i18n="game.subtitle">在被獻祭前逃離村落...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="village-view">
+        <div class="torches"></div>
+        <div id="location-display" class="location-display">
+          <div class="location-icon">🏚️</div>
+          <div id="location-name" class="location-name">村落入口</div>
+        </div>
+        <div id="villager" class="villager hidden">🧟</div>
+        <div id="player" class="player">🏃</div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>❤️</span>
+          <span data-i18n="game.health">體力</span>
+          <div class="bar-container">
+            <div id="health-bar" class="bar health" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>🔇</span>
+          <span data-i18n="game.stealth">隱蔽</span>
+          <div class="bar-container">
+            <div id="stealth-bar" class="bar stealth" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="items-panel">
+        <div class="item-slot" id="item-knife">
+          <span>🔪</span>
+          <small id="knife-count">0</small>
+        </div>
+        <div class="item-slot" id="item-torch">
+          <span>🔥</span>
+          <small id="torch-count">0</small>
+        </div>
+        <div class="item-slot" id="item-key">
+          <span>🗝️</span>
+          <small id="key-count">0</small>
+        </div>
+      </div>
+
+      <div class="navigation">
+        <p data-i18n="game.navigate">前往：</p>
+        <div id="nav-buttons" class="nav-buttons"></div>
+      </div>
+
+      <div class="actions">
+        <button id="search-btn" class="action-btn" data-i18n="game.search">搜索</button>
+        <button id="sneak-btn" class="action-btn" data-i18n="game.sneak">潛行</button>
+        <button id="fight-btn" class="action-btn" data-i18n="game.fight">反擊</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">進入村落</button>
+    </main>
+
+    <footer>
+      <p>Game #978 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
