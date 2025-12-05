@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCP Containment - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="scp-logo">SCP</div>
+      <h1 data-i18n="game.title">Containment Breach</h1>
+      <p data-i18n="game.subtitle">Secure. Contain. Protect.</p>
+    </header>
+
+    <div class="game-container">
+      <div class="facility-status">
+        <div class="status-item">
+          <span data-i18n="game.power">Power</span>
+          <div class="status-bar"><div id="power-bar" class="bar power"></div></div>
+          <span id="power-value">100%</span>
+        </div>
+        <div class="status-item">
+          <span data-i18n="game.containment">Containment</span>
+          <div class="status-bar"><div id="containment-bar" class="bar containment"></div></div>
+          <span id="containment-value">100%</span>
+        </div>
+      </div>
+
+      <div class="terminal" id="terminal">
+        <div class="terminal-header">
+          <span class="terminal-title">SCP FOUNDATION TERMINAL</span>
+          <div class="terminal-lights">
+            <span class="light red" id="alert-light"></span>
+            <span class="light yellow"></span>
+            <span class="light green" id="status-light"></span>
+          </div>
+        </div>
+        <div class="terminal-body" id="terminal-body">
+          <div class="terminal-output" id="terminal-output"></div>
+        </div>
+      </div>
+
+      <div class="scp-panel" id="scp-panel">
+        <div class="scp-card" id="scp-card">
+          <div class="scp-header">
+            <span class="scp-class" id="scp-class">EUCLID</span>
+            <span class="scp-number" id="scp-number">SCP-???</span>
+          </div>
+          <div class="scp-info">
+            <p id="scp-description"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls" id="controls">
+        <button class="control-btn" id="lockdown-btn" data-i18n="game.lockdown">LOCKDOWN</button>
+        <button class="control-btn" id="power-btn" data-i18n="game.restorePower">RESTORE POWER</button>
+        <button class="control-btn" id="contain-btn" data-i18n="game.recontain">RECONTAIN</button>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Initialize System</button>
+    </div>
+
+    <footer>
+      <p>Game #990 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
