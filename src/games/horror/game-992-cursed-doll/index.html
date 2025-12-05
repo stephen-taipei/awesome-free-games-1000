@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursed Doll - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Cursed Doll</h1>
+      <p data-i18n="game.subtitle">Don't let the doll catch you looking</p>
+    </header>
+
+    <div class="game-container">
+      <div class="sanity-meter">
+        <span data-i18n="game.sanity">Sanity</span>
+        <div class="meter-bar">
+          <div id="sanity-bar" class="bar"></div>
+        </div>
+        <span id="sanity-value">100%</span>
+      </div>
+
+      <div class="doll-room" id="doll-room">
+        <div class="room-darkness" id="room-darkness"></div>
+        <div class="doll-container">
+          <div class="doll" id="doll">
+            <div class="doll-head">
+              <div class="doll-hair"></div>
+              <div class="doll-face">
+                <div class="doll-eyes">
+                  <div class="eye left" id="eye-left">👁</div>
+                  <div class="eye right" id="eye-right">👁</div>
+                </div>
+                <div class="doll-mouth" id="doll-mouth">👄</div>
+              </div>
+            </div>
+            <div class="doll-body">🎀</div>
+          </div>
+        </div>
+        <div class="warning-text" id="warning-text"></div>
+      </div>
+
+      <div class="instructions">
+        <p data-i18n="game.instruction">Look away when the doll's eyes glow red!</p>
+      </div>
+
+      <div class="controls">
+        <button id="look-btn" class="look-btn" data-i18n="game.looking">Looking at Doll</button>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Start Game</button>
+    </div>
+
+    <footer>
+      <p>Game #992 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
