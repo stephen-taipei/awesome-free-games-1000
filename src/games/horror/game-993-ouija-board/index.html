@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ouija Board - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Ouija Board</h1>
+      <p data-i18n="game.subtitle">Ask questions and watch the planchette reveal the answers</p>
+    </header>
+
+    <div class="game-container">
+      <div class="ouija-board" id="ouija-board">
+        <div class="board-top">
+          <span class="corner-text">YES</span>
+          <div class="decorative">🌙 ☀️</div>
+          <span class="corner-text">NO</span>
+        </div>
+
+        <div class="alphabet-rows">
+          <div class="alphabet-row">
+            <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span>
+            <span>F</span><span>G</span><span>H</span><span>I</span><span>J</span>
+            <span>K</span><span>L</span><span>M</span>
+          </div>
+          <div class="alphabet-row">
+            <span>N</span><span>O</span><span>P</span><span>Q</span><span>R</span>
+            <span>S</span><span>T</span><span>U</span><span>V</span><span>W</span>
+            <span>X</span><span>Y</span><span>Z</span>
+          </div>
+        </div>
+
+        <div class="numbers-row">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+          <span>6</span><span>7</span><span>8</span><span>9</span><span>0</span>
+        </div>
+
+        <div class="board-bottom">
+          <span class="goodbye">GOODBYE</span>
+        </div>
+
+        <div class="planchette" id="planchette">
+          <div class="planchette-window"></div>
+        </div>
+      </div>
+
+      <div class="message-display">
+        <span data-i18n="game.spiritSays">Spirit says:</span>
+        <div id="spirit-message" class="spirit-message"></div>
+      </div>
+
+      <div class="question-input">
+        <input type="text" id="question-field" class="question-field"
+               placeholder="Type your question..." data-i18n-placeholder="game.placeholder">
+        <button id="ask-btn" class="ask-btn" data-i18n="game.ask">Ask</button>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Place Hands on Planchette</button>
+    </div>
+
+    <footer>
+      <p>Game #993 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
