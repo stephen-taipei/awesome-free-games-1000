@@ -1,0 +1,100 @@
+export const translations = {
+  en: {
+    game: {
+      title: 'Witch Hunt',
+      subtitle: 'Escape before the execution...',
+      suspicion: 'Suspicion',
+      magic: 'Magic',
+      spells: 'Spells:',
+      disguise: 'Disguise',
+      charm: 'Charm',
+      teleport: 'Teleport',
+      goto: 'Go to:',
+      search: 'Search',
+      blend: 'Blend In',
+      start: 'Begin Escape',
+      locations: {
+        square: 'Village Square',
+        church: 'Church',
+        market: 'Market',
+        tavern: 'Tavern',
+        alley: 'Dark Alley',
+        graveyard: 'Graveyard',
+        woods: 'Woods Edge',
+        bridge: 'Old Bridge',
+        exit: 'Forest Path'
+      },
+      msgs: {
+        start: 'They\'re coming for you... escape the village!',
+        mobNear: 'You hear angry voices nearby...',
+        mobChase: 'THE MOB FOUND YOU!',
+        mobLost: 'You lost the mob...',
+        blending: 'You blend with the crowd...',
+        blendFail: 'Someone recognized you!',
+        disguised: 'Magical disguise activated!',
+        charmed: 'You charmed your way out!',
+        teleported: 'You teleported to safety!',
+        noMagic: 'Not enough magic!',
+        foundHerbs: 'Found magical herbs!',
+        foundPotion: 'Found a potion!',
+        foundTalisman: 'Found a protective talisman!',
+        foundNothing: 'Nothing useful here...',
+        potionUsed: 'Potion restored your magic!',
+        talismanUsed: 'Talisman reduced suspicion!',
+        suspicionHigh: 'They\'re very suspicious of you!',
+        exitBlocked: 'The path is guarded! Lower suspicion first!',
+        escaped: 'You escaped into the forest!',
+        caught: 'They caught you... the pyre awaits...'
+      }
+    }
+  },
+  'zh-TW': {
+    game: {
+      title: '獵巫行動',
+      subtitle: '在被處刑前逃離小鎮...',
+      suspicion: '懷疑',
+      magic: '魔力',
+      spells: '法術：',
+      disguise: '偽裝',
+      charm: '魅惑',
+      teleport: '傳送',
+      goto: '前往：',
+      search: '搜索',
+      blend: '混入人群',
+      start: '開始逃亡',
+      locations: {
+        square: '村莊廣場',
+        church: '教堂',
+        market: '市場',
+        tavern: '酒館',
+        alley: '暗巷',
+        graveyard: '墓地',
+        woods: '森林邊緣',
+        bridge: '古橋',
+        exit: '森林小路'
+      },
+      msgs: {
+        start: '他們正在追捕你...快逃離村莊！',
+        mobNear: '你聽到附近有憤怒的聲音...',
+        mobChase: '暴民發現你了！',
+        mobLost: '你甩掉了暴民...',
+        blending: '你混入人群中...',
+        blendFail: '有人認出你了！',
+        disguised: '魔法偽裝啟動！',
+        charmed: '你用魅惑脫身了！',
+        teleported: '你傳送到安全地點！',
+        noMagic: '魔力不足！',
+        foundHerbs: '找到魔法草藥！',
+        foundPotion: '找到藥水！',
+        foundTalisman: '找到護身符！',
+        foundNothing: '這裡沒有有用的東西...',
+        potionUsed: '藥水恢復了你的魔力！',
+        talismanUsed: '護身符降低了懷疑度！',
+        suspicionHigh: '他們非常懷疑你！',
+        exitBlocked: '出口有人把守！先降低懷疑度！',
+        escaped: '你逃入了森林！',
+        caught: '他們抓到你了...火刑台在等著你...'
+      }
+    }
+  }
+};
