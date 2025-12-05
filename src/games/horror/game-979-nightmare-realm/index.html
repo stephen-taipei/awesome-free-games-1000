@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nightmare Realm 惡夢領域</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">惡夢領域</h1>
+      <p data-i18n="game.subtitle">在你醒來之前逃離惡夢...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="dream-view">
+        <div class="distortion"></div>
+        <div id="realm-display" class="realm-display">
+          <div class="realm-icon">🌀</div>
+          <div id="realm-name" class="realm-name">迷霧之境</div>
+        </div>
+        <div id="nightmare" class="nightmare hidden">👁️</div>
+        <div id="dreamer" class="dreamer">💭</div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>😴</span>
+          <span data-i18n="game.consciousness">意識</span>
+          <div class="bar-container">
+            <div id="consciousness-bar" class="bar consciousness" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>⏰</span>
+          <span data-i18n="game.wakeTimer">覺醒</span>
+          <div class="bar-container">
+            <div id="wake-bar" class="bar wake" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lucid-panel">
+        <p data-i18n="game.lucidPower">清醒力量：</p>
+        <div class="power-slots">
+          <button class="power-btn" id="power-fly" data-i18n="game.fly">飛行</button>
+          <button class="power-btn" id="power-shield" data-i18n="game.shield">護盾</button>
+          <button class="power-btn" id="power-wake" data-i18n="game.wake">強制醒來</button>
+        </div>
+      </div>
+
+      <div class="navigation">
+        <p data-i18n="game.drift">漂流至：</p>
+        <div id="nav-buttons" class="nav-buttons"></div>
+      </div>
+
+      <div class="actions">
+        <button id="focus-btn" class="action-btn" data-i18n="game.focus">集中</button>
+        <button id="confront-btn" class="action-btn" data-i18n="game.confront">對抗</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">進入夢境</button>
+    </main>
+
+    <footer>
+      <p>Game #979 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
