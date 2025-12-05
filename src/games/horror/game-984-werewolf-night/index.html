@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Werewolf Night - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">Werewolf Night</h1>
+      <p data-i18n="game.subtitle">Survive until dawn...</p>
+    </header>
+
+    <div class="game-container">
+      <div class="night-sky">
+        <div class="moon" id="moon">🌕</div>
+        <div class="stars"></div>
+        <div class="time-display">
+          <span id="time-value">9:00 PM</span>
+        </div>
+      </div>
+
+      <div class="forest-scene" id="forest-scene">
+        <div class="trees">🌲🌳🌲🌳🌲</div>
+        <div class="cabin" id="cabin">🏠</div>
+        <div class="werewolf hidden" id="werewolf">🐺</div>
+        <div class="player" id="player">🧍</div>
+      </div>
+
+      <div class="status-bars">
+        <div class="bar-item">
+          <span>❤️</span>
+          <div class="bar-container"><div id="health-bar" class="bar health"></div></div>
+        </div>
+        <div class="bar-item">
+          <span>🛡️</span>
+          <div class="bar-container"><div id="safety-bar" class="bar safety"></div></div>
+        </div>
+      </div>
+
+      <div class="inventory">
+        <span data-i18n="game.inventory">Items:</span>
+        <div class="items" id="items">
+          <span class="item" id="item-silver">🔫 <small>0</small></span>
+          <span class="item" id="item-wolfsbane">🌿 <small>0</small></span>
+          <span class="item" id="item-trap">🪤 <small>0</small></span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="search-btn" class="control-btn" data-i18n="game.search">Search</button>
+        <button id="barricade-btn" class="control-btn" data-i18n="game.barricade">Barricade</button>
+        <button id="attack-btn" class="control-btn attack" data-i18n="game.attack">Attack</button>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">Begin Night</button>
+    </div>
+
+    <footer>
+      <p>Game #984 | <a href="/">Awesome Free Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>

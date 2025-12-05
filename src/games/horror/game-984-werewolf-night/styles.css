@@ -1,0 +1,340 @@
+:root {
+  --bg-color: #0a0a15;
+  --text-color: #8899aa;
+  --moon-color: #ffffcc;
+  --health-color: #ff4444;
+  --safety-color: #44aaff;
+  --silver-color: #c0c0c0;
+  --danger-color: #ff3333;
+  --success-color: #44cc44;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(180deg, #0a0a20 0%, var(--bg-color) 100%);
+  color: var(--text-color);
+  font-family: 'Georgia', serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 15px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+header h1 {
+  color: var(--moon-color);
+  text-shadow: 0 0 20px var(--moon-color);
+  letter-spacing: 3px;
+  font-size: 24px;
+}
+
+header p {
+  color: #556;
+  font-size: 12px;
+}
+
+.game-container {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.night-sky {
+  position: relative;
+  height: 60px;
+  background: linear-gradient(180deg, #0a0a20 0%, #151530 100%);
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+}
+
+.moon {
+  position: absolute;
+  right: 20px;
+  top: 10px;
+  font-size: 36px;
+  filter: drop-shadow(0 0 15px var(--moon-color));
+  transition: all 1s;
+}
+
+.moon.full {
+  animation: moon-pulse 2s infinite;
+}
+
+@keyframes moon-pulse {
+  0%, 100% { filter: drop-shadow(0 0 15px var(--moon-color)); }
+  50% { filter: drop-shadow(0 0 30px var(--moon-color)) brightness(1.2); }
+}
+
+.stars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(2px 2px at 20px 20px, white, transparent),
+                    radial-gradient(2px 2px at 50px 35px, white, transparent),
+                    radial-gradient(1px 1px at 80px 15px, white, transparent),
+                    radial-gradient(1px 1px at 120px 40px, white, transparent),
+                    radial-gradient(2px 2px at 160px 25px, white, transparent);
+  animation: twinkle 3s infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.time-display {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: var(--moon-color);
+}
+
+.forest-scene {
+  position: relative;
+  height: 180px;
+  background: linear-gradient(180deg, #151530 0%, #0a1510 100%);
+  border-radius: 0 0 10px 10px;
+  overflow: hidden;
+}
+
+.trees {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  font-size: 50px;
+  text-align: center;
+  opacity: 0.6;
+}
+
+.cabin {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 50px;
+}
+
+.player {
+  position: absolute;
+  bottom: 40px;
+  left: 40%;
+  font-size: 30px;
+  z-index: 5;
+}
+
+.werewolf {
+  position: absolute;
+  bottom: 40px;
+  right: 10%;
+  font-size: 40px;
+  transition: all 0.5s;
+  z-index: 4;
+}
+
+.werewolf.hidden {
+  right: -50px;
+  opacity: 0;
+}
+
+.werewolf.attacking {
+  right: 45%;
+  animation: werewolf-attack 0.5s infinite;
+}
+
+@keyframes werewolf-attack {
+  0%, 100% { transform: scale(1) rotate(0); }
+  50% { transform: scale(1.2) rotate(-10deg); }
+}
+
+.status-bars {
+  display: flex;
+  gap: 15px;
+}
+
+.bar-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bar-item span {
+  font-size: 18px;
+}
+
+.bar-container {
+  flex: 1;
+  height: 15px;
+  background: #1a1a25;
+  border: 1px solid #2a2a35;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  width: 100%;
+  transition: width 0.3s;
+}
+
+.bar.health { background: var(--health-color); }
+.bar.safety { background: var(--safety-color); }
+
+.inventory {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #1a1a25;
+  border-radius: 5px;
+}
+
+.inventory > span {
+  font-size: 12px;
+  color: #667;
+}
+
+.items {
+  display: flex;
+  gap: 15px;
+}
+
+.item {
+  font-size: 20px;
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+
+.item.has-item {
+  opacity: 1;
+}
+
+.item small {
+  font-size: 12px;
+  vertical-align: super;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+}
+
+.control-btn {
+  flex: 1;
+  padding: 15px 10px;
+  font-size: 13px;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+  background: #1a1a25;
+  color: var(--text-color);
+  border: 2px solid #2a2a35;
+  border-radius: 5px;
+  transition: all 0.2s;
+}
+
+.control-btn:hover:not(:disabled) {
+  background: #2a2a35;
+  border-color: var(--moon-color);
+}
+
+.control-btn.attack {
+  color: var(--silver-color);
+  border-color: var(--silver-color);
+}
+
+.control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.status-msg {
+  min-height: 25px;
+  font-size: 13px;
+  text-align: center;
+  font-style: italic;
+}
+
+.status-msg.danger { color: var(--danger-color); }
+.status-msg.warning { color: var(--moon-color); }
+.status-msg.success { color: var(--success-color); }
+
+.btn {
+  padding: 12px 25px;
+  font-size: 14px;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+  background: #1a1a25;
+  color: var(--moon-color);
+  border: 2px solid #2a2a35;
+  border-radius: 5px;
+  transition: all 0.3s;
+}
+
+.btn:hover {
+  background: #2a2a35;
+  border-color: var(--moon-color);
+  box-shadow: 0 0 15px rgba(255, 255, 204, 0.3);
+}
+
+footer {
+  font-size: 11px;
+  color: #334;
+  margin-top: auto;
+  padding: 10px;
+}
+
+a { color: #445; }
+
+/* Danger state */
+.under-attack .forest-scene {
+  animation: scene-shake 0.3s infinite;
+  border-color: var(--danger-color);
+}
+
+@keyframes scene-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* Dawn */
+.dawn .night-sky {
+  background: linear-gradient(180deg, #2a2040 0%, #4a3050 100%);
+}
+
+.dawn .forest-scene {
+  background: linear-gradient(180deg, #2a2040 0%, #1a2520 100%);
+}
+
+.victory .cabin {
+  animation: cabin-glow 1s infinite;
+}
+
+@keyframes cabin-glow {
+  0%, 100% { filter: drop-shadow(0 0 10px var(--moon-color)); }
+  50% { filter: drop-shadow(0 0 20px var(--moon-color)); }
+}
