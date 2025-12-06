@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creepy Pasta 恐怖故事</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">恐怖故事</h1>
+      <p data-i18n="game.subtitle">你敢讀完嗎...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="story-view">
+        <div class="story-title" id="story-title"></div>
+        <div class="story-content" id="story-content">
+          <p id="story-text"></p>
+        </div>
+        <div class="page-indicator">
+          <span id="current-page">1</span> / <span id="total-pages">5</span>
+        </div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>💓</span>
+          <span data-i18n="game.courage">勇氣</span>
+          <div class="bar-container">
+            <div id="courage-bar" class="bar courage" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>😱</span>
+          <span data-i18n="game.fear">恐懼</span>
+          <div class="bar-container">
+            <div id="fear-bar" class="bar fear" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="events-panel">
+        <div id="event-indicator" class="event-indicator"></div>
+      </div>
+
+      <div class="actions">
+        <button id="continue-btn" class="action-btn" data-i18n="game.continue">繼續閱讀</button>
+        <button id="look-btn" class="action-btn" data-i18n="game.lookAway">看向別處</button>
+        <button id="stop-btn" class="action-btn danger" data-i18n="game.stopReading">停止閱讀</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">開始閱讀</button>
+    </main>
+
+    <footer>
+      <p>Game #966 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>

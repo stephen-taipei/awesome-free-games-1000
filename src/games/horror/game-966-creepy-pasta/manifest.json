@@ -1,0 +1,15 @@
+{
+  "name": "Creepy Pasta",
+  "short_name": "CreepyPasta",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#666666",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
