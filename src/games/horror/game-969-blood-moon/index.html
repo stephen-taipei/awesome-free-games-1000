@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blood Moon 血月</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">血月</h1>
+      <p data-i18n="game.subtitle">狼人在月光下覺醒...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="moon-view">
+        <div id="moon" class="moon">🌕</div>
+        <div class="moon-phase" id="moon-phase">滿月</div>
+        <div id="werewolf" class="werewolf hidden">🐺</div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>❤️</span>
+          <span data-i18n="game.health">生命</span>
+          <div class="bar-container">
+            <div id="health-bar" class="bar health" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>🐺</span>
+          <span data-i18n="game.curse">詛咒</span>
+          <div class="bar-container">
+            <div id="curse-bar" class="bar curse" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>🌙</span>
+          <span data-i18n="game.moonPower">月力</span>
+          <div class="bar-container">
+            <div id="moon-bar" class="bar moon-power" style="width: 50%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inventory-panel">
+        <p data-i18n="game.items">道具：</p>
+        <div class="inventory-slots">
+          <div class="inv-slot" id="item-silver">🗡️ <span id="silver-count">0</span></div>
+          <div class="inv-slot" id="item-wolfsbane">🌿 <span id="wolfsbane-count">0</span></div>
+          <div class="inv-slot" id="item-cure">💊 <span id="cure-count">0</span></div>
+        </div>
+      </div>
+
+      <div class="villagers-panel">
+        <p data-i18n="game.villagers">倖存村民：<span id="villager-count">5</span>/5</p>
+        <div class="villagers-icons" id="villagers-icons">
+          <span class="villager">👨</span>
+          <span class="villager">👩</span>
+          <span class="villager">👴</span>
+          <span class="villager">👧</span>
+          <span class="villager">👦</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="hunt-btn" class="action-btn" data-i18n="game.hunt">獵殺狼人</button>
+        <button id="protect-btn" class="action-btn" data-i18n="game.protect">保護村民</button>
+        <button id="cure-btn" class="action-btn" data-i18n="game.cure">治療詛咒</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">迎接血月</button>
+    </main>
+
+    <footer>
+      <p>Game #969 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
