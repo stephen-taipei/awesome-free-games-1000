@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wendigo Woods 溫迪戈森林</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">溫迪戈森林</h1>
+      <p data-i18n="game.subtitle">飢餓永無止境...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="forest-view">
+        <div class="trees">
+          <span>🌲</span><span>🌲</span><span>🌲</span>
+        </div>
+        <div id="wendigo" class="wendigo hidden">🦌</div>
+        <div class="player-area">
+          <div id="player" class="player">🧍</div>
+        </div>
+        <div class="snow-overlay" id="snow"></div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>❤️</span>
+          <span data-i18n="game.health">生命</span>
+          <div class="bar-container">
+            <div id="health-bar" class="bar health" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>🥶</span>
+          <span data-i18n="game.warmth">體溫</span>
+          <div class="bar-container">
+            <div id="warmth-bar" class="bar warmth" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>🍖</span>
+          <span data-i18n="game.hunger">飢餓</span>
+          <div class="bar-container">
+            <div id="hunger-bar" class="bar hunger" style="width: 20%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inventory-panel">
+        <p data-i18n="game.items">道具：</p>
+        <div class="inventory-slots">
+          <div class="inv-slot" id="item-torch">🔥 <span id="torch-count">0</span></div>
+          <div class="inv-slot" id="item-meat">🥩 <span id="meat-count">0</span></div>
+          <div class="inv-slot" id="item-flare">🚀 <span id="flare-count">0</span></div>
+        </div>
+      </div>
+
+      <div class="distance-panel">
+        <p data-i18n="game.escape">逃離進度：</p>
+        <div class="distance-bar">
+          <div id="distance-progress" class="distance-fill" style="width: 0%"></div>
+          <span id="distance-text">0%</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="run-btn" class="action-btn" data-i18n="game.run">奔跑</button>
+        <button id="hide-btn" class="action-btn" data-i18n="game.hide">躲藏</button>
+        <button id="search-btn" class="action-btn" data-i18n="game.search">搜索</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">進入森林</button>
+    </main>
+
+    <footer>
+      <p>Game #972 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
