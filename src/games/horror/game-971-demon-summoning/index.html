@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demon Summoning 惡魔召喚</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">惡魔召喚</h1>
+      <p data-i18n="game.subtitle">完成儀式，但別失去控制...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="ritual-circle">
+        <div class="pentagram">
+          <div class="candle" id="candle-1">🕯️</div>
+          <div class="candle" id="candle-2">🕯️</div>
+          <div class="candle" id="candle-3">🕯️</div>
+          <div class="candle" id="candle-4">🕯️</div>
+          <div class="candle" id="candle-5">🕯️</div>
+          <div id="demon" class="demon">👁️</div>
+        </div>
+        <div class="runes" id="runes"></div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>🔥</span>
+          <span data-i18n="game.power">力量</span>
+          <div class="bar-container">
+            <div id="power-bar" class="bar power" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>🛡️</span>
+          <span data-i18n="game.control">控制</span>
+          <div class="bar-container">
+            <div id="control-bar" class="bar control" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>💀</span>
+          <span data-i18n="game.corruption">腐化</span>
+          <div class="bar-container">
+            <div id="corruption-bar" class="bar corruption" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="offerings-panel">
+        <p data-i18n="game.offerings">祭品：</p>
+        <div class="offerings-list">
+          <div class="offering" id="offer-blood">🩸 <span data-i18n="game.blood">鮮血</span></div>
+          <div class="offering" id="offer-bone">🦴 <span data-i18n="game.bone">骨頭</span></div>
+          <div class="offering" id="offer-soul">👻 <span data-i18n="game.soul">靈魂</span></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="chant-btn" class="action-btn" data-i18n="game.chant">吟唱咒語</button>
+        <button id="offer-btn" class="action-btn" data-i18n="game.offer">獻上祭品</button>
+        <button id="bind-btn" class="action-btn" data-i18n="game.bind">束縛惡魔</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">開始儀式</button>
+    </main>
+
+    <footer>
+      <p>Game #971 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
