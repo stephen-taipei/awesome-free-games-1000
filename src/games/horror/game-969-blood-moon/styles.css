@@ -1,0 +1,382 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-dark: #0a0510;
+  --bg-card: #1a0f1a;
+  --primary: #aa3344;
+  --secondary: #772233;
+  --danger: #cc2233;
+  --success: #44aa66;
+  --warning: #cc8833;
+  --text: #f0e0e8;
+  --text-dim: #aa8899;
+  --moon: #ffcc88;
+  --blood: #cc2244;
+  --glow: rgba(170, 51, 68, 0.5);
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-dark);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+
+#app {
+  width: 100%;
+  max-width: 480px;
+}
+
+header {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+header h1 {
+  font-size: 1.8rem;
+  color: var(--primary);
+  text-shadow: 0 0 20px var(--glow);
+}
+
+header p {
+  color: var(--text-dim);
+  margin-top: 0.5rem;
+}
+
+.game-container {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.moon-view {
+  position: relative;
+  height: 150px;
+  background: linear-gradient(180deg, #0a0515 0%, #1a1025 100%);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.moon {
+  font-size: 4rem;
+  transition: all 0.5s ease;
+  filter: drop-shadow(0 0 20px var(--moon));
+}
+
+.moon.blood {
+  filter: drop-shadow(0 0 30px var(--blood)) hue-rotate(-30deg) saturate(2);
+}
+
+.moon-phase {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+.werewolf {
+  position: absolute;
+  font-size: 3rem;
+  bottom: 10px;
+  right: 20px;
+  transition: all 0.5s ease;
+}
+
+.werewolf.hidden {
+  opacity: 0;
+  transform: scale(0);
+}
+
+.werewolf.prowling {
+  opacity: 0.7;
+  transform: scale(1);
+  animation: prowl 2s infinite;
+}
+
+@keyframes prowl {
+  0%, 100% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(-20px) scale(1.1); }
+}
+
+.werewolf.attacking {
+  opacity: 1;
+  font-size: 4rem;
+  bottom: 20%;
+  right: 30%;
+  animation: attack 0.3s infinite;
+  filter: drop-shadow(0 0 15px var(--blood));
+}
+
+@keyframes attack {
+  0%, 100% { transform: scale(1) rotate(-5deg); }
+  50% { transform: scale(1.2) rotate(5deg); }
+}
+
+.werewolf.defeated {
+  opacity: 0.5;
+  transform: rotate(90deg);
+  filter: grayscale(1);
+}
+
+.status-panel {
+  margin-bottom: 1rem;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-row span:first-child {
+  font-size: 1.2rem;
+}
+
+.stat-row span:nth-child(2) {
+  width: 50px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.bar-container {
+  flex: 1;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.bar.health {
+  background: linear-gradient(90deg, var(--danger), #ee5566);
+}
+
+.bar.curse {
+  background: linear-gradient(90deg, #6633aa, #9955cc);
+}
+
+.bar.curse.high {
+  animation: curse-pulse 0.5s infinite;
+}
+
+@keyframes curse-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.bar.moon-power {
+  background: linear-gradient(90deg, var(--moon), #ffdd99);
+}
+
+.bar.moon-power.blood-moon {
+  background: linear-gradient(90deg, var(--blood), #ee4466);
+}
+
+.inventory-panel {
+  margin-bottom: 1rem;
+}
+
+.inventory-panel > p {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.inventory-slots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.inv-slot {
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--text-dim);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  opacity: 0.5;
+  transition: all 0.2s ease;
+}
+
+.inv-slot.has-item {
+  opacity: 1;
+  border-color: var(--primary);
+}
+
+.villagers-panel {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.villagers-panel > p {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.villagers-icons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.villager {
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.villager.dead {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  background: linear-gradient(135deg, var(--bg-dark), #2a1520);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: var(--primary);
+  transform: translateY(-2px);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.status-msg {
+  text-align: center;
+  min-height: 2.5rem;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.status-msg.warning {
+  color: var(--warning);
+  background: rgba(204, 136, 51, 0.1);
+}
+
+.status-msg.danger {
+  color: var(--danger);
+  background: rgba(204, 34, 51, 0.1);
+  animation: shake 0.3s;
+}
+
+.status-msg.success {
+  color: var(--success);
+  background: rgba(68, 170, 102, 0.1);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.btn {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--glow);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.game-container.blood-moon-active {
+  animation: blood-glow 2s infinite;
+}
+
+@keyframes blood-glow {
+  0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); }
+  50% { box-shadow: 0 8px 32px var(--glow); }
+}
+
+.game-container.victory .moon-view {
+  background: linear-gradient(180deg, #101520 0%, #1a2530 100%);
+}
+
+.game-container.defeat .moon-view {
+  background: linear-gradient(180deg, #200510 0%, #301020 100%);
+}
+
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+footer a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 360px) {
+  .action-btn {
+    font-size: 0.7rem;
+    padding: 0.6rem 0.3rem;
+  }
+
+  .inv-slot {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+}
