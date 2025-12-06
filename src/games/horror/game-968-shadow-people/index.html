@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shadow People 影子人</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">影子人</h1>
+      <p data-i18n="game.subtitle">他們就在黑暗的角落...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="room-view">
+        <div class="corners">
+          <div class="corner" id="corner-tl"><span class="shadow"></span></div>
+          <div class="corner" id="corner-tr"><span class="shadow"></span></div>
+          <div class="corner" id="corner-bl"><span class="shadow"></span></div>
+          <div class="corner" id="corner-br"><span class="shadow"></span></div>
+        </div>
+        <div class="center-area">
+          <div id="light-source" class="light-source">💡</div>
+        </div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>💓</span>
+          <span data-i18n="game.sanity">理智</span>
+          <div class="bar-container">
+            <div id="sanity-bar" class="bar sanity" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>💡</span>
+          <span data-i18n="game.light">光源</span>
+          <div class="bar-container">
+            <div id="light-bar" class="bar light" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="shadow-counter">
+        <span>👤</span>
+        <span data-i18n="game.shadows">影子數：</span>
+        <span id="shadow-count">0</span>
+        <span class="max-shadows">/ 4</span>
+      </div>
+
+      <div class="time-panel">
+        <span>🕐</span>
+        <span data-i18n="game.time">時間：</span>
+        <span id="time-display">3:00 AM</span>
+        <span class="time-goal">→ 6:00 AM</span>
+      </div>
+
+      <div class="actions">
+        <button id="look-tl" class="action-btn corner-btn" data-i18n="game.lookTL">看左上</button>
+        <button id="look-tr" class="action-btn corner-btn" data-i18n="game.lookTR">看右上</button>
+        <button id="look-bl" class="action-btn corner-btn" data-i18n="game.lookBL">看左下</button>
+        <button id="look-br" class="action-btn corner-btn" data-i18n="game.lookBR">看右下</button>
+      </div>
+
+      <div class="actions secondary">
+        <button id="light-btn" class="action-btn" data-i18n="game.useLight">開燈</button>
+        <button id="close-btn" class="action-btn" data-i18n="game.closeEyes">閉眼</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">面對黑暗</button>
+    </main>
+
+    <footer>
+      <p>Game #968 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
