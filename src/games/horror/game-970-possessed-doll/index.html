@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Possessed Doll 附身娃娃</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">附身娃娃</h1>
+      <p data-i18n="game.subtitle">她一直在看著你...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="room-view">
+        <div class="room-bg">
+          <div id="room-icon" class="room-icon">🛏️</div>
+          <div id="room-name" class="room-name">臥室</div>
+        </div>
+        <div id="doll" class="doll">🎎</div>
+        <div id="doll-position" class="doll-indicator"></div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>💓</span>
+          <span data-i18n="game.sanity">理智</span>
+          <div class="bar-container">
+            <div id="sanity-bar" class="bar sanity" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>🔋</span>
+          <span data-i18n="game.battery">電池</span>
+          <div class="bar-container">
+            <div id="battery-bar" class="bar battery" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="time-panel">
+        <span>🕐</span>
+        <span data-i18n="game.time">時間：</span>
+        <span id="time-display">12:00 AM</span>
+        <span class="time-goal">→ 6:00 AM</span>
+      </div>
+
+      <div class="nav-panel">
+        <p data-i18n="game.goto">移動到：</p>
+        <div class="nav-buttons" id="nav-buttons"></div>
+      </div>
+
+      <div class="actions">
+        <button id="watch-btn" class="action-btn" data-i18n="game.watch">監視娃娃</button>
+        <button id="hide-btn" class="action-btn" data-i18n="game.hide">躲藏</button>
+        <button id="flashlight-btn" class="action-btn" data-i18n="game.flashlight">手電筒</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">開始夜晚</button>
+    </main>
+
+    <footer>
+      <p>Game #970 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
