@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skinwalker 皮行者</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">皮行者</h1>
+      <p data-i18n="game.subtitle">沙漠中的模仿者正在接近...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="scene-view">
+        <div id="scene-icon" class="scene-icon">🏜️</div>
+        <div id="scene-name" class="scene-name">納瓦霍沙漠</div>
+        <div id="creature" class="creature hidden">👁️</div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>❤️</span>
+          <span data-i18n="game.health">生命</span>
+          <div class="bar-container">
+            <div id="health-bar" class="bar health" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>🔥</span>
+          <span data-i18n="game.fire">火堆</span>
+          <div class="bar-container">
+            <div id="fire-bar" class="bar fire" style="width: 80%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>👂</span>
+          <span data-i18n="game.trust">信任</span>
+          <div class="bar-container">
+            <div id="trust-bar" class="bar trust" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="companions-panel">
+        <p data-i18n="game.companions">同伴：</p>
+        <div class="companions-list" id="companions-list">
+          <div class="companion" data-id="elder">👴 <span data-i18n="game.names.elder">長老</span></div>
+          <div class="companion" data-id="hunter">🏹 <span data-i18n="game.names.hunter">獵人</span></div>
+          <div class="companion" data-id="child">👦 <span data-i18n="game.names.child">孩子</span></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="watch-btn" class="action-btn" data-i18n="game.watch">警戒</button>
+        <button id="fire-btn" class="action-btn" data-i18n="game.addFire">添柴</button>
+        <button id="verify-btn" class="action-btn" data-i18n="game.verify">驗證身份</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">開始夜晚</button>
+    </main>
+
+    <footer>
+      <p>Game #973 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>

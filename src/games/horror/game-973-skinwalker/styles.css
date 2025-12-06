@@ -1,0 +1,381 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-dark: #1a0f0a;
+  --bg-card: #2a1a12;
+  --primary: #cc7744;
+  --secondary: #886633;
+  --danger: #cc3333;
+  --success: #55aa55;
+  --warning: #ccaa33;
+  --text: #e8ddd0;
+  --text-dim: #998877;
+  --fire: #ff6622;
+  --glow: rgba(204, 119, 68, 0.4);
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-dark);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+
+#app {
+  width: 100%;
+  max-width: 480px;
+}
+
+header {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+header h1 {
+  font-size: 1.8rem;
+  color: var(--primary);
+  text-shadow: 0 0 20px var(--glow);
+}
+
+header p {
+  color: var(--text-dim);
+  margin-top: 0.5rem;
+}
+
+.game-container {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.scene-view {
+  position: relative;
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(180deg, #1a0a05 0%, #2a1510 100%);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  min-height: 140px;
+  overflow: hidden;
+}
+
+.scene-view::before {
+  content: '✨';
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 0.8rem;
+  animation: twinkle 2s infinite;
+}
+
+.scene-view::after {
+  content: '✨';
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 0.6rem;
+  animation: twinkle 2s infinite 0.5s;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.scene-icon {
+  font-size: 4rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.scene-name {
+  font-size: 1.1rem;
+  color: var(--text-dim);
+}
+
+.creature {
+  position: absolute;
+  font-size: 2rem;
+  transition: all 0.5s ease;
+  filter: drop-shadow(0 0 10px var(--danger));
+}
+
+.creature.hidden {
+  opacity: 0;
+  transform: scale(0);
+}
+
+.creature.watching {
+  opacity: 1;
+  transform: scale(1);
+  animation: creep 3s infinite;
+}
+
+@keyframes creep {
+  0%, 100% { transform: scale(1) translateX(0); }
+  25% { transform: scale(1.1) translateX(-10px); }
+  75% { transform: scale(0.9) translateX(10px); }
+}
+
+.creature.attacking {
+  opacity: 1;
+  font-size: 4rem;
+  animation: attack-pulse 0.3s infinite;
+}
+
+@keyframes attack-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.status-panel {
+  margin-bottom: 1rem;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-row span:first-child {
+  font-size: 1.2rem;
+}
+
+.stat-row span:nth-child(2) {
+  width: 60px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.bar-container {
+  flex: 1;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.bar.health {
+  background: linear-gradient(90deg, var(--danger), #ff6666);
+}
+
+.bar.fire {
+  background: linear-gradient(90deg, var(--fire), #ffaa44);
+}
+
+.bar.trust {
+  background: linear-gradient(90deg, var(--success), #88cc88);
+}
+
+.bar.fire.low {
+  animation: flicker 0.5s infinite;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.companions-panel {
+  margin-bottom: 1rem;
+}
+
+.companions-panel > p {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.companions-list {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.companion {
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--text-dim);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.companion:hover {
+  background: rgba(204, 119, 68, 0.2);
+  border-color: var(--primary);
+}
+
+.companion.selected {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.companion.dead {
+  opacity: 0.4;
+  text-decoration: line-through;
+  pointer-events: none;
+  border-color: var(--danger);
+}
+
+.companion.impostor {
+  background: var(--danger);
+  border-color: var(--danger);
+  animation: reveal 0.5s;
+}
+
+@keyframes reveal {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  background: linear-gradient(135deg, var(--bg-dark), #3a2520);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: var(--primary);
+  transform: translateY(-2px);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.status-msg {
+  text-align: center;
+  min-height: 2.5rem;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.status-msg.warning {
+  color: var(--warning);
+  background: rgba(204, 170, 51, 0.1);
+}
+
+.status-msg.danger {
+  color: var(--danger);
+  background: rgba(204, 51, 51, 0.1);
+  animation: shake 0.3s;
+}
+
+.status-msg.success {
+  color: var(--success);
+  background: rgba(85, 170, 85, 0.1);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.btn {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--glow);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.game-container.danger-mode {
+  animation: danger-pulse 1s infinite;
+}
+
+@keyframes danger-pulse {
+  0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); }
+  50% { box-shadow: 0 8px 32px rgba(204, 51, 51, 0.4); }
+}
+
+.game-container.victory .scene-view {
+  background: linear-gradient(180deg, #1a2a15 0%, #2a3a20 100%);
+}
+
+.game-container.defeat .scene-view {
+  background: linear-gradient(180deg, #2a0a0a 0%, #3a1515 100%);
+}
+
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+footer a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 360px) {
+  .action-btn {
+    font-size: 0.75rem;
+    padding: 0.6rem 0.3rem;
+  }
+
+  .companion {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+  }
+}
