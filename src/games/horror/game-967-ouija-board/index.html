@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ouija Board 乩板</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 data-i18n="game.title">乩板</h1>
+      <p data-i18n="game.subtitle">與彼岸對話...</p>
+    </header>
+
+    <main class="game-container">
+      <div class="board-view">
+        <div class="board">
+          <div class="letters-row">
+            <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span>
+          </div>
+          <div class="letters-row">
+            <span>H</span><span>I</span><span>J</span><span>K</span><span>L</span><span>M</span><span>N</span>
+          </div>
+          <div class="letters-row">
+            <span>O</span><span>P</span><span>Q</span><span>R</span><span>S</span><span>T</span><span>U</span>
+          </div>
+          <div class="letters-row">
+            <span>V</span><span>W</span><span>X</span><span>Y</span><span>Z</span>
+          </div>
+          <div class="special-row">
+            <span class="yes" data-i18n="game.yes">是</span>
+            <span class="no" data-i18n="game.no">否</span>
+            <span class="goodbye" data-i18n="game.goodbye">再見</span>
+          </div>
+          <div id="planchette" class="planchette">👁️</div>
+        </div>
+        <div id="spirit-indicator" class="spirit-indicator"></div>
+      </div>
+
+      <div class="message-display">
+        <p data-i18n="game.spiritSays">靈體說：</p>
+        <div id="spirit-message" class="spirit-message"></div>
+      </div>
+
+      <div class="status-panel">
+        <div class="stat-row">
+          <span>💓</span>
+          <span data-i18n="game.sanity">理智</span>
+          <div class="bar-container">
+            <div id="sanity-bar" class="bar sanity" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span>👻</span>
+          <span data-i18n="game.spiritPower">靈力</span>
+          <div class="bar-container">
+            <div id="spirit-bar" class="bar spirit" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="question-panel">
+        <p data-i18n="game.askQuestion">選擇問題：</p>
+        <div class="questions" id="questions">
+          <button class="question-btn" data-q="name" data-i18n="game.q.name">你是誰？</button>
+          <button class="question-btn" data-q="alive" data-i18n="game.q.alive">你還活著嗎？</button>
+          <button class="question-btn" data-q="want" data-i18n="game.q.want">你想要什麼？</button>
+          <button class="question-btn" data-q="leave" data-i18n="game.q.leave">你會離開嗎？</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="goodbye-btn" class="action-btn" data-i18n="game.sayGoodbye">說再見</button>
+        <button id="protect-btn" class="action-btn" data-i18n="game.protect">自我保護</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+
+      <button id="start-btn" class="btn" data-i18n="game.start">開始通靈</button>
+    </main>
+
+    <footer>
+      <p>Game #967 | <a href="../../index.html">Back to Games</a></p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
