@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maze - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="../../shared/styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">Maze</h1>
+        <div class="header-controls">
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-controls">
+        <div class="stats-card">
+          <span data-i18n="game.level">Level</span>
+          <span id="level-display">1</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.time">Time</span>
+          <span id="time-display">0:00</span>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2
+              class="overlay-title"
+              id="overlay-title"
+              data-i18n="game.welcome"
+            >
+              Maze
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Find the exit!
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              Start Game
+            </button>
+            <div class="level-select">
+              <label
+                ><input type="radio" name="difficulty" value="10" checked />
+                Easy</label
+              >
+              <label
+                ><input type="radio" name="difficulty" value="20" /> Hard</label
+              >
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div class="footer-controls">
+        <button id="reset-btn" class="btn warning" data-i18n="game.reset">
+          Reset
+        </button>
+        <div class="mobile-controls">
+          <button id="up-btn">▲</button>
+          <div class="row">
+            <button id="left-btn">◀</button>
+            <button id="down-btn">▼</button>
+            <button id="right-btn">▶</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

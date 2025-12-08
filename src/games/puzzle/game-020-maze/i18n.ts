@@ -1,0 +1,32 @@
+export const translations = {
+  "zh-TW": {
+    "game.title": "迷宮",
+    "game.level": "關卡",
+    "game.time": "時間",
+    "game.welcome": "迷宮",
+    "game.desc": "找到出口！",
+    "game.start": "開始遊戲",
+    "game.reset": "重置",
+    "game.win": "過關！",
+  },
+  en: {
+    "game.title": "Maze",
+    "game.level": "Level",
+    "game.time": "Time",
+    "game.welcome": "Maze",
+    "game.desc": "Find the exit!",
+    "game.start": "Start Game",
+    "game.reset": "Reset",
+    "game.win": "You Win!",
+  },
+  ja: {
+    "game.title": "迷路",
+    "game.level": "レベル",
+    "game.time": "時間",
+    "game.welcome": "迷路",
+    "game.desc": "出口を見つけよう！",
+    "game.start": "スタート",
+    "game.reset": "リセット",
+    "game.win": "クリア！",
+  },
+};
