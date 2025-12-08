@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jigsaw Puzzle - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="../../shared/styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">Jigsaw Puzzle</h1>
+        <div class="header-controls">
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+          <button id="help-btn" class="icon-btn" aria-label="Help">❔</button>
+        </div>
+      </header>
+
+      <div class="game-controls">
+        <div class="control-group">
+          <label for="difficulty-select" data-i18n="game.difficulty"
+            >Difficulty:</label
+          >
+          <select id="difficulty-select">
+            <option value="easy">Easy (3x3)</option>
+            <option value="medium" selected>Medium (4x4)</option>
+            <option value="hard">Hard (6x6)</option>
+            <option value="expert">Expert (8x8)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="image-select" data-i18n="game.image">Image:</label>
+          <select id="image-select">
+            <option value="nature">Nature</option>
+            <option value="city">City</option>
+            <option value="animals">Animals</option>
+          </select>
+          <!-- <input type="file" id="image-upload" accept="image/*" /> -->
+        </div>
+        <div class="control-group">
+          <button id="start-btn" class="btn primary" data-i18n="game.start">
+            Start Game
+          </button>
+          <button
+            id="preview-btn"
+            class="btn secondary"
+            data-i18n="game.preview"
+          >
+            Preview
+          </button>
+        </div>
+        <div class="stats">
+          <span id="time-counter">00:00</span>
+          <span id="piece-counter">0/16</span>
+        </div>
+      </div>
+
+      <main class="game-area" id="game-area">
+        <canvas id="game-canvas"></canvas>
+        <div id="game-overlay" class="overlay" style="display: none">
+          <div class="overlay-content">
+            <h2 id="overlay-title" class="overlay-title"></h2>
+            <div id="overlay-stats" class="overlay-stats"></div>
+            <button
+              id="play-again-btn"
+              class="btn primary"
+              data-i18n="game.playAgain"
+            >
+              Play Again
+            </button>
+          </div>
+        </div>
+        <div id="loading-overlay" class="overlay" style="display: none">
+          <div class="spinner"></div>
+          <p data-i18n="game.loading">Loading...</p>
+        </div>
+      </main>
+
+      <div id="help-modal" class="modal" style="display: none">
+        <div class="modal-content">
+          <span id="modal-close" class="close">&times;</span>
+          <h2 data-i18n="help.title">How to Play</h2>
+          <p data-i18n="help.desc1">Drag pieces to move them.</p>
+          <p data-i18n="help.desc2">
+            Connect pieces together to form the image.
+          </p>
+          <p data-i18n="help.desc3">Use mouse or touch to control.</p>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
