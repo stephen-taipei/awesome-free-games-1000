@@ -137,7 +137,7 @@ gtag('event', 'share', { game_id, method });
 | 015 | 魔術方塊       | Rubik's Cube        | 3D還原六面同色       | CSS 3D                | 🟩    |
 | 016 | 記憶翻牌       | Memory Match        | 翻牌配對相同圖案     | CSS Flip + JS         | 🟩    |
 | 017 | 滑動拼圖       | Sliding Puzzle      | 滑動還原圖片順序     | CSS Grid + JS         | 🟩    |
-| 018 | 填字遊戲       | Crossword           | 根據提示填入單字     | React + Grid          | ⬜    |
+| 018 | 填字遊戲       | Crossword           | 根據提示填入單字     | Vanilla JS + Grid     | 🟩    |
 | 019 | 找不同         | Spot Difference     | 找出兩圖差異處       | Canvas Compare        | ⬜    |
 | 020 | 迷宮           | Maze                | 找到出口路徑         | Canvas + Algorithm    | ⬜    |
 | 021 | 水管工         | Pipe Puzzle         | 連接水管通路         | Grid + Rotate         | ⬜    |
