@@ -135,7 +135,7 @@ gtag('event', 'share', { game_id, method });
 | 013 | 數織           | Nonogram            | 根據數字填格邏輯     | Canvas 2D             | 🟩    |
 | 014 | 七巧板         | Tangram             | 拼合幾何圖形         | SVG + Drag            | 🟩    |
 | 015 | 魔術方塊       | Rubik's Cube        | 3D還原六面同色       | CSS 3D                | 🟩    |
-| 016 | 記憶翻牌       | Memory Match        | 翻牌配對相同圖案     | CSS Flip + JS         | ⬜    |
+| 016 | 記憶翻牌       | Memory Match        | 翻牌配對相同圖案     | CSS Flip + JS         | 🟩    |
 | 017 | 滑動拼圖       | Sliding Puzzle      | 滑動還原圖片順序     | CSS Grid + JS         | ⬜    |
 | 018 | 填字遊戲       | Crossword           | 根據提示填入單字     | React + Grid          | ⬜    |
 | 019 | 找不同         | Spot Difference     | 找出兩圖差異處       | Canvas Compare        | ⬜    |
