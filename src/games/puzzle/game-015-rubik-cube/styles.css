@@ -1,0 +1,119 @@
+.game-container {
+  max-width: 600px;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #2c3e50;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  margin-bottom: 1rem;
+  perspective: 1000px; /* Essential for 3D */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  touch-action: none; /* Prevent scroll */
+}
+
+.scene {
+  width: 200px;
+  height: 200px;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(-30deg) rotateY(45deg);
+  transition: transform 0.1s linear; /* Smooth view rotate */
+}
+
+/* The core group that holds layers/cubies */
+.cube {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.cubie {
+  position: absolute;
+  width: 33.33%; /* 1/3 of container */
+  height: 33.33%;
+  /* Start centered to apply transform conveniently? Or strict grid. */
+  /* Let's say top-left is 0,0. */
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease-out; /* Animation for face rotation */
+}
+
+/* Faces of a cubie */
+.face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #000;
+  background: #111; /* Internal color */
+  box-sizing: border-box;
+  backface-visibility: hidden; /* Or visible? usually hidden for 1-sided, but cube solid needs visible or 6 faces */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 10px;
+  color: white;
+}
+
+/* Standard Colors */
+.face.front {
+  transform: translateZ(33px);
+  background: #b90000;
+} /* Red */
+.face.back {
+  transform: rotateY(180deg) translateZ(33px);
+  background: #ff5900;
+} /* Orange */
+.face.right {
+  transform: rotateY(90deg) translateZ(33px);
+  background: #0045ad;
+} /* Blue */
+.face.left {
+  transform: rotateY(-90deg) translateZ(33px);
+  background: #009b48;
+} /* Green */
+.face.top {
+  transform: rotateX(90deg) translateZ(33px);
+  background: #ffffff;
+} /* White */
+.face.bottom {
+  transform: rotateX(-90deg) translateZ(33px);
+  background: #ffd500;
+} /* Yellow */
+
+/* Note: 33px translate depends on cubie size.
+   If scene is 200px, cubie is ~66px. Half is 33px.
+   We need dynamic sizing via JS or CSS variables. */
+
+.game-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stats-card {
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: #aaa;
+  font-size: 0.9em;
+}
