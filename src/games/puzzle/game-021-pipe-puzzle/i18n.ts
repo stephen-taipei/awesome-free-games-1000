@@ -1,0 +1,32 @@
+export const translations = {
+  "zh-TW": {
+    "game.title": "水管工",
+    "game.level": "關卡",
+    "game.time": "時間",
+    "game.welcome": "水管工",
+    "game.desc": "旋轉水管讓水流通過！",
+    "game.start": "開始遊戲",
+    "game.reset": "重置",
+    "game.win": "通關成功！",
+  },
+  en: {
+    "game.title": "Pipe Puzzle",
+    "game.level": "Level",
+    "game.time": "Time",
+    "game.welcome": "Pipe Puzzle",
+    "game.desc": "Rotate pipes to connect flow!",
+    "game.start": "Start Game",
+    "game.reset": "Reset",
+    "game.win": "Pipe Connected!",
+  },
+  ja: {
+    "game.title": "パイプパズル",
+    "game.level": "レベル",
+    "game.time": "時間",
+    "game.welcome": "パイプパズル",
+    "game.desc": "パイプを回転させて繋げよう！",
+    "game.start": "スタート",
+    "game.reset": "リセット",
+    "game.win": "接続完了！",
+  },
+};
