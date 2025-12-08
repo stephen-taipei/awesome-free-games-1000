@@ -140,7 +140,7 @@ gtag('event', 'share', { game_id, method });
 | 018 | 填字遊戲       | Crossword           | 根據提示填入單字     | Vanilla JS + Grid     | 🟩    |
 | 019 | 找不同         | Spot Difference     | 找出兩圖差異處       | Canvas Compare        | 🟩    |
 | 020 | 迷宮           | Maze                | 找到出口路徑         | Canvas + Algorithm    | 🟩    |
-| 021 | 水管工         | Pipe Puzzle         | 連接水管通路         | Grid + Rotate         | ⬜    |
+| 021 | 水管工         | Pipe Puzzle         | 連接水管通路         | Grid + Rotate         | 🟩    |
 | 022 | 倉庫番         | Warehouse Keeper    | 推箱子進階版         | Phaser 3              | ⬜    |
 | 023 | 方塊消除       | Block Blast         | 放置方塊消除整行     | PixiJS                | ⬜    |
 | 024 | 塔羅解謎       | Tower Hanoi         | 移動圓盤到目標柱     | SVG Animation         | ⬜    |
