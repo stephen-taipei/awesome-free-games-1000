@@ -128,7 +128,7 @@ gtag('event', 'share', { game_id, method });
 | 006 | 拼圖           | Jigsaw Puzzle       | 拖曳拼合圖片         | Canvas + Drag API     | 🟩    |
 | 007 | 推箱子         | Sokoban             | 推動箱子到目標點     | Canvas 2D + TS        | 🟩    |
 | 008 | 消消樂         | Match-3             | 交換消除三個相同     | PixiJS                | 🟩    |
-| 009 | 連連看         | Mahjong Connect     | 配對消除相同圖案     | Canvas 2D             | ⬜    |
+| 009 | 連連看         | Mahjong Connect     | 配對消除相同圖案     | Canvas 2D             | 🟩    |
 | 010 | 泡泡龍         | Bubble Shooter      | 射擊消除同色泡泡     | Phaser 3              | ⬜    |
 | 011 | 寶石方塊       | Bejeweled           | 交換寶石消除連線     | PixiJS                | ⬜    |
 | 012 | 一筆畫         | One Line            | 一筆連接所有點       | SVG + Canvas          | ⬜    |
