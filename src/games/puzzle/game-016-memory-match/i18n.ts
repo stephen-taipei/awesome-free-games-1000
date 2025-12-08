@@ -1,0 +1,32 @@
+export const translations = {
+  "zh-TW": {
+    "game.title": "記憶翻牌",
+    "game.moves": "步數",
+    "game.time": "時間",
+    "game.welcome": "記憶翻牌",
+    "game.desc": "找出所有相同配對！",
+    "game.start": "開始遊戲",
+    "game.reset": "重置",
+    "game.win": "恭喜過關！",
+  },
+  en: {
+    "game.title": "Memory Match",
+    "game.moves": "Moves",
+    "game.time": "Time",
+    "game.welcome": "Memory Match",
+    "game.desc": "Find all matching pairs!",
+    "game.start": "Start Game",
+    "game.reset": "Reset",
+    "game.win": "You Win!",
+  },
+  ja: {
+    "game.title": "神経衰弱",
+    "game.moves": "手数",
+    "game.time": "時間",
+    "game.welcome": "神経衰弱",
+    "game.desc": "ペアを見つけよう！",
+    "game.start": "スタート",
+    "game.reset": "リセット",
+    "game.win": "クリア！",
+  },
+};
