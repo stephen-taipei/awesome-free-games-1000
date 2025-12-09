@@ -143,7 +143,7 @@ gtag('event', 'share', { game_id, method });
 | 021 | 水管工         | Pipe Puzzle         | 連接水管通路         | Grid + Rotate         | 🟩    |
 | 022 | 倉庫番         | Warehouse Keeper    | 推箱子進階版         | Vanilla JS            | 🟩    |
 | 023 | 方塊消除       | Block Blast         | 放置方塊消除整行     | Vanilla Canvas        | 🟩    |
-| 024 | 塔羅解謎       | Tower Hanoi         | 移動圓盤到目標柱     | SVG Animation         | ⬜    |
+| 024 | 塔羅解謎       | Tower Hanoi         | 移動圓盤到目標柱     | SVG/DOM Animation     | 🟩    |
 | 025 | 數字華容道     | 15 Puzzle           | 滑動數字1-15排序     | CSS + Touch           | ⬜    |
 | 026 | 顏色配對       | Color Match         | 快速配對相同顏色     | Canvas Speed          | ⬜    |
 | 027 | 邏輯電路       | Logic Gates         | 連接電路達成輸出     | SVG + Logic           | ⬜    |
