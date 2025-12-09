@@ -1,0 +1,126 @@
+.game-container {
+  max-width: 600px;
+}
+
+.game-area {
+  width: 100%;
+  /* auto height */
+  /* background: #ecf0f1; */ /* Removing background to let board stand out */
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  grid-template-rows: repeat(11, 1fr);
+  width: 100%;
+  aspect-ratio: 1/1;
+  background: #e67e22; /* Wood-ish */
+  border: 5px solid #d35400;
+  margin-bottom: 1rem;
+  gap: 1px;
+}
+
+.cell {
+  background: #f1c40f; /* Default Cell */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 10px;
+  color: #333;
+  position: relative;
+  user-select: none;
+}
+.cell.dl {
+  background: #3498db;
+} /* Double Letter */
+.cell.tl {
+  background: #9b59b6;
+} /* Triple Letter */
+.cell.dw {
+  background: #e74c3c;
+} /* Double Word */
+.cell.center {
+  background: #e74c3c;
+  color: white;
+}
+
+.rack {
+  display: flex;
+  gap: 0.5rem;
+  background: #7f8c8d;
+  padding: 1rem;
+  border-radius: 4px;
+  min-height: 40px;
+  width: 90%;
+  justify-content: center;
+  align-items: center;
+}
+
+.tile {
+  width: 35px;
+  height: 35px;
+  background: #ecf0f1;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  cursor: grab;
+  user-select: none;
+  font-size: 1.2rem;
+  position: relative;
+  color: #2c3e50;
+  z-index: 10;
+}
+
+.tile.on-board {
+  width: 90%; /* Fit in cell */
+  height: 90%;
+  cursor: grab;
+  position: absolute; /* inside cell */
+}
+
+.tile.locked {
+  background: #bdc3c7;
+  cursor: default;
+}
+
+.tile sub {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 0.5rem;
+  color: #7f8c8d;
+}
+
+.tile[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stats-card {
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
