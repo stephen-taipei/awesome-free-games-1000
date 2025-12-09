@@ -1,0 +1,32 @@
+export const translations = {
+  "zh-TW": {
+    "game.title": "方塊消除",
+    "game.score": "得分",
+    "game.best": "最高分",
+    "game.welcome": "方塊消除",
+    "game.desc": "拖曳方塊消除整行！",
+    "game.start": "開始遊戲",
+    "game.reset": "重置",
+    "game.gameover": "遊戲結束",
+  },
+  en: {
+    "game.title": "Block Blast",
+    "game.score": "Score",
+    "game.best": "Best",
+    "game.welcome": "Block Blast",
+    "game.desc": "Drag blocks to clear lines!",
+    "game.start": "Start Game",
+    "game.reset": "Reset",
+    "game.gameover": "Game Over",
+  },
+  ja: {
+    "game.title": "ブロックブラスト",
+    "game.score": "スコア",
+    "game.best": "ベスト",
+    "game.welcome": "ブロックブラスト",
+    "game.desc": "ブロックを置いてラインを消そう！",
+    "game.start": "スタート",
+    "game.reset": "リセット",
+    "game.gameover": "ゲームオーバー",
+  },
+};

@@ -142,7 +142,7 @@ gtag('event', 'share', { game_id, method });
 | 020 | 迷宮           | Maze                | 找到出口路徑         | Canvas + Algorithm    | 🟩    |
 | 021 | 水管工         | Pipe Puzzle         | 連接水管通路         | Grid + Rotate         | 🟩    |
 | 022 | 倉庫番         | Warehouse Keeper    | 推箱子進階版         | Vanilla JS            | 🟩    |
-| 023 | 方塊消除       | Block Blast         | 放置方塊消除整行     | PixiJS                | ⬜    |
+| 023 | 方塊消除       | Block Blast         | 放置方塊消除整行     | Vanilla Canvas        | 🟩    |
 | 024 | 塔羅解謎       | Tower Hanoi         | 移動圓盤到目標柱     | SVG Animation         | ⬜    |
 | 025 | 數字華容道     | 15 Puzzle           | 滑動數字1-15排序     | CSS + Touch           | ⬜    |
 | 026 | 顏色配對       | Color Match         | 快速配對相同顏色     | Canvas Speed          | ⬜    |

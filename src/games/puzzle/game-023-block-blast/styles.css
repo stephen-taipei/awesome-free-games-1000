@@ -1,0 +1,91 @@
+.game-container {
+  max-width: 500px;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  background: #2c3e50;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.grid-wrapper {
+  width: 100%;
+  aspect-ratio: 1/1;
+  max-width: 400px;
+  background: #34495e;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+canvas#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pieces-area {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 80px;
+  min-height: 80px;
+}
+
+.piece-container {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  cursor: grab;
+  touch-action: none; /* Prevents scroll when dragging */
+}
+
+.piece-container canvas {
+  pointer-events: none; /* Let the container handle events or manual hit test */
+  /* Actually for drag and drop we might listen on the canvas itself or container */
+}
+
+.game-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stats-card {
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* Draggable Ghost */
+.dragging-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.8;
+  transform: scale(1.1);
+}
