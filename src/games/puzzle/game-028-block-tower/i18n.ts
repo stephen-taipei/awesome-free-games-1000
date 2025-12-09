@@ -1,0 +1,32 @@
+export const translations = {
+  "zh-TW": {
+    "game.title": "積木塔",
+    "game.height": "高度",
+    "game.blocks": "積木數",
+    "game.welcome": "積木塔",
+    "game.desc": "堆疊積木挑戰最高！",
+    "game.start": "開始遊戲",
+    "game.reset": "重置",
+    "game.gameover": "倒塌了！",
+  },
+  en: {
+    "game.title": "Block Tower",
+    "game.height": "Height",
+    "game.blocks": "Blocks",
+    "game.welcome": "Block Tower",
+    "game.desc": "Stack blocks high!",
+    "game.start": "Start Game",
+    "game.reset": "Reset",
+    "game.gameover": "Collapsed!",
+  },
+  ja: {
+    "game.title": "ブロックタワー",
+    "game.height": "高さ",
+    "game.blocks": "ブロック数",
+    "game.welcome": "ブロックタワー",
+    "game.desc": "高く積み上げろ！",
+    "game.start": "スタート",
+    "game.reset": "リセット",
+    "game.gameover": "崩れた！",
+  },
+};

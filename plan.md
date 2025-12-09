@@ -118,158 +118,158 @@ gtag('event', 'share', { game_id, method });
 
 ## 🧩 益智遊戲 Puzzle (001-150)
 
-| #   | 遊戲名稱       | 英文名              | 玩法重點             | 技術方向              | 狀態 |
-| --- | -------------- | ------------------- | -------------------- | --------------------- | ---- |
-| 001 | 2048           | 2048                | 滑動合併數字達到2048 | Vanilla TS + CSS Grid | 🟩    |
-| 002 | 俄羅斯方塊     | Tetris              | 旋轉排列方塊消除行列 | Canvas 2D + TS        | 🟩    |
-| 003 | 數獨           | Sudoku              | 9x9填數邏輯推理      | Vanilla TS + CSS Grid | 🟩    |
-| 004 | 掃雷           | Minesweeper         | 推理避開地雷         | Vanilla JS + DOM      | 🟩    |
-| 005 | 華容道         | Klotski             | 滑動方塊讓曹操脫困   | Canvas 2D             | 🟩    |
-| 006 | 拼圖           | Jigsaw Puzzle       | 拖曳拼合圖片         | Canvas + Drag API     | 🟩    |
-| 007 | 推箱子         | Sokoban             | 推動箱子到目標點     | Canvas 2D + TS        | 🟩    |
-| 008 | 消消樂         | Match-3             | 交換消除三個相同     | PixiJS                | 🟩    |
-| 009 | 連連看         | Mahjong Connect     | 配對消除相同圖案     | Canvas 2D             | 🟩    |
-| 010 | 泡泡龍         | Bubble Shooter      | 射擊消除同色泡泡     | Canvas 2D             | 🟩    |
-| 011 | 寶石方塊       | Bejeweled           | 交換寶石消除連線     | Canvas 2D             | 🟩    |
-| 012 | 一筆畫         | One Line            | 一筆連接所有點       | SVG + Canvas          | 🟩    |
-| 013 | 數織           | Nonogram            | 根據數字填格邏輯     | Canvas 2D             | 🟩    |
-| 014 | 七巧板         | Tangram             | 拼合幾何圖形         | SVG + Drag            | 🟩    |
-| 015 | 魔術方塊       | Rubik's Cube        | 3D還原六面同色       | CSS 3D                | 🟩    |
-| 016 | 記憶翻牌       | Memory Match        | 翻牌配對相同圖案     | CSS Flip + JS         | 🟩    |
-| 017 | 滑動拼圖       | Sliding Puzzle      | 滑動還原圖片順序     | CSS Grid + JS         | 🟩    |
-| 018 | 填字遊戲       | Crossword           | 根據提示填入單字     | Vanilla JS + Grid     | 🟩    |
-| 019 | 找不同         | Spot Difference     | 找出兩圖差異處       | Canvas Compare        | 🟩    |
-| 020 | 迷宮           | Maze                | 找到出口路徑         | Canvas + Algorithm    | 🟩    |
-| 021 | 水管工         | Pipe Puzzle         | 連接水管通路         | Grid + Rotate         | 🟩    |
-| 022 | 倉庫番         | Warehouse Keeper    | 推箱子進階版         | Vanilla JS            | 🟩    |
-| 023 | 方塊消除       | Block Blast         | 放置方塊消除整行     | Vanilla Canvas        | 🟩    |
-| 024 | 塔羅解謎       | Tower Hanoi         | 移動圓盤到目標柱     | SVG/DOM Animation     | 🟩    |
-| 025 | 數字華容道     | 15 Puzzle           | 滑動數字1-15排序     | CSS Grid + Order      | 🟩    |
-| 026 | 顏色配對       | Color Match         | 快速配對相同顏色     | Canvas Speed          | 🟩    |
-| 027 | 邏輯電路       | Logic Gates         | 連接電路達成輸出     | SVG + Logic           | 🟩    |
-| 028 | 積木塔         | Block Tower         | 堆疊積木保持平衡     | Matter.js             | ⬜    |
-| 029 | 蜂巢消除       | Hexagon Match       | 六角形消消樂         | PixiJS Hex            | ⬜    |
-| 030 | 字母湯         | Word Search         | 找出隱藏單字         | Grid + Highlight      | ⬜    |
-| 031 | 拼字遊戲       | Scrabble Lite       | 拼出有效單字得分     | React + Dict          | ⬜    |
-| 032 | 燈泡謎題       | Lights Out          | 關閉所有燈泡         | Grid + Toggle         | ⬜    |
-| 033 | 折紙解謎       | Origami Puzzle      | 模擬折紙達成圖形     | SVG Transform         | ⬜    |
-| 034 | 齒輪連動       | Gear Puzzle         | 連接齒輪帶動目標     | Canvas Rotate         | ⬜    |
-| 035 | 鏡像謎題       | Mirror Puzzle       | 利用鏡子反射解謎     | Canvas Reflect        | ⬜    |
-| 036 | 重力方塊       | Gravity Blocks      | 重力影響方塊移動     | Physics 2D            | ⬜    |
-| 037 | 電路連接       | Circuit Connect     | 連接電路點亮燈泡     | SVG Path              | ⬜    |
-| 038 | 拼圖挑戰       | Puzzle Challenge    | 限時拼圖挑戰         | Canvas Timer          | ⬜    |
-| 039 | 數學24點       | 24 Game             | 四則運算得出24       | React Calculator      | ⬜    |
-| 040 | 火柴謎題       | Matchstick Puzzle   | 移動火柴改變算式     | SVG Drag              | ⬜    |
-| 041 | 色彩洪水       | Flood Fill          | 用最少步數填滿畫面   | Canvas Flood          | ⬜    |
-| 042 | 方塊旋轉       | Rotate Blocks       | 旋轉方塊填滿空間     | PixiJS Rotate         | ⬜    |
-| 043 | 數字連線       | Number Link         | 連接相同數字不交叉   | SVG Path              | ⬜    |
-| 044 | 迷你高爾夫謎題 | Golf Puzzle         | 規劃路線進洞         | Physics 2D            | ⬜    |
-| 045 | 疊疊樂解謎     | Stack Puzzle        | 堆疊達到目標高度     | Matter.js             | ⬜    |
-| 046 | 滾球迷宮       | Ball Maze           | 傾斜迷宮滾動球       | DeviceOrientation     | ⬜    |
-| 047 | 拼接六邊形     | Hex Connect         | 六邊形圖案拼接       | SVG Hex               | ⬜    |
-| 048 | 字謎猜猜       | Word Guess          | 猜測隱藏單字         | React + Keyboard      | ⬜    |
-| 049 | 解繩謎題       | Untangle            | 移動節點解開繩結     | SVG + Collision       | ⬜    |
-| 050 | 路徑規劃       | Path Finder         | 規劃最短路徑         | Canvas + A*           | ⬜    |
-| 051 | 多米諾骨牌     | Domino Puzzle       | 配對多米諾數字       | Canvas Domino         | ⬜    |
-| 052 | 磁鐵謎題       | Magnet Puzzle       | 利用磁力移動物件     | Physics 2D            | ⬜    |
-| 053 | 摺紙飛機       | Paper Plane Puzzle  | 摺出能飛的飛機       | 3D Transform          | ⬜    |
-| 054 | 積木拼圖       | Block Fit           | 放入積木填滿空間     | Grid + Rotate         | ⬜    |
-| 055 | 鎖匠解謎       | Locksmith           | 解開複雜機關鎖       | SVG Animation         | ⬜    |
-| 056 | 時鐘謎題       | Clock Puzzle        | 調整時鐘到目標時間   | SVG Clock             | ⬜    |
-| 057 | 橋樑建造       | Bridge Builder      | 建造穩固橋樑         | Matter.js             | ⬜    |
-| 058 | 化學配方       | Chemistry Puzzle    | 配對元素產生反應     | SVG + Animation       | ⬜    |
-| 059 | 星座連線       | Constellation       | 連接星星形成星座     | Canvas Stars          | ⬜    |
-| 060 | 密室逃脫       | Room Escape         | 找線索解謎逃出       | Point & Click         | ⬜    |
-| 061 | 骨牌連鎖       | Domino Chain        | 排列骨牌觸發連鎖     | Physics 2D            | ⬜    |
-| 062 | 魔法陣         | Magic Circle        | 旋轉符文對齊圖案     | SVG Rotate            | ⬜    |
-| 063 | 電梯謎題       | Elevator Puzzle     | 規劃電梯運送乘客     | Logic + Animation     | ⬜    |
-| 064 | 水流謎題       | Water Flow          | 引導水流到目的地     | Canvas Fluid          | ⬜    |
-| 065 | 影子配對       | Shadow Match        | 配對物體與影子       | SVG Silhouette        | ⬜    |
-| 066 | 機關解謎       | Mechanism Puzzle    | 觸發機關開啟大門     | SVG + Physics         | ⬜    |
-| 067 | 植物成長       | Plant Growth        | 規劃植物生長路線     | Canvas + Time         | ⬜    |
-| 068 | 鏡子世界       | Mirror World        | 鏡像世界同步解謎     | Dual Canvas           | ⬜    |
-| 069 | 編碼解謎       | Code Puzzle         | 破解密碼與編碼       | React + Logic         | ⬜    |
-| 070 | 立體拼圖       | 3D Puzzle           | 3D空間拼圖           | Three.js              | ⬜    |
-| 071 | 迷你城市       | Mini City           | 放置建築解謎         | Isometric             | ⬜    |
-| 072 | 時間倒流       | Time Rewind         | 倒轉時間解謎         | State Replay          | ⬜    |
-| 073 | 聲音謎題       | Sound Puzzle        | 根據聲音線索解謎     | Web Audio             | ⬜    |
-| 074 | 陰陽平衡       | Yin Yang            | 平衡陰陽能量         | Physics Balance       | ⬜    |
-| 075 | 糖果工廠       | Candy Factory       | 機關輸送糖果         | Conveyor Logic        | ⬜    |
-| 076 | 氣球謎題       | Balloon Puzzle      | 控制氣球避障解謎     | Physics Float         | ⬜    |
-| 077 | 考古挖掘       | Archaeology         | 挖掘找出文物         | Canvas Dig            | ⬜    |
-| 078 | 電子謎題       | Electronic Puzzle   | 電子元件連接         | Circuit Logic         | ⬜    |
-| 079 | 立體迷宮       | 3D Maze             | 3D迷宮探索           | Three.js Maze         | ⬜    |
-| 080 | 拼字消除       | Word Crush          | 連接字母組成單字     | Grid + Dict           | ⬜    |
-| 081 | 恐龍拼骨       | Dino Bones          | 拼合恐龍骨架         | SVG Skeleton          | ⬜    |
-| 082 | 算術迷宮       | Math Maze           | 計算結果選擇路徑     | Canvas + Math         | ⬜    |
-| 083 | 顏色排序       | Color Sort          | 按規則排列顏色       | Tube Sort             | ⬜    |
-| 084 | 試管排序       | Tube Sort           | 同色液體歸類         | Canvas Liquid         | ⬜    |
-| 085 | 螺絲謎題       | Screw Puzzle        | 按順序拆卸螺絲       | SVG Rotate            | ⬜    |
-| 086 | 繩結解謎       | Rope Puzzle         | 解開繩結             | SVG Rope              | ⬜    |
-| 087 | 鑰匙收集       | Key Collection      | 收集鑰匙開啟門       | Platform Logic        | ⬜    |
-| 088 | 按鈕謎題       | Button Puzzle       | 按正確順序按鈕       | Event Sequence        | ⬜    |
-| 089 | 對稱繪圖       | Symmetry Draw       | 繪製對稱圖案         | Canvas Mirror         | ⬜    |
-| 090 | 層層疊疊       | Layer Stack         | 按順序堆疊層次       | Z-index Logic         | ⬜    |
-| 091 | 雷達解謎       | Radar Puzzle        | 利用雷達找目標       | Canvas Radar          | ⬜    |
-| 092 | 太空站謎題     | Space Station       | 對接太空艙           | Rotation Match        | ⬜    |
-| 093 | 鏈條解謎       | Chain Puzzle        | 解開鏈條連結         | SVG Chain             | ⬜    |
-| 094 | 光線折射       | Light Refraction    | 折射光線到目標       | Ray Casting           | ⬜    |
-| 095 | 機器人程式     | Robot Program       | 編程控制機器人       | Visual Code           | ⬜    |
-| 096 | 四子棋謎題     | Connect 4 Puzzle    | 四子棋解謎模式       | Grid Logic            | ⬜    |
-| 097 | 翻轉謎題       | Flip Puzzle         | 翻轉達成目標圖案     | Grid Flip             | ⬜    |
-| 098 | 骰子謎題       | Dice Puzzle         | 骰子滾動到達目標     | 3D Dice               | ⬜    |
-| 099 | 電梯樓層       | Floor Puzzle        | 規劃電梯停靠         | Logic Planning        | ⬜    |
-| 100 | 密碼鎖         | Combination Lock    | 解開密碼鎖           | Dial Interface        | ⬜    |
-| 101 | 彈珠台謎題     | Pinball Puzzle      | 規劃彈珠路線         | Physics 2D            | ⬜    |
-| 102 | 雪花拼圖       | Snowflake Puzzle    | 對稱雪花拼接         | SVG Symmetry          | ⬜    |
-| 103 | 分子連接       | Molecule Connect    | 連接分子結構         | SVG Molecule          | ⬜    |
-| 104 | 圖騰解謎       | Totem Puzzle        | 堆疊圖騰             | Stack Logic           | ⬜    |
-| 105 | 金字塔謎題     | Pyramid Puzzle      | 金字塔數字邏輯       | Triangle Grid         | ⬜    |
-| 106 | 藏寶圖         | Treasure Map        | 解讀地圖找寶藏       | Canvas Map            | ⬜    |
-| 107 | 調色盤         | Color Palette       | 混色達成目標色       | Color Mixing          | ⬜    |
-| 108 | 軌道切換       | Track Switch        | 切換軌道引導列車     | Path Switch           | ⬜    |
-| 109 | 拼接島嶼       | Island Connect      | 連接島嶼橋樑         | Grid Bridge           | ⬜    |
-| 110 | 音符謎題       | Note Puzzle         | 排列音符成旋律       | Audio + Grid          | ⬜    |
-| 111 | 風向謎題       | Wind Direction      | 利用風向移動物體     | Physics Wind          | ⬜    |
-| 112 | 蜘蛛網         | Spider Web          | 規劃蜘蛛網路線       | SVG Web               | ⬜    |
-| 113 | 溫度平衡       | Temperature Balance | 調節溫度解謎         | Gradient Logic        | ⬜    |
-| 114 | 重力切換       | Gravity Switch      | 切換重力方向解謎     | Physics Gravity       | ⬜    |
-| 115 | 傳送門         | Portal Puzzle       | 利用傳送門解謎       | Canvas Portal         | ⬜    |
-| 116 | 撞球謎題       | Billiard Puzzle     | 規劃撞球路線         | Physics 2D            | ⬜    |
-| 117 | 骨架拼接       | Skeleton Puzzle     | 拼接動物骨架         | SVG Parts             | ⬜    |
-| 118 | 天秤平衡       | Scale Balance       | 天秤兩端平衡         | Physics Scale         | ⬜    |
-| 119 | 季節轉換       | Season Change       | 轉換季節解謎         | Theme Switch          | ⬜    |
-| 120 | 地圖拼接       | Map Puzzle          | 拼接世界地圖         | SVG Map               | ⬜    |
-| 121 | 符文解謎       | Rune Puzzle         | 對齊魔法符文         | Rotate Match          | ⬜    |
-| 122 | 機關城堡       | Castle Mechanism    | 城堡機關解謎         | Multi-layer           | ⬜    |
-| 123 | 光影謎題       | Light Shadow        | 調整光源投影         | Shadow Calc           | ⬜    |
-| 124 | 潛水艇         | Submarine Puzzle    | 控制潛艇解謎         | Depth Control         | ⬜    |
-| 125 | 太陽系         | Solar System        | 行星軌道謎題         | Orbital Logic         | ⬜    |
-| 126 | 細胞分裂       | Cell Division       | 細胞分裂策略         | Growth Logic          | ⬜    |
-| 127 | 蟲洞穿越       | Wormhole            | 利用蟲洞解謎         | Teleport Logic        | ⬜    |
-| 128 | 結冰謎題       | Ice Puzzle          | 在冰上滑動解謎       | Slide Physics         | ⬜    |
-| 129 | 彩虹橋         | Rainbow Bridge      | 建造彩虹橋樑         | Color Sequence        | ⬜    |
-| 130 | 蝴蝶效應       | Butterfly Effect    | 連鎖反應解謎         | Chain Reaction        | ⬜    |
-| 131 | 望遠鏡         | Telescope           | 對準望遠鏡看星星     | Align Puzzle          | ⬜    |
-| 132 | 印章蓋章       | Stamp Puzzle        | 蓋章組合圖案         | Overlay Logic         | ⬜    |
-| 133 | 電影膠卷       | Film Reel           | 排列電影順序         | Sequence Logic        | ⬜    |
-| 134 | DNA配對        | DNA Match           | 配對DNA序列          | Pair Matching         | ⬜    |
-| 135 | 交通號誌       | Traffic Sign        | 解讀交通號誌         | Symbol Logic          | ⬜    |
-| 136 | 建築藍圖       | Blueprint           | 解讀藍圖建造         | Plan Reading          | ⬜    |
-| 137 | 摺疊謎題       | Folding Puzzle      | 摺疊紙張解謎         | Fold Transform        | ⬜    |
-| 138 | 磁力方塊       | Magnetic Blocks     | 利用磁力移動         | Magnet Physics        | ⬜    |
-| 139 | 漩渦謎題       | Vortex Puzzle       | 利用漩渦解謎         | Spiral Logic          | ⬜    |
-| 140 | 沙漏時間       | Hourglass           | 控制沙漏時間         | Timer Puzzle          | ⬜    |
-| 141 | 古文解讀       | Ancient Script      | 翻譯古代文字         | Cipher Logic          | ⬜    |
-| 142 | 樂高拼接       | Lego Build          | 樂高積木拼接         | 3D Blocks             | ⬜    |
-| 143 | 玻璃彩繪       | Stained Glass       | 彩繪玻璃拼圖         | Color Fill            | ⬜    |
-| 144 | 迷你農場       | Mini Farm           | 農場規劃謎題         | Grid Planning         | ⬜    |
-| 145 | 海底探索       | Deep Sea            | 海底探索謎題         | Depth Pressure        | ⬜    |
-| 146 | 火山謎題       | Volcano Puzzle      | 火山能量解謎         | Heat Logic            | ⬜    |
-| 147 | 考古現場       | Dig Site            | 考古挖掘解謎         | Layer Reveal          | ⬜    |
-| 148 | 電波傳遞       | Signal Puzzle       | 傳遞電波信號         | Wave Logic            | ⬜    |
-| 149 | 書架整理       | Bookshelf           | 整理書架順序         | Sort Logic            | ⬜    |
-| 150 | 終極謎題       | Ultimate Puzzle     | 結合多種機制         | Multi-mechanic        | ⬜    |
+| #   | 遊戲名稱       | 英文名              | 玩法重點             | 技術方向                 | 狀態 |
+| --- | -------------- | ------------------- | -------------------- | ------------------------ | ---- |
+| 001 | 2048           | 2048                | 滑動合併數字達到2048 | Vanilla TS + CSS Grid    | 🟩    |
+| 002 | 俄羅斯方塊     | Tetris              | 旋轉排列方塊消除行列 | Canvas 2D + TS           | 🟩    |
+| 003 | 數獨           | Sudoku              | 9x9填數邏輯推理      | Vanilla TS + CSS Grid    | 🟩    |
+| 004 | 掃雷           | Minesweeper         | 推理避開地雷         | Vanilla JS + DOM         | 🟩    |
+| 005 | 華容道         | Klotski             | 滑動方塊讓曹操脫困   | Canvas 2D                | 🟩    |
+| 006 | 拼圖           | Jigsaw Puzzle       | 拖曳拼合圖片         | Canvas + Drag API        | 🟩    |
+| 007 | 推箱子         | Sokoban             | 推動箱子到目標點     | Canvas 2D + TS           | 🟩    |
+| 008 | 消消樂         | Match-3             | 交換消除三個相同     | PixiJS                   | 🟩    |
+| 009 | 連連看         | Mahjong Connect     | 配對消除相同圖案     | Canvas 2D                | 🟩    |
+| 010 | 泡泡龍         | Bubble Shooter      | 射擊消除同色泡泡     | Canvas 2D                | 🟩    |
+| 011 | 寶石方塊       | Bejeweled           | 交換寶石消除連線     | Canvas 2D                | 🟩    |
+| 012 | 一筆畫         | One Line            | 一筆連接所有點       | SVG + Canvas             | 🟩    |
+| 013 | 數織           | Nonogram            | 根據數字填格邏輯     | Canvas 2D                | 🟩    |
+| 014 | 七巧板         | Tangram             | 拼合幾何圖形         | SVG + Drag               | 🟩    |
+| 015 | 魔術方塊       | Rubik's Cube        | 3D還原六面同色       | CSS 3D                   | 🟩    |
+| 016 | 記憶翻牌       | Memory Match        | 翻牌配對相同圖案     | CSS Flip + JS            | 🟩    |
+| 017 | 滑動拼圖       | Sliding Puzzle      | 滑動還原圖片順序     | CSS Grid + JS            | 🟩    |
+| 018 | 填字遊戲       | Crossword           | 根據提示填入單字     | Vanilla JS + Grid        | 🟩    |
+| 019 | 找不同         | Spot Difference     | 找出兩圖差異處       | Canvas Compare           | 🟩    |
+| 020 | 迷宮           | Maze                | 找到出口路徑         | Canvas + Algorithm       | 🟩    |
+| 021 | 水管工         | Pipe Puzzle         | 連接水管通路         | Grid + Rotate            | 🟩    |
+| 022 | 倉庫番         | Warehouse Keeper    | 推箱子進階版         | Vanilla JS               | 🟩    |
+| 023 | 方塊消除       | Block Blast         | 放置方塊消除整行     | Vanilla Canvas           | 🟩    |
+| 024 | 塔羅解謎       | Tower Hanoi         | 移動圓盤到目標柱     | SVG/DOM Animation        | 🟩    |
+| 025 | 數字華容道     | 15 Puzzle           | 滑動數字1-15排序     | CSS Grid + Order         | 🟩    |
+| 026 | 顏色配對       | Color Match         | 快速配對相同顏色     | Canvas Speed             | 🟩    |
+| 027 | 邏輯電路       | Logic Gates         | 連接電路達成輸出     | SVG + Logic              | 🟩    |
+| 028 | 積木塔         | Block Tower         | 堆疊積木保持平衡     | Vanilla Canvas (Physics) | 🟩    |
+| 029 | 蜂巢消除       | Hexagon Match       | 六角形消消樂         | PixiJS Hex               | ⬜    |
+| 030 | 字母湯         | Word Search         | 找出隱藏單字         | Grid + Highlight         | ⬜    |
+| 031 | 拼字遊戲       | Scrabble Lite       | 拼出有效單字得分     | React + Dict             | ⬜    |
+| 032 | 燈泡謎題       | Lights Out          | 關閉所有燈泡         | Grid + Toggle            | ⬜    |
+| 033 | 折紙解謎       | Origami Puzzle      | 模擬折紙達成圖形     | SVG Transform            | ⬜    |
+| 034 | 齒輪連動       | Gear Puzzle         | 連接齒輪帶動目標     | Canvas Rotate            | ⬜    |
+| 035 | 鏡像謎題       | Mirror Puzzle       | 利用鏡子反射解謎     | Canvas Reflect           | ⬜    |
+| 036 | 重力方塊       | Gravity Blocks      | 重力影響方塊移動     | Physics 2D               | ⬜    |
+| 037 | 電路連接       | Circuit Connect     | 連接電路點亮燈泡     | SVG Path                 | ⬜    |
+| 038 | 拼圖挑戰       | Puzzle Challenge    | 限時拼圖挑戰         | Canvas Timer             | ⬜    |
+| 039 | 數學24點       | 24 Game             | 四則運算得出24       | React Calculator         | ⬜    |
+| 040 | 火柴謎題       | Matchstick Puzzle   | 移動火柴改變算式     | SVG Drag                 | ⬜    |
+| 041 | 色彩洪水       | Flood Fill          | 用最少步數填滿畫面   | Canvas Flood             | ⬜    |
+| 042 | 方塊旋轉       | Rotate Blocks       | 旋轉方塊填滿空間     | PixiJS Rotate            | ⬜    |
+| 043 | 數字連線       | Number Link         | 連接相同數字不交叉   | SVG Path                 | ⬜    |
+| 044 | 迷你高爾夫謎題 | Golf Puzzle         | 規劃路線進洞         | Physics 2D               | ⬜    |
+| 045 | 疊疊樂解謎     | Stack Puzzle        | 堆疊達到目標高度     | Matter.js                | ⬜    |
+| 046 | 滾球迷宮       | Ball Maze           | 傾斜迷宮滾動球       | DeviceOrientation        | ⬜    |
+| 047 | 拼接六邊形     | Hex Connect         | 六邊形圖案拼接       | SVG Hex                  | ⬜    |
+| 048 | 字謎猜猜       | Word Guess          | 猜測隱藏單字         | React + Keyboard         | ⬜    |
+| 049 | 解繩謎題       | Untangle            | 移動節點解開繩結     | SVG + Collision          | ⬜    |
+| 050 | 路徑規劃       | Path Finder         | 規劃最短路徑         | Canvas + A*              | ⬜    |
+| 051 | 多米諾骨牌     | Domino Puzzle       | 配對多米諾數字       | Canvas Domino            | ⬜    |
+| 052 | 磁鐵謎題       | Magnet Puzzle       | 利用磁力移動物件     | Physics 2D               | ⬜    |
+| 053 | 摺紙飛機       | Paper Plane Puzzle  | 摺出能飛的飛機       | 3D Transform             | ⬜    |
+| 054 | 積木拼圖       | Block Fit           | 放入積木填滿空間     | Grid + Rotate            | ⬜    |
+| 055 | 鎖匠解謎       | Locksmith           | 解開複雜機關鎖       | SVG Animation            | ⬜    |
+| 056 | 時鐘謎題       | Clock Puzzle        | 調整時鐘到目標時間   | SVG Clock                | ⬜    |
+| 057 | 橋樑建造       | Bridge Builder      | 建造穩固橋樑         | Matter.js                | ⬜    |
+| 058 | 化學配方       | Chemistry Puzzle    | 配對元素產生反應     | SVG + Animation          | ⬜    |
+| 059 | 星座連線       | Constellation       | 連接星星形成星座     | Canvas Stars             | ⬜    |
+| 060 | 密室逃脫       | Room Escape         | 找線索解謎逃出       | Point & Click            | ⬜    |
+| 061 | 骨牌連鎖       | Domino Chain        | 排列骨牌觸發連鎖     | Physics 2D               | ⬜    |
+| 062 | 魔法陣         | Magic Circle        | 旋轉符文對齊圖案     | SVG Rotate               | ⬜    |
+| 063 | 電梯謎題       | Elevator Puzzle     | 規劃電梯運送乘客     | Logic + Animation        | ⬜    |
+| 064 | 水流謎題       | Water Flow          | 引導水流到目的地     | Canvas Fluid             | ⬜    |
+| 065 | 影子配對       | Shadow Match        | 配對物體與影子       | SVG Silhouette           | ⬜    |
+| 066 | 機關解謎       | Mechanism Puzzle    | 觸發機關開啟大門     | SVG + Physics            | ⬜    |
+| 067 | 植物成長       | Plant Growth        | 規劃植物生長路線     | Canvas + Time            | ⬜    |
+| 068 | 鏡子世界       | Mirror World        | 鏡像世界同步解謎     | Dual Canvas              | ⬜    |
+| 069 | 編碼解謎       | Code Puzzle         | 破解密碼與編碼       | React + Logic            | ⬜    |
+| 070 | 立體拼圖       | 3D Puzzle           | 3D空間拼圖           | Three.js                 | ⬜    |
+| 071 | 迷你城市       | Mini City           | 放置建築解謎         | Isometric                | ⬜    |
+| 072 | 時間倒流       | Time Rewind         | 倒轉時間解謎         | State Replay             | ⬜    |
+| 073 | 聲音謎題       | Sound Puzzle        | 根據聲音線索解謎     | Web Audio                | ⬜    |
+| 074 | 陰陽平衡       | Yin Yang            | 平衡陰陽能量         | Physics Balance          | ⬜    |
+| 075 | 糖果工廠       | Candy Factory       | 機關輸送糖果         | Conveyor Logic           | ⬜    |
+| 076 | 氣球謎題       | Balloon Puzzle      | 控制氣球避障解謎     | Physics Float            | ⬜    |
+| 077 | 考古挖掘       | Archaeology         | 挖掘找出文物         | Canvas Dig               | ⬜    |
+| 078 | 電子謎題       | Electronic Puzzle   | 電子元件連接         | Circuit Logic            | ⬜    |
+| 079 | 立體迷宮       | 3D Maze             | 3D迷宮探索           | Three.js Maze            | ⬜    |
+| 080 | 拼字消除       | Word Crush          | 連接字母組成單字     | Grid + Dict              | ⬜    |
+| 081 | 恐龍拼骨       | Dino Bones          | 拼合恐龍骨架         | SVG Skeleton             | ⬜    |
+| 082 | 算術迷宮       | Math Maze           | 計算結果選擇路徑     | Canvas + Math            | ⬜    |
+| 083 | 顏色排序       | Color Sort          | 按規則排列顏色       | Tube Sort                | ⬜    |
+| 084 | 試管排序       | Tube Sort           | 同色液體歸類         | Canvas Liquid            | ⬜    |
+| 085 | 螺絲謎題       | Screw Puzzle        | 按順序拆卸螺絲       | SVG Rotate               | ⬜    |
+| 086 | 繩結解謎       | Rope Puzzle         | 解開繩結             | SVG Rope                 | ⬜    |
+| 087 | 鑰匙收集       | Key Collection      | 收集鑰匙開啟門       | Platform Logic           | ⬜    |
+| 088 | 按鈕謎題       | Button Puzzle       | 按正確順序按鈕       | Event Sequence           | ⬜    |
+| 089 | 對稱繪圖       | Symmetry Draw       | 繪製對稱圖案         | Canvas Mirror            | ⬜    |
+| 090 | 層層疊疊       | Layer Stack         | 按順序堆疊層次       | Z-index Logic            | ⬜    |
+| 091 | 雷達解謎       | Radar Puzzle        | 利用雷達找目標       | Canvas Radar             | ⬜    |
+| 092 | 太空站謎題     | Space Station       | 對接太空艙           | Rotation Match           | ⬜    |
+| 093 | 鏈條解謎       | Chain Puzzle        | 解開鏈條連結         | SVG Chain                | ⬜    |
+| 094 | 光線折射       | Light Refraction    | 折射光線到目標       | Ray Casting              | ⬜    |
+| 095 | 機器人程式     | Robot Program       | 編程控制機器人       | Visual Code              | ⬜    |
+| 096 | 四子棋謎題     | Connect 4 Puzzle    | 四子棋解謎模式       | Grid Logic               | ⬜    |
+| 097 | 翻轉謎題       | Flip Puzzle         | 翻轉達成目標圖案     | Grid Flip                | ⬜    |
+| 098 | 骰子謎題       | Dice Puzzle         | 骰子滾動到達目標     | 3D Dice                  | ⬜    |
+| 099 | 電梯樓層       | Floor Puzzle        | 規劃電梯停靠         | Logic Planning           | ⬜    |
+| 100 | 密碼鎖         | Combination Lock    | 解開密碼鎖           | Dial Interface           | ⬜    |
+| 101 | 彈珠台謎題     | Pinball Puzzle      | 規劃彈珠路線         | Physics 2D               | ⬜    |
+| 102 | 雪花拼圖       | Snowflake Puzzle    | 對稱雪花拼接         | SVG Symmetry             | ⬜    |
+| 103 | 分子連接       | Molecule Connect    | 連接分子結構         | SVG Molecule             | ⬜    |
+| 104 | 圖騰解謎       | Totem Puzzle        | 堆疊圖騰             | Stack Logic              | ⬜    |
+| 105 | 金字塔謎題     | Pyramid Puzzle      | 金字塔數字邏輯       | Triangle Grid            | ⬜    |
+| 106 | 藏寶圖         | Treasure Map        | 解讀地圖找寶藏       | Canvas Map               | ⬜    |
+| 107 | 調色盤         | Color Palette       | 混色達成目標色       | Color Mixing             | ⬜    |
+| 108 | 軌道切換       | Track Switch        | 切換軌道引導列車     | Path Switch              | ⬜    |
+| 109 | 拼接島嶼       | Island Connect      | 連接島嶼橋樑         | Grid Bridge              | ⬜    |
+| 110 | 音符謎題       | Note Puzzle         | 排列音符成旋律       | Audio + Grid             | ⬜    |
+| 111 | 風向謎題       | Wind Direction      | 利用風向移動物體     | Physics Wind             | ⬜    |
+| 112 | 蜘蛛網         | Spider Web          | 規劃蜘蛛網路線       | SVG Web                  | ⬜    |
+| 113 | 溫度平衡       | Temperature Balance | 調節溫度解謎         | Gradient Logic           | ⬜    |
+| 114 | 重力切換       | Gravity Switch      | 切換重力方向解謎     | Physics Gravity          | ⬜    |
+| 115 | 傳送門         | Portal Puzzle       | 利用傳送門解謎       | Canvas Portal            | ⬜    |
+| 116 | 撞球謎題       | Billiard Puzzle     | 規劃撞球路線         | Physics 2D               | ⬜    |
+| 117 | 骨架拼接       | Skeleton Puzzle     | 拼接動物骨架         | SVG Parts                | ⬜    |
+| 118 | 天秤平衡       | Scale Balance       | 天秤兩端平衡         | Physics Scale            | ⬜    |
+| 119 | 季節轉換       | Season Change       | 轉換季節解謎         | Theme Switch             | ⬜    |
+| 120 | 地圖拼接       | Map Puzzle          | 拼接世界地圖         | SVG Map                  | ⬜    |
+| 121 | 符文解謎       | Rune Puzzle         | 對齊魔法符文         | Rotate Match             | ⬜    |
+| 122 | 機關城堡       | Castle Mechanism    | 城堡機關解謎         | Multi-layer              | ⬜    |
+| 123 | 光影謎題       | Light Shadow        | 調整光源投影         | Shadow Calc              | ⬜    |
+| 124 | 潛水艇         | Submarine Puzzle    | 控制潛艇解謎         | Depth Control            | ⬜    |
+| 125 | 太陽系         | Solar System        | 行星軌道謎題         | Orbital Logic            | ⬜    |
+| 126 | 細胞分裂       | Cell Division       | 細胞分裂策略         | Growth Logic             | ⬜    |
+| 127 | 蟲洞穿越       | Wormhole            | 利用蟲洞解謎         | Teleport Logic           | ⬜    |
+| 128 | 結冰謎題       | Ice Puzzle          | 在冰上滑動解謎       | Slide Physics            | ⬜    |
+| 129 | 彩虹橋         | Rainbow Bridge      | 建造彩虹橋樑         | Color Sequence           | ⬜    |
+| 130 | 蝴蝶效應       | Butterfly Effect    | 連鎖反應解謎         | Chain Reaction           | ⬜    |
+| 131 | 望遠鏡         | Telescope           | 對準望遠鏡看星星     | Align Puzzle             | ⬜    |
+| 132 | 印章蓋章       | Stamp Puzzle        | 蓋章組合圖案         | Overlay Logic            | ⬜    |
+| 133 | 電影膠卷       | Film Reel           | 排列電影順序         | Sequence Logic           | ⬜    |
+| 134 | DNA配對        | DNA Match           | 配對DNA序列          | Pair Matching            | ⬜    |
+| 135 | 交通號誌       | Traffic Sign        | 解讀交通號誌         | Symbol Logic             | ⬜    |
+| 136 | 建築藍圖       | Blueprint           | 解讀藍圖建造         | Plan Reading             | ⬜    |
+| 137 | 摺疊謎題       | Folding Puzzle      | 摺疊紙張解謎         | Fold Transform           | ⬜    |
+| 138 | 磁力方塊       | Magnetic Blocks     | 利用磁力移動         | Magnet Physics           | ⬜    |
+| 139 | 漩渦謎題       | Vortex Puzzle       | 利用漩渦解謎         | Spiral Logic             | ⬜    |
+| 140 | 沙漏時間       | Hourglass           | 控制沙漏時間         | Timer Puzzle             | ⬜    |
+| 141 | 古文解讀       | Ancient Script      | 翻譯古代文字         | Cipher Logic             | ⬜    |
+| 142 | 樂高拼接       | Lego Build          | 樂高積木拼接         | 3D Blocks                | ⬜    |
+| 143 | 玻璃彩繪       | Stained Glass       | 彩繪玻璃拼圖         | Color Fill               | ⬜    |
+| 144 | 迷你農場       | Mini Farm           | 農場規劃謎題         | Grid Planning            | ⬜    |
+| 145 | 海底探索       | Deep Sea            | 海底探索謎題         | Depth Pressure           | ⬜    |
+| 146 | 火山謎題       | Volcano Puzzle      | 火山能量解謎         | Heat Logic               | ⬜    |
+| 147 | 考古現場       | Dig Site            | 考古挖掘解謎         | Layer Reveal             | ⬜    |
+| 148 | 電波傳遞       | Signal Puzzle       | 傳遞電波信號         | Wave Logic               | ⬜    |
+| 149 | 書架整理       | Bookshelf           | 整理書架順序         | Sort Logic               | ⬜    |
+| 150 | 終極謎題       | Ultimate Puzzle     | 結合多種機制         | Multi-mechanic           | ⬜    |
 
 ---
 
