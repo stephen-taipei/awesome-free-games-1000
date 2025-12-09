@@ -1,0 +1,137 @@
+.game-container {
+  max-width: 700px;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  /* aspect-ratio: 16/9; */
+  height: 300px;
+  background: #ecf0f1;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+}
+
+#towers-container {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  /* padding-bottom: 20px; */
+}
+
+.tower {
+  position: relative;
+  width: 30%;
+  height: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-radius: 4px;
+}
+
+.tower:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.tower.selected-tower {
+  background-color: rgba(52, 152, 219, 0.1);
+}
+
+.pole {
+  position: absolute;
+  bottom: 20px;
+  width: 10px;
+  height: 80%;
+  background: #7f8c8d;
+  border-radius: 5px 5px 0 0;
+  z-index: 1;
+}
+
+.base {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 20px;
+  background: #95a5a6;
+  border-radius: 4px;
+  z-index: 1;
+}
+
+.disk {
+  height: 25px;
+  border-radius: 12px;
+  background: #3498db;
+  border: 2px solid white;
+  z-index: 10;
+  margin-bottom: 0; /* Stack on top of each other */
+  transition: transform 0.3s ease, bottom 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  /* For flex column-reverse stacking */
+  flex-shrink: 0;
+}
+
+/* Selected Disk Animation */
+.disk.selected {
+  transform: translateY(-20px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Cannot Select visual cue? */
+
+/* Tower Base Logic:
+   Actually, flex-direction column-reverse on .tower puts items at bottom.
+   But pole is absolute. Disks are static flex items.
+   We need pole to be BEHIND disks.
+   z-index pole: 1. Disks: 10.
+
+   However, flex items will sit inside .tower.
+   We need a container for disks to sit above the base?
+   No, just margin-bottom on the lowest disk or padding-bottom on tower.
+*/
+
+.tower {
+  padding-bottom: 20px; /* Space for Base */
+}
+
+.game-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stats-card {
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.level-select {
+  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.level-select select {
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
