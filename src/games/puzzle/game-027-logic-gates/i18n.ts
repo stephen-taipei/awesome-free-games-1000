@@ -1,0 +1,32 @@
+export const translations = {
+  "zh-TW": {
+    "game.title": "邏輯電路",
+    "game.level": "關卡",
+    "game.welcome": "邏輯電路",
+    "game.desc": "連接邏輯閘讓輸出燈亮起！",
+    "game.start": "開始遊戲",
+    "game.reset": "重置",
+    "game.check": "檢查",
+    "game.win": "過關成功！",
+  },
+  en: {
+    "game.title": "Logic Gates",
+    "game.level": "Level",
+    "game.welcome": "Logic Gates",
+    "game.desc": "Connect gates to light output!",
+    "game.start": "Start Game",
+    "game.reset": "Reset",
+    "game.check": "Check",
+    "game.win": "Solved!",
+  },
+  ja: {
+    "game.title": "論理回路",
+    "game.level": "レベル",
+    "game.welcome": "論理回路",
+    "game.desc": "ゲートを繋いで出力させよう！",
+    "game.start": "スタート",
+    "game.reset": "リセット",
+    "game.check": "確認",
+    "game.win": "クリア！",
+  },
+};
