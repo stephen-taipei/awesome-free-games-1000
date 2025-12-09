@@ -1,0 +1,32 @@
+export const translations = {
+  "zh-TW": {
+    "game.title": "數字華容道",
+    "game.moves": "步數",
+    "game.time": "時間",
+    "game.welcome": "數字華容道",
+    "game.desc": "按順序排列數字 1-15！",
+    "game.start": "開始遊戲",
+    "game.reset": "重置",
+    "game.win": "過關成功！",
+  },
+  en: {
+    "game.title": "15 Puzzle",
+    "game.moves": "Moves",
+    "game.time": "Time",
+    "game.welcome": "15 Puzzle",
+    "game.desc": "Order numbers 1-15!",
+    "game.start": "Start Game",
+    "game.reset": "Reset",
+    "game.win": "Solved!",
+  },
+  ja: {
+    "game.title": "15パズル",
+    "game.moves": "手数",
+    "game.time": "時間",
+    "game.welcome": "15パズル",
+    "game.desc": "数字を1から15まで並べよう！",
+    "game.start": "スタート",
+    "game.reset": "リセット",
+    "game.win": "クリア！",
+  },
+};
