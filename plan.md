@@ -146,7 +146,7 @@ gtag('event', 'share', { game_id, method });
 | 024 | 塔羅解謎       | Tower Hanoi         | 移動圓盤到目標柱     | SVG/DOM Animation     | 🟩    |
 | 025 | 數字華容道     | 15 Puzzle           | 滑動數字1-15排序     | CSS Grid + Order      | 🟩    |
 | 026 | 顏色配對       | Color Match         | 快速配對相同顏色     | Canvas Speed          | 🟩    |
-| 027 | 邏輯電路       | Logic Gates         | 連接電路達成輸出     | SVG + Logic           | ⬜    |
+| 027 | 邏輯電路       | Logic Gates         | 連接電路達成輸出     | SVG + Logic           | 🟩    |
 | 028 | 積木塔         | Block Tower         | 堆疊積木保持平衡     | Matter.js             | ⬜    |
 | 029 | 蜂巢消除       | Hexagon Match       | 六角形消消樂         | PixiJS Hex            | ⬜    |
 | 030 | 字母湯         | Word Search         | 找出隱藏單字         | Grid + Highlight      | ⬜    |
