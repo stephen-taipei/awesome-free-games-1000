@@ -148,7 +148,7 @@ gtag('event', 'share', { game_id, method });
 | 026 | 顏色配對       | Color Match         | 快速配對相同顏色     | Canvas Speed             | 🟩    |
 | 027 | 邏輯電路       | Logic Gates         | 連接電路達成輸出     | SVG + Logic              | 🟩    |
 | 028 | 積木塔         | Block Tower         | 堆疊積木保持平衡     | Vanilla Canvas (Physics) | 🟩    |
-| 029 | 蜂巢消除       | Hexagon Match       | 六角形消消樂         | PixiJS Hex               | ⬜    |
+| 029 | 蜂巢消除       | Hexagon Match       | 六角形消消樂         | Vanilla Canvas (Hex)     | 🟩    |
 | 030 | 字母湯         | Word Search         | 找出隱藏單字         | Grid + Highlight         | ⬜    |
 | 031 | 拼字遊戲       | Scrabble Lite       | 拼出有效單字得分     | React + Dict             | ⬜    |
 | 032 | 燈泡謎題       | Lights Out          | 關閉所有燈泡         | Grid + Toggle            | ⬜    |
