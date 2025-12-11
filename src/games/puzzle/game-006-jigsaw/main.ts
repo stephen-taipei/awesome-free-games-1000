@@ -7,6 +7,10 @@ import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
 import { isTouchDevice } from "../../../shared/utils";
 
+import natureImg from "./assets/images/nature.jpg";
+import cityImg from "./assets/images/city.jpg";
+import animalsImg from "./assets/images/animals.jpg";
+
 // Elements
 const canvas = document.getElementById("game-canvas") as HTMLCanvasElement;
 const startBtn = document.getElementById("start-btn")!;
@@ -34,11 +38,9 @@ let game: JigsawGame;
 let timerInterval: any = null;
 
 const IMAGE_SOURCES = {
-  nature:
-    "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-  city: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-  animals:
-    "https://images.unsplash.com/photo-1474511320723-9a56873867b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+  nature: natureImg,
+  city: cityImg,
+  animals: animalsImg,
 };
 
 function initI18n() {

@@ -75,14 +75,21 @@ class I18n {
       return key;
     }
 
-    const keys = key.split('.');
-    let value: string | Translations | undefined = translations;
+    // 優先嘗試直接匹配 (支援 flat keys)
+    let value: string | Translations | undefined = translations[key];
 
-    for (const k of keys) {
-      if (typeof value === 'object' && value !== null) {
-        value = value[k];
-      } else {
-        return key;
+    // 如果直接匹配失敗，嘗試巢狀匹配 (支援 nested keys)
+    if (typeof value !== 'string') {
+      const keys = key.split('.');
+      value = translations;
+
+      for (const k of keys) {
+        if (typeof value === 'object' && value !== null) {
+          value = value[k];
+        } else {
+          value = undefined;
+          break;
+        }
       }
     }
 
