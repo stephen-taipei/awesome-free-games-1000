@@ -153,7 +153,7 @@ gtag('event', 'share', { game_id, method });
 | 031 | 拼字遊戲       | Scrabble Lite       | 拼出有效單字得分     | Vanilla JS/DOM           | 🟩    |
 | 032 | 燈泡謎題       | Lights Out          | 關閉所有燈泡         | Vanilla Grid Toggle      | 🟩    |
 | 033 | 折紙解謎       | Origami Puzzle      | 模擬折紙達成圖形     | Canvas Transform (Fold)  | 🟩    |
-| 034 | 齒輪連動       | Gear Puzzle         | 連接齒輪帶動目標     | Canvas Rotate            | ⬜    |
+| 034 | 齒輪連動       | Gear Puzzle         | 連接齒輪帶動目標     | Canvas Rotate (Mesh)     | 🟩    |
 | 035 | 鏡像謎題       | Mirror Puzzle       | 利用鏡子反射解謎     | Canvas Reflect           | ⬜    |
 | 036 | 重力方塊       | Gravity Blocks      | 重力影響方塊移動     | Physics 2D               | ⬜    |
 | 037 | 電路連接       | Circuit Connect     | 連接電路點亮燈泡     | SVG Path                 | ⬜    |
