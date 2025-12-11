@@ -1,0 +1,32 @@
+export const translations = {
+  "zh-TW": {
+    "game.title": "燈泡謎題",
+    "game.moves": "步數",
+    "game.welcome": "燈泡謎題",
+    "game.desc": "將所有燈泡關閉！",
+    "game.start": "開始遊戲",
+    "game.reset": "重置本局",
+    "game.newgame": "新的一局",
+    "game.win": "恭喜過關！",
+  },
+  en: {
+    "game.title": "Lights Out",
+    "game.moves": "Moves",
+    "game.welcome": "Lights Out",
+    "game.desc": "Turn off all lights!",
+    "game.start": "Start Game",
+    "game.reset": "Reset",
+    "game.newgame": "New Game",
+    "game.win": "You Won!",
+  },
+  ja: {
+    "game.title": "ライツアウト",
+    "game.moves": "手数",
+    "game.welcome": "ライツアウト",
+    "game.desc": "全てのライトを消せ！",
+    "game.start": "スタート",
+    "game.reset": "リセット",
+    "game.newgame": "新しいゲーム",
+    "game.win": "クリア！",
+  },
+};
