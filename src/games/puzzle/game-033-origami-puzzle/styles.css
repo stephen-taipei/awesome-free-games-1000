@@ -1,0 +1,75 @@
+.game-container {
+  max-width: 600px;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  background: #bdc3c7;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.canvas-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+canvas {
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.target-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.target-card h4 {
+  margin: 0 0 0.5rem 0;
+  color: #7f8c8d;
+}
+
+#target-icon {
+  width: 60px;
+  height: 60px;
+  background: #ecf0f1;
+  border: 1px solid #ccc;
+  /* CSS generated target shape preview? Or canvas? */
+  /* Let's use a small canvas or just description for now. */
+  /* Wait, I can inject a mini canvas or svg */
+}
+
+.game-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stats-card {
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
