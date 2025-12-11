@@ -1,0 +1,32 @@
+export const translations = {
+  "zh-TW": {
+    "game.title": "折紙解謎",
+    "game.level": "關卡",
+    "game.target": "目標形狀",
+    "game.welcome": "折紙解謎",
+    "game.desc": "將紙張折疊成目標形狀！",
+    "game.start": "開始遊戲",
+    "game.reset": "重置",
+    "game.next": "下一關",
+  },
+  en: {
+    "game.title": "Origami Puzzle",
+    "game.level": "Level",
+    "game.target": "Target",
+    "game.welcome": "Origami Puzzle",
+    "game.desc": "Fold the paper to match the shape!",
+    "game.start": "Start Game",
+    "game.reset": "Reset",
+    "game.next": "Next Level",
+  },
+  ja: {
+    "game.title": "折り紙パズル",
+    "game.level": "レベル",
+    "game.target": "目標",
+    "game.welcome": "折り紙パズル",
+    "game.desc": "紙を折って形を作ろう！",
+    "game.start": "スタート",
+    "game.reset": "リセット",
+    "game.next": "次のレベル",
+  },
+};
