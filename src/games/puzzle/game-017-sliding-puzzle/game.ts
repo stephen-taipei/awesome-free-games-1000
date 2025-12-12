@@ -5,6 +5,8 @@ export interface Tile {
   element: HTMLElement;
 }
 
+import natureImg from "./assets/images/nature.jpg";
+
 export class SlidingPuzzleGame {
   private container: HTMLElement;
   private tiles: Tile[] = [];
@@ -74,7 +76,7 @@ export class SlidingPuzzleGame {
       // Let's use a nice gradient or shape pattern for "Image Mode" demo,
       // or a real image url if allowed.
       // Using a persistent placeholder image from standard placeholder service
-      tileEl.style.backgroundImage = 'url("https://picsum.photos/600/600")';
+      tileEl.style.backgroundImage = `url("${natureImg}")`;
 
       const tile: Tile = {
         value: i + 1,
@@ -102,6 +104,7 @@ export class SlidingPuzzleGame {
 
       if (this.isImageMode) {
         t.element.classList.add("image-mode");
+        t.element.style.backgroundImage = `url("${natureImg}")`;
         // Calculate BG position based on TARGET pos (original image slice)
         const row = Math.floor(t.targetPos / this.size);
         const col = t.targetPos % this.size;
@@ -127,7 +130,8 @@ export class SlidingPuzzleGame {
         // Keep number for easy debug? No, hide it. CSS handles color:transparent.
       } else {
         t.element.classList.remove("image-mode");
-        t.element.style.background = "#f1c40f";
+        t.element.style.backgroundImage = "none";
+        t.element.style.backgroundColor = "#f1c40f";
       }
     });
   }
