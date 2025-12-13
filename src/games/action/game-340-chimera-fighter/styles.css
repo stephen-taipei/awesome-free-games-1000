@@ -1,0 +1,201 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+  background: linear-gradient(135deg, #2a1a3a 0%, #3a2a4a 50%, #4a3a5a 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.game-container {
+  max-width: 600px;
+  width: 100%;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  text-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+  color: #8a2be2;
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: none;
+  background: white;
+  cursor: pointer;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.stats-card {
+  background: rgba(74, 58, 90, 0.3);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: bold;
+  border: 1px solid rgba(74, 58, 90, 0.5);
+  display: flex;
+  gap: 0.5rem;
+  color: #9a7ab5;
+}
+
+.stats-card.health {
+  background: rgba(0, 200, 100, 0.2);
+  border-color: rgba(0, 200, 100, 0.4);
+  color: #00c864;
+}
+
+.stats-card.power {
+  background: rgba(138, 43, 226, 0.2);
+  border-color: rgba(138, 43, 226, 0.4);
+  color: #8a2be2;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/10;
+  background: #2a1a3a;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 30px rgba(138, 43, 226, 0.3);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(42, 26, 58, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: 16px;
+}
+
+.overlay-content {
+  text-align: center;
+  color: white;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+  color: #8a2be2;
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #6a1ab2 0%, #8a2be2 100%);
+  color: white;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  opacity: 0.7;
+}
+
+.mobile-controls {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1rem;
+}
+
+.control-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.control-btn {
+  width: 55px;
+  height: 55px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(74, 58, 90, 0.3);
+  color: #9a7ab5;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  border: 2px solid rgba(74, 58, 90, 0.5);
+  transition: all 0.1s;
+}
+
+.control-btn:active {
+  background: rgba(74, 58, 90, 0.5);
+  transform: scale(0.95);
+}
+
+.control-btn.jump {
+  background: rgba(100, 200, 100, 0.3);
+  border-color: rgba(100, 200, 100, 0.5);
+  color: #64c864;
+}
+
+.control-btn.attack {
+  background: rgba(192, 192, 192, 0.3);
+  border-color: rgba(192, 192, 192, 0.5);
+  color: #c0c0c0;
+}
+
+.control-btn.special {
+  background: rgba(138, 43, 226, 0.3);
+  border-color: rgba(138, 43, 226, 0.5);
+  color: #8a2be2;
+}
+
+@media (min-width: 768px) {
+  .mobile-controls {
+    display: none;
+  }
+}
