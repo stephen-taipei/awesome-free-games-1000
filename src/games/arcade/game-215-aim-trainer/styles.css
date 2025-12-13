@@ -1,0 +1,256 @@
+/**
+ * Aim Trainer Styles
+ * Game #215
+ */
+
+:root {
+  --bg-color: #1a1a2e;
+  --target-color: #e74c3c;
+  --text-color: #e0e0e0;
+  --text-muted: #a0a0a0;
+  --btn-primary: #3498db;
+  --btn-secondary: #636e72;
+  --hit-color: #27ae60;
+  --miss-color: #e74c3c;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, var(--bg-color) 0%, #0f0f23 100%);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.game-container {
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.game-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--btn-primary);
+}
+
+.header-controls select {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--btn-secondary);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.game-info {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  background: rgba(22, 33, 62, 0.8);
+  padding: 12px 10px;
+  border-radius: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.info-item {
+  text-align: center;
+  min-width: 60px;
+}
+
+.info-label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.info-value {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--btn-primary);
+}
+
+.info-value.hits {
+  color: var(--hit-color);
+}
+
+.info-value.misses {
+  color: var(--miss-color);
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  cursor: crosshair;
+  user-select: none;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 400px;
+  background: #16213e;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(26, 26, 46, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 32px;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  color: var(--btn-primary);
+}
+
+.overlay-msg {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.final-score {
+  font-size: 3.5rem;
+  font-weight: bold;
+  color: var(--hit-color);
+  margin-bottom: 12px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  background: rgba(52, 152, 219, 0.1);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: var(--btn-primary);
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--btn-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #5dade2;
+  transform: translateY(-2px);
+}
+
+.instructions {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 12px;
+  background: rgba(22, 33, 62, 0.8);
+  border-radius: 8px;
+  width: 100%;
+}
+
+.timer-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--btn-primary), var(--hit-color));
+  transition: width 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  #game-canvas {
+    height: 350px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .final-score {
+    font-size: 2.5rem;
+  }
+
+  .info-label {
+    font-size: 0.6rem;
+  }
+
+  .info-value {
+    font-size: 1rem;
+  }
+}
