@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="太陽戰士 - 使用太陽力量戰鬥的街機遊戲。">
+  <meta name="keywords" content="Sun Warrior, 太陽戰士, solar power, arcade game, 街機遊戲, 免費遊戲">
+  <meta name="theme-color" content="#1a0a00">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="太陽戰士 - 街機遊戲">
+  <meta property="og:description" content="烈焰之力，無可阻擋！">
+  <meta property="og:type" content="website">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <title>太陽戰士 - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 頂部標題區 -->
+    <header class="header">
+      <div class="title-section">
+        <h1 class="title" data-i18n="game.title">太陽戰士</h1>
+        <p class="subtitle" data-i18n="game.subtitle">烈焰之力，無可阻擋！</p>
+      </div>
+      <div class="scores-section">
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.score">分數</span>
+          <span class="score-value" id="score">0</span>
+        </div>
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.best">最高分</span>
+          <span class="score-value" id="best-score">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 狀態條 -->
+    <div class="status-bars">
+      <div class="bar-container">
+        <div class="bar-info">
+          <span class="bar-label" data-i18n="game.health">生命值</span>
+          <span class="bar-value" id="health-value">100</span>
+        </div>
+        <div class="bar-track health-track">
+          <div class="bar-fill health-bar" id="health-bar"></div>
+        </div>
+      </div>
+      <div class="bar-container">
+        <div class="bar-info">
+          <span class="bar-label" data-i18n="game.solarEnergy">太陽能量</span>
+          <span class="bar-value" id="solar-energy-value">100</span>
+        </div>
+        <div class="bar-track solar-track">
+          <div class="bar-fill solar-energy-bar" id="solar-energy-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 波次和擊殺 -->
+    <div class="game-info">
+      <div class="info-item">
+        <span class="info-label" data-i18n="game.wave">波次</span>
+        <span class="info-value" id="wave">1</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label" data-i18n="game.killed">擊殺</span>
+        <span class="info-value" id="killed">0</span>
+      </div>
+    </div>
+
+    <!-- 技能按鈕 -->
+    <div class="skill-buttons">
+      <button class="skill-btn solar-storm-btn" id="solar-storm-btn">
+        <span class="skill-key">Q</span>
+        <span class="skill-name" data-i18n="game.solarStorm">太陽風暴</span>
+        <span class="skill-cost">40</span>
+      </button>
+      <button class="skill-btn burning-field-btn" id="burning-field-btn">
+        <span class="skill-key">E</span>
+        <span class="skill-name" data-i18n="game.burningField">燃燒領域</span>
+        <span class="skill-cost">60</span>
+      </button>
+    </div>
+
+    <!-- 控制區 -->
+    <div class="controls">
+      <button class="btn btn-secondary" id="help-btn" data-i18n="game.howToPlay">遊戲說明</button>
+      <div class="language-selector">
+        <select id="language-select">
+          <option value="zh-TW">繁體中文</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 遊戲容器 -->
+    <div class="game-container" id="game-container">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- 遊戲覆蓋層 -->
+      <div class="game-overlay" id="game-overlay">
+        <div class="overlay-content">
+          <h2 class="overlay-title" id="overlay-title">點擊開始</h2>
+          <p class="overlay-score">分數: <span id="final-score">0</span></p>
+          <div class="overlay-buttons">
+            <button class="btn btn-primary" id="start-btn" data-i18n="game.tapToStart">點擊開始</button>
+            <button class="btn btn-primary" id="retry-btn" data-i18n="game.tryAgain" style="display: none;">再試一次</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 說明彈窗 -->
+    <div class="modal" id="help-modal" style="display: none;">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">&times;</button>
+        <h2 data-i18n="game.howToPlay">遊戲說明</h2>
+        <p data-i18n="game.howToPlayContent">移動滑鼠或手指控制太陽戰士。左鍵或點擊發射太陽爆破（消耗5能量）。Q鍵或按鈕施放太陽風暴（消耗40能量）。E鍵或按鈕施放燃燒領域（消耗60能量）。太陽能量越高，攻擊越強！被擊中的敵人會持續燒傷。</p>
+        <div class="controls-guide">
+          <div class="control-item">
+            <span class="control-key">移動</span>
+            <span class="control-desc">移動滑鼠/手指</span>
+          </div>
+          <div class="control-item">
+            <span class="control-key">自動射擊</span>
+            <span class="control-desc">太陽爆破 (5能量)</span>
+          </div>
+          <div class="control-item">
+            <span class="control-key">Q</span>
+            <span class="control-desc">太陽風暴 (40能量)</span>
+          </div>
+          <div class="control-item">
+            <span class="control-key">E</span>
+            <span class="control-desc">燃燒領域 (60能量)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="footer">
+      <p>Game #350 | <a href="https://github.com/awesome-free-games" target="_blank">Awesome Free Games 1000</a></p>
+    </footer>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
