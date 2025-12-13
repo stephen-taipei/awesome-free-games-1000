@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moto Run - Motorcycle Runner Game</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="game-container">
+    <h1 id="game-title">Moto Run</h1>
+
+    <div class="canvas-container">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn" class="btn btn-primary">Start Game</button>
+      <button id="pauseBtn" class="btn btn-secondary" style="display: none;">Pause</button>
+      <button id="restartBtn" class="btn btn-secondary" style="display: none;">Restart</button>
+    </div>
+
+    <div class="info-panel">
+      <div class="info-section">
+        <h3 id="controlsTitle">Controls</h3>
+        <p id="controlsDesc">← → or A/D to switch lanes | ↑ or W/Space for wheelie</p>
+      </div>
+      <div class="info-section">
+        <p id="tipText" class="tip">Collect fuel to keep going, wheelie to jump over pedestrians!</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
