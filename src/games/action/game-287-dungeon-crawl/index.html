@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dungeon Crawl - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">Dungeon Crawl</h1>
+        <div class="header-controls">
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-stats">
+        <div class="stat-card">
+          <span data-i18n="game.score">Gold</span>
+          <span id="gold-display" class="stat-value">0</span>
+        </div>
+        <div class="stat-card">
+          <span data-i18n="game.floor">Floor</span>
+          <span id="floor-display" class="stat-value">1</span>
+        </div>
+        <div class="stat-card">
+          <span data-i18n="game.high">Best</span>
+          <span id="high-display" class="stat-value">0</span>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <div class="hp-container">
+          <span data-i18n="game.hp">HP</span>
+          <div class="hp-bar">
+            <div id="hp-fill" class="hp-fill" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="atk-info">
+          <span data-i18n="game.atk">ATK</span>
+          <span id="atk-display">15</span>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+        <div id="message-box" class="message-box"></div>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.welcome">
+              Dungeon Crawl
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Explore the dungeon, defeat monsters, collect treasure!
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              Enter Dungeon
+            </button>
+            <div class="controls-hint">
+              <small data-i18n="game.hint">Arrow keys to move, auto-attack when near enemies!</small>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div class="mobile-controls">
+        <button class="control-btn" id="mobile-up">^</button>
+        <div class="control-row">
+          <button class="control-btn" id="mobile-left">&lt;</button>
+          <button class="control-btn" id="mobile-right">&gt;</button>
+        </div>
+        <button class="control-btn" id="mobile-down">v</button>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
