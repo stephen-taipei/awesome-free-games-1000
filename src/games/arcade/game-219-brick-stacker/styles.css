@@ -1,0 +1,228 @@
+/**
+ * Brick Stacker Styles
+ * Game #219
+ */
+
+:root {
+  --bg-color: #2c3e50;
+  --text-color: #ecf0f1;
+  --text-muted: #95a5a6;
+  --btn-primary: #e74c3c;
+  --btn-secondary: #7f8c8d;
+  --gold: #f1c40f;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(180deg, #3498db 0%, #2c3e50 50%, #1a252f 100%);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.game-container {
+  width: 100%;
+  max-width: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.game-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--btn-primary);
+}
+
+.header-controls select {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--btn-secondary);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.game-info {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px 10px;
+  border-radius: 8px;
+  gap: 8px;
+}
+
+.info-item {
+  text-align: center;
+  min-width: 80px;
+}
+
+.info-label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.info-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+.info-value.best {
+  color: var(--gold);
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 500px;
+  background: linear-gradient(180deg, #87ceeb 0%, #e0f7fa 100%);
+  cursor: pointer;
+}
+
+.perfect-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(241, 196, 15, 0.8);
+  animation: perfectPop 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes perfectPop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(44, 62, 80, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 32px;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  color: var(--btn-primary);
+}
+
+.overlay-msg {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.final-score {
+  font-size: 4rem;
+  font-weight: bold;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--btn-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+}
+
+.instructions {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  #game-canvas {
+    height: 450px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .final-score {
+    font-size: 3rem;
+  }
+}
