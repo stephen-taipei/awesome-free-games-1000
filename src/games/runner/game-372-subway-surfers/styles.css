@@ -1,0 +1,27 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Courier New', monospace; background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 1rem; }
+.game-container { max-width: 600px; width: 100%; }
+.game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; color: #e67e22; }
+.game-header h1 { font-size: 1.4rem; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px #000; }
+.game-header select { padding: 0.4rem; border: 2px solid #e67e22; background: #2c3e50; color: #e67e22; font-family: inherit; }
+.game-stats { display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+.stat-card { background: #34495e; border: 2px solid #e67e22; padding: 0.4rem 0.8rem; display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+.stat-card span:first-child { font-size: 0.65rem; color: #bdc3c7; text-transform: uppercase; }
+.stat-value { font-size: 1.1rem; font-weight: bold; color: #f1c40f; }
+.game-area { position: relative; width: 100%; border: 4px solid #e67e22; margin-bottom: 0.5rem; background: #2c3e50; }
+canvas { width: 100%; display: block; }
+.overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(44,62,80,0.95); display: flex; justify-content: center; align-items: center; z-index: 10; }
+.overlay-content { text-align: center; padding: 2rem; color: #ecf0f1; }
+.overlay-content h2 { font-size: 2rem; margin-bottom: 1rem; color: #e67e22; text-transform: uppercase; text-shadow: 3px 3px #000; }
+.overlay-content p { margin-bottom: 1.5rem; }
+.btn { padding: 0.75rem 2rem; border: 3px solid #e67e22; background: transparent; color: #e67e22; font-family: inherit; font-size: 1rem; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.btn:hover { background: #e67e22; color: #2c3e50; }
+.controls-hint { margin-top: 1rem; opacity: 0.7; font-size: 0.75rem; }
+.mobile-controls { display: flex; justify-content: space-between; padding: 0 0.5rem; }
+.control-row { display: flex; gap: 0.5rem; align-items: center; }
+.control-btn { width: 55px; height: 55px; border: 2px solid #e67e22; background: #34495e; color: #e67e22; font-family: inherit; font-size: 1.2rem; font-weight: bold; border-radius: 8px; }
+.control-btn.action { font-size: 0.6rem; width: 60px; }
+.control-btn.jump { background: #27ae60; border-color: #27ae60; color: white; }
+.control-btn.roll { background: #3498db; border-color: #3498db; color: white; }
+.control-btn:active { transform: scale(0.95); opacity: 0.8; }
+@media (min-width: 768px) { .mobile-controls { display: none; } }
