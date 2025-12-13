@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stickman War - Awesome Free Games 1000</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="game-container">
+    <header class="game-header">
+      <h1 data-i18n="game.title">Stickman War</h1>
+      <select id="language-select">
+        <option value="zh-TW">繁體中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
+    </header>
+    <div class="game-stats">
+      <div class="stat-card"><span data-i18n="game.score">Score</span><span id="score-display" class="stat-value">0</span></div>
+      <div class="stat-card"><span data-i18n="game.wave">Wave</span><span id="wave-display" class="stat-value">1</span></div>
+      <div class="stat-card"><span data-i18n="game.high">Best</span><span id="high-display" class="stat-value">0</span></div>
+    </div>
+    <div class="status-bar">
+      <span data-i18n="game.hp">Base HP</span>
+      <div class="hp-bar"><div id="hp-fill" class="hp-fill"></div></div>
+    </div>
+    <main class="game-area">
+      <canvas id="game-canvas"></canvas>
+      <div id="game-overlay" class="overlay" style="display: flex">
+        <div class="overlay-content">
+          <h2 id="overlay-title" data-i18n="game.welcome">Stickman War</h2>
+          <p id="overlay-msg" data-i18n="game.desc">Command your army!</p>
+          <button id="start-btn" class="btn primary" data-i18n="game.start">Start</button>
+          <div class="controls-hint"><small data-i18n="game.hint">Click to spawn soldiers!</small></div>
+        </div>
+      </div>
+    </main>
+    <div class="spawn-controls">
+      <button id="spawn-soldier" class="spawn-btn">Archer (35g)</button>
+      <button id="spawn-tank" class="spawn-btn">Tank (60g)</button>
+    </div>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
