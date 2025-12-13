@@ -1,0 +1,184 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, sans-serif;
+  background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.game-container {
+  max-width: 500px;
+  width: 100%;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: #00ff00;
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  text-shadow: 0 0 10px #00ff00;
+  font-family: "Courier New", monospace;
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: none;
+  background: #1a1a2e;
+  color: #00ff00;
+  cursor: pointer;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stats-card {
+  background: rgba(0, 255, 0, 0.1);
+  border: 1px solid #00ff00;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: bold;
+  display: flex;
+  gap: 0.5rem;
+  color: #00ff00;
+  font-family: "Courier New", monospace;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #000;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border: 2px solid #00ff00;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: 8px;
+}
+
+.overlay-content {
+  text-align: center;
+  color: #00ff00;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 20px #00ff00;
+  font-family: "Courier New", monospace;
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: 2px solid #00ff00;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Courier New", monospace;
+}
+
+.btn:hover {
+  box-shadow: 0 0 15px #00ff00;
+}
+
+.btn.primary {
+  background: #00ff00;
+  color: #000;
+}
+
+.btn.primary:hover {
+  background: #00cc00;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  opacity: 0.7;
+}
+
+.mobile-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.control-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.control-btn {
+  width: 60px;
+  height: 60px;
+  border: 2px solid #00ff00;
+  border-radius: 8px;
+  background: rgba(0, 255, 0, 0.1);
+  color: #00ff00;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.1s;
+  font-family: "Courier New", monospace;
+}
+
+.control-btn:active {
+  background: #00ff00;
+  color: #000;
+}
+
+.fire-btn {
+  width: 80px;
+  font-size: 1rem;
+}
+
+@media (min-width: 768px) {
+  .mobile-controls {
+    display: none;
+  }
+}
