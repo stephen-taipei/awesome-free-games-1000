@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Racing Run - 賽車跑酷</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="game-container">
+    <h1 id="gameTitle">Racing Run</h1>
+
+    <!-- Game Stats -->
+    <div class="stats-container">
+      <div class="stat-item">
+        <span id="scoreLabel">Score:</span>
+        <span id="score" class="stat-value">0</span>
+      </div>
+      <div class="stat-item">
+        <span id="distanceLabel">Distance:</span>
+        <span id="distance" class="stat-value">0m</span>
+      </div>
+      <div class="stat-item">
+        <span id="coinsLabel">Coins:</span>
+        <span id="coins" class="stat-value">0</span>
+      </div>
+    </div>
+
+    <!-- Health and Nitro Bars -->
+    <div class="bars-container">
+      <div class="bar-item">
+        <span id="healthLabel" class="bar-label">Health:</span>
+        <div class="bar-background">
+          <div id="healthBar" class="bar-fill health-bar"></div>
+        </div>
+      </div>
+      <div class="bar-item">
+        <span id="nitroLabel" class="bar-label">Nitro:</span>
+        <div class="bar-background">
+          <div id="nitroBar" class="bar-fill nitro-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas" width="600" height="800"></canvas>
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="screen">
+      <div class="screen-content">
+        <h2 id="gameTitle2" class="screen-title">Racing Run</h2>
+        <div class="instructions">
+          <div class="instruction-section">
+            <h3 id="controlsTitle">Controls</h3>
+            <p id="controlsText">← → or A/D: Change Lanes<br>↑ or W/Space: Use Nitro Boost</p>
+          </div>
+          <div class="instruction-section">
+            <h3 id="tipsTitle">Game Tips</h3>
+            <p id="tipsText">• Collect nitro icons to refill boost energy<br>• Collect coins for bonus points<br>• Collect repair kits to restore health<br>• Avoid cones, oil slicks, cars, and barriers<br>• Speed increases over time</p>
+          </div>
+        </div>
+        <button id="startButton" class="btn btn-primary">Start Game</button>
+      </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="screen hidden">
+      <div class="screen-content">
+        <h2 id="gameOverText" class="screen-title">Game Over</h2>
+        <p id="finalScore" class="final-score">Final Score: 0</p>
+        <p id="highScore" class="high-score">High Score: 0</p>
+        <button id="restartButton" class="btn btn-primary">Restart</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
