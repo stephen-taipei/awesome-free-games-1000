@@ -1,0 +1,222 @@
+/**
+ * Pyramid Puzzle Styles
+ * Game #105
+ */
+
+:root {
+  --bg-color: #1a1a2e;
+  --pyramid-bg: #16213e;
+  --gold: #f39c12;
+  --purple: #9b59b6;
+  --sand: #e6c688;
+  --text-color: #e0e0e0;
+  --text-muted: #a0a0a0;
+  --btn-primary: #e67e22;
+  --btn-secondary: #4a4a6a;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, var(--bg-color) 0%, #0f0f23 100%);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.game-container {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.game-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--gold);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.header-controls select {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--btn-secondary);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.game-info {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  background: var(--pyramid-bg);
+  padding: 12px 20px;
+  border-radius: 8px;
+}
+
+.info-item {
+  text-align: center;
+}
+
+.info-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.info-value {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--gold);
+}
+
+.target-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.target-color {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  border: 2px solid white;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  background: var(--pyramid-bg);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 400px;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(26, 26, 46, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 32px;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  color: var(--gold);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.overlay-msg {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--btn-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #d35400;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: var(--btn-secondary);
+  color: var(--text-color);
+}
+
+.btn-secondary:hover {
+  background: #5a5a7a;
+}
+
+.instructions {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 12px;
+  background: var(--pyramid-bg);
+  border-radius: 8px;
+  width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  #game-canvas {
+    height: 350px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .game-info {
+    gap: 20px;
+  }
+}
