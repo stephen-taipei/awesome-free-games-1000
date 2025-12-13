@@ -1,0 +1,608 @@
+/**
+ * 星辰使者遊戲樣式
+ */
+
+:root {
+  --bg-color: #0a0a1f;
+  --bg-secondary: #1a1a3e;
+  --text-color: #ffffff;
+  --text-muted: #8888cc;
+  --primary-color: #ffd700;
+  --secondary-color: #00ffff;
+  --health-color: #4cd137;
+  --energy-color: #ffd700;
+  --danger-color: #ff6348;
+  --overlay-bg: rgba(0, 0, 0, 0.95);
+  --border-radius: 8px;
+  --game-height: min(70vh, 500px);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(180deg, var(--bg-color) 0%, var(--bg-secondary) 50%, var(--bg-color) 100%);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* 星空動畫背景 */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, white, transparent),
+    radial-gradient(2px 2px at 60px 70px, white, transparent),
+    radial-gradient(1px 1px at 50px 50px, white, transparent),
+    radial-gradient(1px 1px at 130px 80px, white, transparent),
+    radial-gradient(2px 2px at 90px 10px, white, transparent);
+  background-size: 200px 200px;
+  animation: twinkle 5s infinite;
+  opacity: 0.5;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+#app {
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 1;
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.title-section {
+  flex: 1;
+  min-width: 150px;
+}
+
+.title {
+  font-size: 2.2rem;
+  font-weight: bold;
+  background: linear-gradient(135deg, #ffd700, #00ffff, #ff9ff3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5)); }
+  to { filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)); }
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.scores-section {
+  display: flex;
+  gap: 8px;
+}
+
+.score-box {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  text-align: center;
+  min-width: 60px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.score-label {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.score-value {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-top: 2px;
+  color: var(--primary-color);
+}
+
+/* 狀態條 */
+.status-bars {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  min-width: 70px;
+}
+
+.bar-track {
+  flex: 1;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.bar {
+  height: 100%;
+  width: 100%;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.health-bar {
+  background: linear-gradient(90deg, var(--health-color), #2ecc71);
+  box-shadow: 0 0 10px var(--health-color);
+}
+
+.energy-bar {
+  background: linear-gradient(90deg, var(--energy-color), #f39c12);
+  box-shadow: 0 0 10px var(--energy-color);
+}
+
+/* 遊戲資訊 */
+.game-info {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.info-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.info-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.info-value {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.shield-status {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.shield-indicator {
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: var(--border-radius);
+  text-transform: uppercase;
+  font-weight: bold;
+  backdrop-filter: blur(10px);
+  border: 2px solid transparent;
+}
+
+.shield-indicator.ready {
+  background: rgba(0, 255, 255, 0.2);
+  color: var(--secondary-color);
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.shield-indicator.active {
+  background: rgba(0, 255, 255, 0.4);
+  color: #ffffff;
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.shield-indicator.cooldown {
+  background: rgba(136, 136, 204, 0.2);
+  color: var(--text-muted);
+  border-color: var(--text-muted);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* 星座選擇器 */
+.constellation-selector {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.selector-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.constellation-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.constellation-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--border-radius);
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(10px);
+}
+
+.constellation-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.constellation-btn.selected {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+.constellation-icon {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+}
+
+.constellation-name {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+.constellation-desc {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.controls {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-color), #f39c12);
+  color: #000000;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.language-selector select {
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--border-radius);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.game-container {
+  position: relative;
+  width: 100%;
+  height: var(--game-height);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+  border: 2px solid rgba(255, 215, 0, 0.5);
+}
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--overlay-bg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 20px;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #ffd700, #00ffff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.overlay-score {
+  font-size: 1.2rem;
+  margin-bottom: 24px;
+  color: var(--text-muted);
+}
+
+.overlay-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.next-wave-info {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary-color);
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+  z-index: 50;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.modal-content {
+  background: var(--bg-secondary);
+  padding: 32px;
+  border-radius: var(--border-radius);
+  max-width: 400px;
+  width: 100%;
+  position: relative;
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.3s ease;
+}
+
+.modal-close:hover {
+  color: var(--text-color);
+}
+
+.modal-content h2 {
+  margin-bottom: 16px;
+  color: var(--primary-color);
+}
+
+.modal-content p {
+  line-height: 1.6;
+  margin-bottom: 24px;
+  color: var(--text-muted);
+}
+
+.controls-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guide-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.guide-key {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.guide-action {
+  color: var(--text-muted);
+}
+
+.footer {
+  margin-top: 24px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.footer a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer a:hover {
+  color: var(--secondary-color);
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  :root {
+    --game-height: 55vh;
+  }
+
+  .title {
+    font-size: 1.8rem;
+  }
+
+  .score-box {
+    padding: 6px 10px;
+    min-width: 50px;
+  }
+
+  .score-value {
+    font-size: 1rem;
+  }
+
+  .constellation-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .scores-section {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .game-info {
+    flex-direction: column;
+  }
+
+  .shield-status {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
