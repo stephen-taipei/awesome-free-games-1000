@@ -1,0 +1,32 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: linear-gradient(135deg, #1a1a1a, #2d2d2d); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 1rem; }
+.game-container { max-width: 600px; width: 100%; }
+.game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; color: white; }
+.game-header h1 { font-size: 1.5rem; color: #e74c3c; }
+.game-header select { padding: 0.5rem; border-radius: 4px; border: none; background: #333; color: white; }
+.game-stats { display: flex; justify-content: center; gap: 1rem; margin-bottom: 0.75rem; }
+.stat-card { background: #333; padding: 0.5rem 1rem; border-radius: 8px; color: white; display: flex; flex-direction: column; align-items: center; min-width: 80px; }
+.stat-card span:first-child { font-size: 0.75rem; opacity: 0.8; }
+.stat-value { font-size: 1.25rem; font-weight: bold; color: #e74c3c; }
+.status-bar { display: flex; gap: 1rem; margin-bottom: 0.75rem; }
+.bar-container { flex: 1; display: flex; align-items: center; gap: 0.5rem; color: white; font-size: 0.85rem; }
+.bar { flex: 1; height: 14px; background: #1a1a1a; border-radius: 7px; overflow: hidden; }
+.bar-fill { height: 100%; transition: width 0.3s; }
+.bar-fill.hp { background: linear-gradient(90deg, #e74c3c, #c0392b); width: 100%; }
+.bar-fill.food { background: linear-gradient(90deg, #f39c12, #d68910); width: 100%; }
+.game-area { position: relative; width: 100%; background: #1a1a1a; border-radius: 12px; margin-bottom: 1rem; overflow: hidden; }
+canvas { width: 100%; display: block; }
+.overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(26,26,26,0.95); display: flex; justify-content: center; align-items: center; z-index: 10; border-radius: 12px; }
+.overlay-content { text-align: center; color: white; padding: 2rem; }
+.overlay-content h2 { font-size: 2rem; margin-bottom: 1rem; color: #e74c3c; }
+.overlay-content p { margin-bottom: 1.5rem; opacity: 0.9; }
+.btn { padding: 0.75rem 2rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+.btn.primary { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
+.btn:hover { transform: translateY(-2px); }
+.controls-hint { margin-top: 1rem; opacity: 0.7; }
+.mobile-controls { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.control-row { display: flex; gap: 1rem; }
+.control-btn { width: 50px; height: 50px; border: none; border-radius: 50%; background: #333; color: white; font-size: 1.2rem; font-weight: bold; }
+.control-btn.attack { background: #e74c3c; font-size: 0.7rem; }
+.control-btn:active { transform: scale(0.95); }
+@media (min-width: 768px) { .mobile-controls { display: none; } }

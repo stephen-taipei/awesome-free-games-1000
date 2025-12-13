@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doomsday Survival - Awesome Free Games 1000</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="game-container">
+    <header class="game-header">
+      <h1 data-i18n="game.title">Doomsday Survival</h1>
+      <select id="language-select">
+        <option value="zh-TW">繁體中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
+    </header>
+    <div class="game-stats">
+      <div class="stat-card"><span data-i18n="game.score">Score</span><span id="score-display" class="stat-value">0</span></div>
+      <div class="stat-card"><span data-i18n="game.day">Day</span><span id="day-display" class="stat-value">1</span></div>
+      <div class="stat-card"><span data-i18n="game.high">Best</span><span id="high-display" class="stat-value">0</span></div>
+    </div>
+    <div class="status-bar">
+      <div class="bar-container"><span data-i18n="game.hp">HP</span><div class="bar"><div id="hp-fill" class="bar-fill hp"></div></div></div>
+      <div class="bar-container"><span data-i18n="game.food">Food</span><div class="bar"><div id="food-fill" class="bar-fill food"></div></div></div>
+    </div>
+    <main class="game-area">
+      <canvas id="game-canvas"></canvas>
+      <div id="game-overlay" class="overlay" style="display: flex">
+        <div class="overlay-content">
+          <h2 id="overlay-title" data-i18n="game.welcome">Doomsday Survival</h2>
+          <p id="overlay-msg" data-i18n="game.desc">Survive the apocalypse!</p>
+          <button id="start-btn" class="btn primary" data-i18n="game.start">Start</button>
+          <div class="controls-hint"><small data-i18n="game.hint">Arrow keys to move!</small></div>
+        </div>
+      </div>
+    </main>
+    <div class="mobile-controls">
+      <button class="control-btn" id="mobile-up">^</button>
+      <div class="control-row">
+        <button class="control-btn" id="mobile-left">&lt;</button>
+        <button class="control-btn attack" id="mobile-attack">ATK</button>
+        <button class="control-btn" id="mobile-right">&gt;</button>
+      </div>
+      <button class="control-btn" id="mobile-down">v</button>
+    </div>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
