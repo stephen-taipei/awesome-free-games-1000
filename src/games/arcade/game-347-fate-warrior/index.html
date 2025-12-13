@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="命運戰士 - 掌握命運之力，與敵人戰鬥的街機遊戲。">
+  <meta name="keywords" content="Fate Warrior, 命運戰士, combat game, arcade game, 街機遊戲, 免費遊戲">
+  <meta name="theme-color" content="#0a0014">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="命運戰士 - 街機遊戲">
+  <meta property="og:description" content="掌握命運之力！">
+  <meta property="og:type" content="website">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <title>命運戰士 - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 頂部標題區 -->
+    <header class="header">
+      <div class="title-section">
+        <h1 class="title" data-i18n="game.title">命運戰士</h1>
+        <p class="subtitle" data-i18n="game.subtitle">掌握命運之力！</p>
+      </div>
+      <div class="scores-section">
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.score">分數</span>
+          <span class="score-value" id="score">0</span>
+        </div>
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.best">最高分</span>
+          <span class="score-value" id="best-score">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 遊戲狀態 -->
+    <div class="game-stats">
+      <div class="stat-item">
+        <span class="stat-label" data-i18n="game.wave">波次</span>
+        <span class="stat-value" id="wave">1</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label" data-i18n="game.kills">擊殺</span>
+        <span class="stat-value" id="kills">0</span>
+      </div>
+    </div>
+
+    <!-- 生命值和命運能量 -->
+    <div class="bars-container">
+      <div class="bar-group">
+        <span class="bar-label" data-i18n="game.health">生命</span>
+        <div class="bar-track health-track">
+          <div class="health-bar" id="health-bar"></div>
+        </div>
+      </div>
+      <div class="bar-group">
+        <span class="bar-label" data-i18n="game.fate">命運</span>
+        <div class="bar-track fate-track">
+          <div class="fate-bar" id="fate-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 命運反擊指示器 -->
+    <div class="counter-indicator" id="counter-indicator">
+      <span data-i18n="game.counterActive">命運反擊啟動！</span>
+    </div>
+
+    <!-- 技能區 -->
+    <div class="skills-section">
+      <h3 class="skills-title" data-i18n="game.skills">命運技能</h3>
+      <div class="skills-grid">
+        <button class="skill-btn disabled" id="skill-1-btn">
+          <div class="skill-name" data-i18n="game.skill1">時間回溯 (1)</div>
+          <div class="skill-cost">30</div>
+          <div class="skill-desc" data-i18n="game.skillDesc1">恢復30生命值</div>
+        </button>
+        <button class="skill-btn disabled" id="skill-2-btn">
+          <div class="skill-name" data-i18n="game.skill2">命運反擊 (2)</div>
+          <div class="skill-cost">50</div>
+          <div class="skill-desc" data-i18n="game.skillDesc2">5秒內反彈所有傷害</div>
+        </button>
+        <button class="skill-btn disabled" id="skill-3-btn">
+          <div class="skill-name" data-i18n="game.skill3">命運終結 (3)</div>
+          <div class="skill-cost">100</div>
+          <div class="skill-desc" data-i18n="game.skillDesc3">對所有敵人造成200傷害</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- 控制區 -->
+    <div class="controls">
+      <button class="btn btn-secondary" id="help-btn" data-i18n="game.howToPlay">遊戲說明</button>
+      <div class="language-selector">
+        <select id="language-select">
+          <option value="zh-TW">繁體中文</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 遊戲容器 -->
+    <div class="game-container" id="game-container">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- 遊戲覆蓋層 -->
+      <div class="game-overlay" id="game-overlay">
+        <div class="overlay-content">
+          <h2 class="overlay-title" id="overlay-title">點擊開始</h2>
+          <p class="overlay-score" id="final-score">0</p>
+          <div class="overlay-buttons">
+            <button class="btn btn-primary" id="start-btn" data-i18n="game.tapToStart">點擊開始</button>
+            <button class="btn btn-primary" id="retry-btn" data-i18n="game.tryAgain" style="display: none;">再試一次</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 說明彈窗 -->
+    <div class="modal" id="help-modal" style="display: none;">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">&times;</button>
+        <h2 data-i18n="game.howToPlay">遊戲說明</h2>
+        <p data-i18n="game.howToPlayContent">使用方向鍵或 WASD 移動戰士。空白鍵發射攻擊。收集命運能量使用特殊技能：1-時間回溯（恢復生命）、2-命運反擊（反彈傷害）、3-命運終結（強力攻擊）。擊敗敵人獲得分數和能量！</p>
+        <div class="controls-guide">
+          <p><strong>移動：</strong>方向鍵 / WASD</p>
+          <p><strong>攻擊：</strong>自動發射</p>
+          <p><strong>技能：</strong>按 1, 2, 3 或點擊技能按鈕</p>
+          <p><strong>暫停：</strong>ESC</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="footer">
+      <p>Game #347 | <a href="https://github.com/awesome-free-games" target="_blank">Awesome Free Games 1000</a></p>
+    </footer>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
