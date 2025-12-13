@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Fighting Champion - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="game-container">
+      <header class="game-header">
+        <h1 class="title" data-i18n="game.title">Fighting Champion</h1>
+        <select id="language-select"><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select>
+      </header>
+      <div class="game-info">
+        <div class="info-item"><span class="info-label" data-i18n="game.score">Score</span><span class="info-value" id="score-display">0</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.round">Round</span><span class="info-value" id="round-display">1</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.wins">Wins</span><span class="info-value" id="wins-display">0</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.combo">Combo</span><span class="info-value" id="combo-display">0</span></div>
+      </div>
+      <div class="bars-container">
+        <div class="bar-wrapper"><span class="bar-label" data-i18n="game.hp">HP</span><div class="bar"><div class="bar-fill hp-fill" id="hp-fill"></div></div></div>
+        <div class="bar-wrapper"><span class="bar-label" data-i18n="game.stamina">Stamina</span><div class="bar"><div class="bar-fill stamina-fill" id="stamina-fill"></div></div></div>
+        <div class="bar-wrapper" style="display: none"><span class="bar-label">Enemy</span><div class="bar"><div class="bar-fill enemy-hp-fill" id="enemy-hp-fill"></div></div></div>
+      </div>
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.title">Fighting Champion</h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">Defeat opponents with combos!</p>
+            <div class="final-score" id="final-score" style="display: none">0</div>
+            <div class="stats-grid" id="stats-grid" style="display: none"></div>
+            <button id="start-btn" class="btn btn-primary" data-i18n="game.start">Start Fight</button>
+          </div>
+        </div>
+      </main>
+      <div class="mobile-controls">
+        <div class="joystick" id="joystick"><div class="joystick-knob" id="joystick-knob"></div></div>
+        <div class="action-buttons">
+          <button class="action-btn punch-btn" id="punch-btn" data-i18n="game.punch">Punch</button>
+          <button class="action-btn kick-btn" id="kick-btn" data-i18n="game.kick">Kick</button>
+          <button class="action-btn special-btn" id="special-btn" data-i18n="game.special">Special</button>
+          <button class="action-btn block-btn" id="block-btn" data-i18n="game.block">Block</button>
+        </div>
+      </div>
+      <div class="instructions"><p data-i18n="game.controls">A/D move, J punch, K kick, L special, B block</p></div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
