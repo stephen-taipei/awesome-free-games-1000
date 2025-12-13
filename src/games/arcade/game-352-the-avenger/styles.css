@@ -1,0 +1,532 @@
+/**
+ * 復仇者遊戲樣式
+ */
+
+:root {
+  --bg-color: #0a0000;
+  --bg-dark: #140505;
+  --text-color: #ffffff;
+  --text-muted: #aa8888;
+  --primary-color: #ff0000;
+  --secondary-color: #cc0000;
+  --health-color: #00ff00;
+  --health-low: #ff0000;
+  --rage-color: #ff4444;
+  --rage-high: #ff0000;
+  --overlay-bg: rgba(20, 5, 5, 0.95);
+  --border-radius: 8px;
+  --game-height: min(65vh, 450px);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(135deg, var(--bg-color) 0%, var(--bg-dark) 100%);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.title-section {
+  flex: 1;
+  min-width: 150px;
+}
+
+.title {
+  font-size: 2.2rem;
+  font-weight: bold;
+  background: linear-gradient(135deg, #ff0000, #ff6666);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+  text-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.scores-section {
+  display: flex;
+  gap: 8px;
+}
+
+.score-box {
+  background: rgba(255, 0, 0, 0.15);
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  text-align: center;
+  min-width: 60px;
+  border: 1px solid rgba(255, 0, 0, 0.3);
+}
+
+.score-label {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.score-value {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-top: 2px;
+  color: var(--primary-color);
+}
+
+/* 狀態條 */
+.status-bars {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  min-width: 50px;
+}
+
+.bar-track {
+  flex: 1;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.health-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--health-color);
+  border-radius: 7px;
+  transition: width 0.2s ease, background-color 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+.health-bar.low {
+  background: var(--health-low);
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+  animation: pulse 0.5s ease-in-out infinite;
+}
+
+.rage-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--rage-color);
+  border-radius: 7px;
+  transition: width 0.2s ease, background-color 0.3s ease;
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+}
+
+.rage-bar.high {
+  background: var(--rage-high);
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+  animation: rage-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes rage-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(255, 0, 0, 1); }
+}
+
+/* 遊戲資訊 */
+.game-info {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+}
+
+.info-item {
+  background: rgba(255, 0, 0, 0.1);
+  padding: 6px 12px;
+  border-radius: var(--border-radius);
+  text-align: center;
+  flex: 1;
+  border: 1px solid rgba(255, 0, 0, 0.2);
+}
+
+.info-label {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.info-value {
+  display: block;
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 2px;
+  color: var(--primary-color);
+}
+
+.controls {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: var(--text-color);
+}
+
+.btn-primary:hover {
+  background: #ff3333;
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.language-selector select {
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--border-radius);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* 技能按鈕 */
+.skills {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+}
+
+.skill-btn {
+  flex: 1;
+  background: rgba(255, 0, 0, 0.15);
+  border: 2px solid rgba(255, 0, 0, 0.4);
+  border-radius: var(--border-radius);
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-color);
+  text-align: center;
+}
+
+.skill-btn:hover:not(.disabled) {
+  background: rgba(255, 0, 0, 0.3);
+  border-color: rgba(255, 0, 0, 0.6);
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
+}
+
+.skill-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.skill-key {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 4px;
+}
+
+.skill-name {
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+}
+
+.skill-cost {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.game-container {
+  position: relative;
+  width: 100%;
+  height: var(--game-height);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  cursor: none;
+  border: 2px solid rgba(255, 0, 0, 0.3);
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.2);
+}
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--overlay-bg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 20px;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #ff0000, #ff6666);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+}
+
+.overlay-score {
+  font-size: 1.2rem;
+  margin-bottom: 24px;
+  color: var(--text-muted);
+}
+
+.overlay-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--bg-dark);
+  padding: 32px;
+  border-radius: var(--border-radius);
+  max-width: 400px;
+  width: 100%;
+  position: relative;
+  border: 2px solid rgba(255, 0, 0, 0.3);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.modal-close:hover {
+  color: var(--text-color);
+}
+
+.modal-content h2 {
+  margin-bottom: 16px;
+  color: var(--primary-color);
+}
+
+.modal-content h3 {
+  margin-top: 20px;
+  margin-bottom: 12px;
+  color: var(--primary-color);
+  font-size: 1.2rem;
+}
+
+.modal-content p {
+  line-height: 1.6;
+  margin-bottom: 16px;
+  color: var(--text-muted);
+}
+
+.skills-guide {
+  text-align: left;
+}
+
+.skill-info {
+  margin-bottom: 12px;
+  padding: 8px;
+  background: rgba(255, 0, 0, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 0, 0, 0.2);
+}
+
+.skill-info strong {
+  color: var(--primary-color);
+  font-size: 1.1rem;
+}
+
+.skill-info p {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+}
+
+.footer {
+  margin-top: 24px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.footer a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  :root {
+    --game-height: 55vh;
+  }
+
+  .title {
+    font-size: 1.8rem;
+  }
+
+  .score-box {
+    padding: 6px 10px;
+    min-width: 50px;
+  }
+
+  .score-value {
+    font-size: 1rem;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .skill-btn {
+    padding: 6px;
+  }
+
+  .skill-key {
+    font-size: 1rem;
+  }
+
+  .skill-name {
+    font-size: 0.7rem;
+  }
+
+  .skill-cost {
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .scores-section {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .skills {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
