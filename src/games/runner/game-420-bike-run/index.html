@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="game.title">腳踏車跑酷</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 data-i18n="game.title">腳踏車跑酷</h1>
+            <div class="stats">
+                <div class="stat-item">
+                    <span data-i18n="game.score">分數</span>: <span id="score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span data-i18n="game.distance">距離</span>: <span id="distance">0m</span>
+                </div>
+                <div class="stat-item">
+                    <span data-i18n="game.waterBottles">水瓶</span>: <span id="waterBottles">0</span>
+                </div>
+                <div class="stat-item">
+                    <span data-i18n="game.energyBars">能量棒</span>: <span id="energyBars">0</span>
+                </div>
+                <div class="stat-item">
+                    <span data-i18n="game.medals">獎牌</span>: <span id="medals">0</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="game-wrapper">
+            <canvas id="gameCanvas"></canvas>
+
+            <div id="menu" class="overlay">
+                <div class="menu-content">
+                    <h2 data-i18n="game.title">腳踏車跑酷</h2>
+                    <div class="controls-info">
+                        <h3 data-i18n="game.controls">控制說明</h3>
+                        <p data-i18n="game.control.left">← 或 A：向左移動</p>
+                        <p data-i18n="game.control.right">→ 或 D：向右移動</p>
+                        <p data-i18n="game.control.jump">↑ 或 W 或 空白鍵：跳躍</p>
+                    </div>
+                    <p class="tips" data-i18n="game.tips">提示：收集水瓶和能量棒來得分，避開障礙物！</p>
+                    <button id="startButton" class="btn btn-primary" data-i18n="game.start">開始遊戲</button>
+                </div>
+            </div>
+
+            <div id="gameOver" class="overlay" style="display: none;">
+                <div class="menu-content">
+                    <h2 data-i18n="game.gameOver">遊戲結束</h2>
+                    <div class="final-stats">
+                        <p><span data-i18n="game.finalScore">最終分數</span>: <span id="finalScore">0</span></p>
+                    </div>
+                    <button id="restartButton" class="btn btn-primary" data-i18n="game.restart">重新開始</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <div class="game-info">
+                <h3 data-i18n="game.obstacles">障礙物</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="icon">🪨</span>
+                        <span data-i18n="game.rock">岩石</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="icon">🪵</span>
+                        <span data-i18n="game.log">木頭</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="icon">💧</span>
+                        <span data-i18n="game.puddle">水坑</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="icon">🚶</span>
+                        <span data-i18n="game.hiker">徒步者</span>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script type="module" src="main.ts"></script>
+</body>
+</html>
