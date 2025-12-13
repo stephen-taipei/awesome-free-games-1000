@@ -1,0 +1,105 @@
+/**
+ * 鏡像控制遊戲多語言翻譯
+ */
+
+export const translations = {
+  'zh-TW': {
+    game: {
+      title: '鏡像控制',
+      subtitle: '同時控制兩個鏡像角色！',
+      newGame: '新遊戲',
+      score: '分數',
+      best: '最高分',
+      level: '關卡',
+      gameOver: '遊戲結束',
+      levelComplete: '關卡完成！',
+      nextLevel: '下一關',
+      tapToStart: '點擊開始',
+      tryAgain: '再試一次',
+      howToPlay: '遊戲說明',
+      howToPlayContent: '使用方向鍵控制兩個角色同時移動，按空白鍵跳躍。藍色和紅色角色會朝相反方向移動。讓兩個角色都到達各自的目標星星！避開障礙物。',
+      language: '語言',
+      close: '關閉',
+    },
+  },
+  'zh-CN': {
+    game: {
+      title: '镜像控制',
+      subtitle: '同时控制两个镜像角色！',
+      newGame: '新游戏',
+      score: '分数',
+      best: '最高分',
+      level: '关卡',
+      gameOver: '游戏结束',
+      levelComplete: '关卡完成！',
+      nextLevel: '下一关',
+      tapToStart: '点击开始',
+      tryAgain: '再试一次',
+      howToPlay: '游戏说明',
+      howToPlayContent: '使用方向键控制两个角色同时移动，按空格键跳跃。蓝色和红色角色会朝相反方向移动。让两个角色都到达各自的目标星星！避开障碍物。',
+      language: '语言',
+      close: '关闭',
+    },
+  },
+  en: {
+    game: {
+      title: 'Mirror Control',
+      subtitle: 'Control two mirrored characters!',
+      newGame: 'New Game',
+      score: 'Score',
+      best: 'Best',
+      level: 'Level',
+      gameOver: 'Game Over',
+      levelComplete: 'Level Complete!',
+      nextLevel: 'Next Level',
+      tapToStart: 'Tap to Start',
+      tryAgain: 'Try Again',
+      howToPlay: 'How to Play',
+      howToPlayContent: 'Use arrow keys to move both characters, press space to jump. Blue and red characters move in opposite directions. Guide both to their goal stars! Avoid obstacles.',
+      language: 'Language',
+      close: 'Close',
+    },
+  },
+  ja: {
+    game: {
+      title: 'ミラーコントロール',
+      subtitle: '2つのミラーキャラを同時に操作！',
+      newGame: '新しいゲーム',
+      score: 'スコア',
+      best: 'ベスト',
+      level: 'レベル',
+      gameOver: 'ゲームオーバー',
+      levelComplete: 'レベルクリア！',
+      nextLevel: '次のレベル',
+      tapToStart: 'タップして開始',
+      tryAgain: 'もう一度',
+      howToPlay: '遊び方',
+      howToPlayContent: '矢印キーで両方のキャラクターを移動、スペースキーでジャンプ。青と赤のキャラクターは逆方向に動きます。両方を目標の星に導きましょう！障害物を避けてください。',
+      language: '言語',
+      close: '閉じる',
+    },
+  },
+  ko: {
+    game: {
+      title: '미러 컨트롤',
+      subtitle: '두 개의 거울 캐릭터를 동시에 조종!',
+      newGame: '새 게임',
+      score: '점수',
+      best: '최고점',
+      level: '레벨',
+      gameOver: '게임 오버',
+      levelComplete: '레벨 완료!',
+      nextLevel: '다음 레벨',
+      tapToStart: '탭하여 시작',
+      tryAgain: '다시 시도',
+      howToPlay: '게임 방법',
+      howToPlayContent: '화살표 키로 두 캐릭터를 이동하고, 스페이스바로 점프하세요. 파란색과 빨간색 캐릭터는 반대 방향으로 움직입니다. 둘 다 목표 별에 도달하게 하세요! 장애물을 피하세요.',
+      language: '언어',
+      close: '닫기',
+    },
+  },
+};
+
+export type TranslationKey = keyof typeof translations['en']['game'];
+
+export default translations;
