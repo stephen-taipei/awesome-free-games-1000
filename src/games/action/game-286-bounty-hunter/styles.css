@@ -1,0 +1,245 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.game-container {
+  max-width: 600px;
+  width: 100%;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  color: #e74c3c;
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: none;
+  background: #34495e;
+  color: white;
+  cursor: pointer;
+}
+
+.game-stats {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #34495e, #2c3e50);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.stat-card span:first-child {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #f1c40f;
+}
+
+.status-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  align-items: center;
+}
+
+.hp-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+}
+
+.hp-bar {
+  flex: 1;
+  height: 16px;
+  background: #1a252f;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #34495e;
+}
+
+.hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+  transition: width 0.3s ease;
+}
+
+.targets-info {
+  color: white;
+  display: flex;
+  gap: 0.5rem;
+  background: #34495e;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  background: #1a252f;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+canvas {
+  width: 100%;
+  height: 400px;
+  display: block;
+}
+
+.message-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(231, 76, 60, 0.9);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: bold;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.message-box.show {
+  opacity: 1;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(44, 62, 80, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: 12px;
+}
+
+.overlay-content {
+  text-align: center;
+  color: white;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #e74c3c;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  opacity: 0.7;
+}
+
+.mobile-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.control-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.control-btn {
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #34495e, #2c3e50);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s;
+}
+
+.control-btn.attack {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  font-size: 0.9rem;
+}
+
+.control-btn:active {
+  transform: scale(0.95);
+}
+
+@media (min-width: 768px) {
+  .mobile-controls {
+    display: none;
+  }
+}
