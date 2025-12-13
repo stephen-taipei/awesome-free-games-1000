@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Light Speed - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="../../shared/styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">光速賽跑</h1>
+        <div class="header-controls">
+          <button id="instructions-btn" class="btn secondary" data-i18n="game.instructions">
+            遊戲說明
+          </button>
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-controls">
+        <div class="stats-card">
+          <span data-i18n="game.score">分數</span>
+          <span id="score-display" class="stats-value">0</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.best">最高分</span>
+          <span id="best-display" class="stats-value">0</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.lives">生命</span>
+          <span id="lives-display" class="stats-value">♥♥♥</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.level">等級</span>
+          <span id="level-display" class="stats-value">1</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.avgTime">平均反應</span>
+          <span id="avgtime-display" class="stats-value">-</span>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+
+        <div id="symbol-buttons" class="symbol-buttons"></div>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2
+              class="overlay-title"
+              id="overlay-title"
+              data-i18n="game.welcome"
+            >
+              光速賽跑
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              極速反應挑戰！在最短時間內對指示做出反應。
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              開始遊戲
+            </button>
+          </div>
+        </div>
+      </main>
+
+      <!-- Instructions Modal -->
+      <div id="instructions-modal" class="modal">
+        <div class="modal-content">
+          <h2 data-i18n="game.instructionsTitle">如何遊玩</h2>
+          <ul class="instructions-list">
+            <li data-i18n="game.rule1">顏色挑戰：當螢幕變色時，快速點擊螢幕</li>
+            <li data-i18n="game.rule2">符號挑戰：記住顯示的符號並點擊對應按鈕</li>
+            <li data-i18n="game.rule3">方向挑戰：按下對應的方向鍵</li>
+            <li data-i18n="game.rule4">文字挑戰：按空白鍵或Enter鍵</li>
+            <li data-i18n="game.rule5">反應越快分數越高</li>
+            <li data-i18n="game.rule6">反應錯誤或太慢會失去生命</li>
+          </ul>
+          <button id="close-instructions" class="btn primary" data-i18n="game.close">
+            關閉
+          </button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
