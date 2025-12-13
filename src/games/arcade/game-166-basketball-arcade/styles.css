@@ -1,0 +1,52 @@
+.game-container {
+  max-width: 600px;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 450px;
+  background: linear-gradient(180deg, #1a1a2e 0%, #2d1b4e 100%);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+
+.stats-card {
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.stats-card.time {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
