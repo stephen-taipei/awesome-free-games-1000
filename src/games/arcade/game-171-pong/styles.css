@@ -1,0 +1,53 @@
+.game-container {
+  max-width: 600px;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 450px;
+  background: #000;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  cursor: none;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+
+.stats-card {
+  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.4);
+  display: flex;
+  gap: 0.5rem;
+  font-family: 'Courier New', monospace;
+}
+
+.stats-card.cpu {
+  background: linear-gradient(135deg, #c0392b 0%, #962d22 100%);
+  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.4);
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
