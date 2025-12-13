@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="月影刺客 - 隱於月影，致命一擊的潛行戰鬥街機遊戲。">
+  <meta name="keywords" content="Moon Shadow, 月影刺客, stealth game, assassin, arcade game, 街機遊戲, 免費遊戲">
+  <meta name="theme-color" content="#0a0a1a">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="月影刺客 - 街機遊戲">
+  <meta property="og:description" content="隱於月影，致命一擊！">
+  <meta property="og:type" content="website">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <title>月影刺客 - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 頂部標題區 -->
+    <header class="header">
+      <div class="title-section">
+        <h1 class="title" data-i18n="game.title">月影刺客</h1>
+        <p class="subtitle" data-i18n="game.subtitle">隱於月影，致命一擊！</p>
+      </div>
+      <div class="scores-section">
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.score">分數</span>
+          <span class="score-value" id="score">0</span>
+        </div>
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.kills">擊殺</span>
+          <span class="score-value" id="kills">0</span>
+        </div>
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.best">最高分</span>
+          <span class="score-value" id="best-score">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 狀態條 -->
+    <div class="status-bars">
+      <div class="status-bar">
+        <span class="status-label" data-i18n="game.health">生命</span>
+        <div class="bar-track">
+          <div class="bar health-bar" id="health-bar"></div>
+        </div>
+      </div>
+      <div class="status-bar">
+        <span class="status-label" data-i18n="game.stealth">隱身</span>
+        <div class="bar-track">
+          <div class="bar stealth-bar" id="stealth-bar"></div>
+        </div>
+        <span class="stealth-indicator" id="stealth-indicator" data-i18n="game.stealth">隱身</span>
+      </div>
+    </div>
+
+    <!-- 技能欄 -->
+    <div class="skills-section">
+      <div class="skill-button" id="skill-moon-slash">
+        <div class="skill-icon">Q</div>
+        <div class="skill-name" data-i18n="game.moonSlash">月光斬</div>
+        <div class="skill-cooldown" id="cooldown-moon-slash">
+          <span class="cooldown-text"></span>
+        </div>
+      </div>
+      <div class="skill-button" id="skill-shadow-clone">
+        <div class="skill-icon">E</div>
+        <div class="skill-name" data-i18n="game.shadowClone">影分身</div>
+        <div class="skill-cooldown" id="cooldown-shadow-clone">
+          <span class="cooldown-text"></span>
+        </div>
+      </div>
+      <div class="skill-button" id="skill-night-dash">
+        <div class="skill-icon">R</div>
+        <div class="skill-name" data-i18n="game.nightDash">暗夜疾走</div>
+        <div class="skill-cooldown" id="cooldown-night-dash">
+          <span class="cooldown-text"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 控制區 -->
+    <div class="controls">
+      <button class="btn btn-secondary" id="help-btn" data-i18n="game.howToPlay">遊戲說明</button>
+      <div class="language-selector">
+        <select id="language-select">
+          <option value="zh-TW">繁體中文</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 遊戲容器 -->
+    <div class="game-container" id="game-container">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- 遊戲覆蓋層 -->
+      <div class="game-overlay" id="game-overlay">
+        <div class="overlay-content">
+          <h2 class="overlay-title" id="overlay-title">點擊開始</h2>
+          <p class="overlay-score" id="final-score">分數: 0</p>
+          <div class="overlay-buttons">
+            <button class="btn btn-primary" id="start-btn" data-i18n="game.tapToStart">點擊開始</button>
+            <button class="btn btn-primary" id="retry-btn" data-i18n="game.tryAgain" style="display: none;">再試一次</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 說明彈窗 -->
+    <div class="modal" id="help-modal" style="display: none;">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">&times;</button>
+        <h2 data-i18n="game.howToPlay">遊戲說明</h2>
+        <p data-i18n="game.howToPlayContent">使用 WASD 或方向鍵移動刺客。按 Shift 切換隱身模式，隱身時敵人無法發現你。點擊滑鼠左鍵或按空白鍵攻擊敵人。隱身狀態下攻擊會造成暴擊傷害！使用技能鍵（Q/E/R）施放月光技能。</p>
+        <div class="controls-guide">
+          <h3 data-i18n="game.controls">操作方式</h3>
+          <p data-i18n="game.move">WASD/方向鍵 - 移動</p>
+          <p data-i18n="game.stealthKey">Shift - 隱身</p>
+          <p data-i18n="game.attack">空白鍵/滑鼠左鍵 - 攻擊</p>
+          <p data-i18n="game.skill1">Q - 月光斬</p>
+          <p data-i18n="game.skill2">E - 影分身</p>
+          <p data-i18n="game.skill3">R - 暗夜疾走</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="footer">
+      <p>Game #349 | <a href="https://github.com/awesome-free-games" target="_blank">Awesome Free Games 1000</a></p>
+    </footer>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
