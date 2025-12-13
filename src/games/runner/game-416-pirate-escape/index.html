@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pirate Escape - Runner Game</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="game-container">
+    <!-- Start Screen -->
+    <div id="startScreen" class="screen">
+      <h1 id="gameTitle">Pirate Escape</h1>
+      <p id="gameDesc">Run on the pirate ship, dodge obstacles and collect treasures!</p>
+      <button id="startBtn" class="btn">Start Game</button>
+      <p id="controls" class="controls-text">Controls: Arrow keys to move, Space to jump</p>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="screen" style="display: none;">
+      <h1 id="gameOverTitle">Game Over</h1>
+      <p class="final-score">
+        <span id="finalScoreLabel">Final Score:</span>
+        <span id="finalScore">0</span>
+      </p>
+      <button id="restartBtn" class="btn">Restart</button>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas" width="600" height="500"></canvas>
+
+    <!-- HUD -->
+    <div class="hud">
+      <div class="hud-item">
+        <span id="scoreLabel">Score:</span>
+        <span id="score">0</span>
+      </div>
+      <div class="hud-item">
+        <span id="distanceLabel">Distance:</span>
+        <span id="distance">0</span>
+      </div>
+      <div class="hud-item">
+        <span id="coinsLabel">Coins:</span>
+        <span id="coins">0</span>
+      </div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div class="mobile-controls">
+      <div class="control-row">
+        <button id="leftBtn" class="control-btn">◄</button>
+        <button id="rightBtn" class="control-btn">►</button>
+      </div>
+      <div class="control-row">
+        <button id="jumpBtn" class="control-btn jump-btn">JUMP</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
