@@ -1,0 +1,305 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.game-container {
+  max-width: 700px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.game-header h1 {
+  color: #e74c3c;
+  font-size: 1.5rem;
+}
+
+#language-select {
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  border: none;
+  background: #2c3e50;
+  color: white;
+  cursor: pointer;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.stats-card {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  color: white;
+  display: flex;
+  gap: 0.5rem;
+  font-weight: bold;
+}
+
+.inventory-card {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.inventory {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.inventory-item {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  border: 2px solid transparent;
+}
+
+.inventory-item:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.inventory-item.selected {
+  border-color: #f1c40f;
+  background: rgba(241, 196, 15, 0.3);
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  background: #2c3e50;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.room-view {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: linear-gradient(180deg, #34495e 0%, #2c3e50 100%);
+}
+
+.room-object {
+  position: absolute;
+  cursor: pointer;
+  transition: transform 0.2s, filter 0.2s;
+}
+
+.room-object:hover {
+  transform: scale(1.05);
+  filter: brightness(1.2);
+}
+
+.room-object.highlight {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 5px #f1c40f);
+  }
+  50% {
+    filter: drop-shadow(0 0 15px #f1c40f);
+  }
+}
+
+.message-box {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  max-width: 80%;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 50;
+}
+
+.message-box.show {
+  opacity: 1;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 12px;
+}
+
+.overlay-content {
+  text-align: center;
+  color: white;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #e74c3c;
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  color: #bdc3c7;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: #7f8c8d;
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  font-weight: bold;
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, #f39c12, #d35400);
+  color: white;
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* Room objects styling */
+.wall {
+  background: linear-gradient(180deg, #5d6d7e, #4a5568);
+}
+
+.floor {
+  background: linear-gradient(180deg, #6b4423, #5d3a1a);
+}
+
+.door {
+  background: linear-gradient(180deg, #8b4513, #654321);
+  border: 3px solid #5d3a1a;
+  border-radius: 4px 4px 0 0;
+}
+
+.door-handle {
+  width: 8px;
+  height: 8px;
+  background: #f1c40f;
+  border-radius: 50%;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+}
+
+.safe {
+  background: linear-gradient(145deg, #7f8c8d, #5d6d7e);
+  border: 2px solid #4a5568;
+  border-radius: 4px;
+}
+
+.painting {
+  background: linear-gradient(145deg, #8e44ad, #9b59b6);
+  border: 8px solid #d4af37;
+}
+
+.desk {
+  background: linear-gradient(180deg, #8b4513, #6b4423);
+}
+
+.drawer {
+  background: linear-gradient(180deg, #7d3c1a, #5d3a1a);
+  border: 1px solid #4a2c15;
+}
+
+.plant {
+  font-size: 2.5rem;
+}
+
+.clock {
+  background: #ecf0f1;
+  border: 3px solid #bdc3c7;
+  border-radius: 50%;
+}
+
+.rug {
+  background: linear-gradient(45deg, #c0392b, #e74c3c);
+  border-radius: 50%;
+}
+
+@media (max-width: 500px) {
+  .game-area {
+    height: 350px;
+  }
+
+  .inventory-item {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+  }
+}
