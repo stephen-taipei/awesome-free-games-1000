@@ -1,0 +1,250 @@
+/**
+ * Pinball Puzzle Styles
+ * Game #101
+ */
+
+:root {
+  --bg-color: #1a0a30;
+  --board-bg: #2d1b4e;
+  --flipper-color: #ff6b6b;
+  --ball-color: #c0c0c0;
+  --target-color: #ffd93d;
+  --bumper-color: #6bcb77;
+  --text-color: #f0e6ff;
+  --text-muted: #a094b8;
+  --btn-primary: #ff6b6b;
+  --btn-secondary: #4a3a6e;
+  --neon-pink: #ff00ff;
+  --neon-blue: #00ffff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, var(--bg-color) 0%, #0d0520 100%);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.game-container {
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.game-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--neon-pink);
+  text-shadow: 0 0 10px var(--neon-pink);
+}
+
+.header-controls select {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--btn-secondary);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.game-info {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  background: var(--board-bg);
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 2px solid var(--neon-blue);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+.info-item {
+  text-align: center;
+}
+
+.info-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.info-value {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--neon-blue);
+  text-shadow: 0 0 8px var(--neon-blue);
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  background: var(--board-bg);
+  border-radius: 12px;
+  border: 3px solid var(--neon-pink);
+  box-shadow:
+    0 0 20px rgba(255, 0, 255, 0.4),
+    inset 0 0 30px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 500px;
+  background: radial-gradient(ellipse at center, #3d2a60 0%, var(--board-bg) 70%);
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(26, 10, 48, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 32px;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  color: var(--neon-pink);
+  text-shadow: 0 0 15px var(--neon-pink);
+}
+
+.overlay-msg {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+}
+
+.controls.secondary {
+  margin-top: 8px;
+}
+
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--btn-primary);
+  color: white;
+  box-shadow: 0 0 15px rgba(255, 107, 107, 0.5);
+}
+
+.btn-primary:hover {
+  background: #ff8585;
+  transform: translateY(-2px);
+}
+
+.btn-flipper {
+  flex: 1;
+  max-width: 120px;
+  background: linear-gradient(180deg, var(--flipper-color), #cc5555);
+  color: white;
+  border: 2px solid #ff8888;
+  font-size: 0.9rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.btn-flipper:hover {
+  background: linear-gradient(180deg, #ff8585, var(--flipper-color));
+}
+
+.btn-flipper:active,
+.btn-flipper.active {
+  transform: scale(0.95);
+  background: linear-gradient(180deg, #cc5555, #993333);
+}
+
+.btn-launch {
+  background: linear-gradient(180deg, var(--target-color), #ccb030);
+  color: #333;
+  border: 2px solid #ffe066;
+  min-width: 100px;
+}
+
+.btn-launch:hover {
+  background: linear-gradient(180deg, #ffe066, var(--target-color));
+}
+
+.btn-launch:active {
+  transform: scale(0.95);
+}
+
+.btn-secondary {
+  background: var(--btn-secondary);
+  color: var(--text-color);
+}
+
+.btn-secondary:hover {
+  background: #5d4a82;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  #game-canvas {
+    height: 450px;
+  }
+
+  .btn-flipper {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+
+  .btn-launch {
+    min-width: 80px;
+    padding: 10px 16px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+}
