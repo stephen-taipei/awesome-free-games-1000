@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="征服者 - 征服一切，統治世界的街機遊戲。">
+  <meta name="keywords" content="The Conqueror, 征服者, conquest game, 街機遊戲, 免費遊戲">
+  <meta name="theme-color" content="#1a0f2e">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="征服者 - 街機遊戲">
+  <meta property="og:description" content="征服一切，統治世界！">
+  <meta property="og:type" content="website">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <title>征服者 - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 頂部標題區 -->
+    <header class="header">
+      <div class="title-section">
+        <h1 class="title" data-i18n="game.title">征服者</h1>
+        <p class="subtitle" data-i18n="game.subtitle">征服一切，統治世界！</p>
+      </div>
+      <div class="scores-section">
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.score">分數</span>
+          <span class="score-value" id="score">0</span>
+        </div>
+        <div class="score-box">
+          <span class="score-label" data-i18n="game.best">最高分</span>
+          <span class="score-value" id="best-score">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 狀態列 -->
+    <div class="status-bar">
+      <div class="status-item">
+        <span class="status-label" data-i18n="game.health">生命值</span>
+        <div class="health-track">
+          <div class="health-bar" id="health-bar"></div>
+        </div>
+      </div>
+      <div class="status-item">
+        <span class="status-label" data-i18n="game.conquered">已佔領</span>
+        <span class="status-value" id="conquered">0/6</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label" data-i18n="game.level">等級</span>
+        <span class="status-value" id="level">1</span>
+      </div>
+    </div>
+
+    <!-- 技能列 -->
+    <div class="skills-bar">
+      <button class="skill-btn" id="skill-1-btn">
+        <span class="skill-icon">🗺️</span>
+        <span class="skill-name" data-i18n="game.skill1">領土擴張</span>
+      </button>
+      <button class="skill-btn" id="skill-2-btn">
+        <span class="skill-icon">⚔️</span>
+        <span class="skill-name" data-i18n="game.skill2">軍團召喚</span>
+      </button>
+      <button class="skill-btn" id="skill-3-btn">
+        <span class="skill-icon">✨</span>
+        <span class="skill-name" data-i18n="game.skill3">統御光環</span>
+      </button>
+    </div>
+
+    <!-- 控制區 -->
+    <div class="controls">
+      <button class="btn btn-secondary" id="help-btn" data-i18n="game.howToPlay">遊戲說明</button>
+      <div class="language-selector">
+        <select id="language-select">
+          <option value="zh-TW">繁體中文</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 遊戲容器 -->
+    <div class="game-container" id="game-container">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- 遊戲覆蓋層 -->
+      <div class="game-overlay" id="game-overlay">
+        <div class="overlay-content">
+          <h2 class="overlay-title" id="overlay-title">點擊開始</h2>
+          <p class="overlay-score">分數: <span id="final-score">0</span></p>
+          <div class="overlay-buttons">
+            <button class="btn btn-primary" id="start-btn" data-i18n="game.tapToStart">點擊開始</button>
+            <button class="btn btn-primary" id="retry-btn" data-i18n="game.tryAgain" style="display: none;">再試一次</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 說明彈窗 -->
+    <div class="modal" id="help-modal" style="display: none;">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">&times;</button>
+        <h2 data-i18n="game.howToPlay">遊戲說明</h2>
+        <p data-i18n="game.howToPlayContent">移動滑鼠或手指控制征服者移動。靠近領地並消滅守衛來佔領該區域。佔領更多領地獲得加成，擊敗所有敵人進入下一關！使用技能增強戰鬥力。</p>
+        <div class="controls-guide">
+          <h3>技能說明</h3>
+          <div class="skill-info">
+            <p><strong data-i18n="game.skill1">領土擴張</strong> (快捷鍵: 1)</p>
+            <p class="skill-desc" data-i18n="game.skill1Desc">加速佔領速度</p>
+          </div>
+          <div class="skill-info">
+            <p><strong data-i18n="game.skill2">軍團召喚</strong> (快捷鍵: 2)</p>
+            <p class="skill-desc" data-i18n="game.skill2Desc">範圍傷害敵人</p>
+          </div>
+          <div class="skill-info">
+            <p><strong data-i18n="game.skill3">統御光環</strong> (快捷鍵: 3)</p>
+            <p class="skill-desc" data-i18n="game.skill3Desc">減慢敵人速度</p>
+          </div>
+          <h3>領地加成</h3>
+          <div class="bonus-info">
+            <p>⚔ <span data-i18n="game.attackBonus">攻擊力</span> +10</p>
+            <p>❤ <span data-i18n="game.healthBonus">生命上限</span> +20</p>
+            <p>⚡ <span data-i18n="game.speedBonus">移動速度</span> +30</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="footer">
+      <p>Game #353 | <a href="https://github.com/awesome-free-games" target="_blank">Awesome Free Games 1000</a></p>
+    </footer>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
