@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Countdown Boom - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="game-container">
+      <header class="game-header">
+        <h1 class="title" data-i18n="game.title">Countdown Boom</h1>
+        <div class="header-controls">
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-info">
+        <div class="info-item">
+          <span class="info-label" data-i18n="game.score">Score</span>
+          <span class="info-value" id="score-display">0</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label" data-i18n="game.bombs">Defused</span>
+          <span class="info-value" id="bombs-display">0</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label" data-i18n="game.level">Level</span>
+          <span class="info-value" id="level-display">1</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Lives</span>
+          <span class="info-value lives" id="lives-display">💣💣💣</span>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+        <div id="result-indicator" class="result-indicator"></div>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.welcome">
+              Countdown Boom
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Cut the right wire to defuse the bomb!
+            </p>
+            <div class="final-score" id="final-score" style="display: none">0</div>
+            <button id="start-btn" class="btn btn-primary" data-i18n="game.start">
+              Start Game
+            </button>
+          </div>
+        </div>
+      </main>
+
+      <div class="instructions">
+        <p data-i18n="game.instructions">Choose the correct wire color to defuse the bomb!</p>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
