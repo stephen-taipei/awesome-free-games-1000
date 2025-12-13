@@ -1,0 +1,26 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, sans-serif; background: linear-gradient(135deg, #87ceeb, #90ee90); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 1rem; }
+.game-container { max-width: 600px; width: 100%; }
+.game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; color: #2c3e50; }
+.game-header h1 { font-size: 1.5rem; }
+.game-header select { padding: 0.5rem; border-radius: 4px; border: none; background: white; }
+.game-stats { display: flex; justify-content: center; gap: 1rem; margin-bottom: 0.75rem; }
+.stat-card { background: white; padding: 0.5rem 1rem; border-radius: 8px; display: flex; flex-direction: column; align-items: center; min-width: 80px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.stat-card span:first-child { font-size: 0.75rem; opacity: 0.7; }
+.stat-value { font-size: 1.25rem; font-weight: bold; color: #3498db; }
+.status-bar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; color: #2c3e50; }
+.hp-bar { flex: 1; height: 16px; background: #ddd; border-radius: 8px; overflow: hidden; }
+.hp-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #3498db, #2980b9); transition: width 0.3s; }
+.game-area { position: relative; width: 100%; background: white; border-radius: 12px; margin-bottom: 1rem; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+canvas { width: 100%; display: block; }
+.overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.95); display: flex; justify-content: center; align-items: center; z-index: 10; border-radius: 12px; }
+.overlay-content { text-align: center; padding: 2rem; }
+.overlay-content h2 { font-size: 2rem; margin-bottom: 1rem; color: #3498db; }
+.overlay-content p { margin-bottom: 1.5rem; color: #666; }
+.btn { padding: 0.75rem 2rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+.btn.primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+.btn:hover { transform: translateY(-2px); }
+.controls-hint { margin-top: 1rem; opacity: 0.7; }
+.spawn-controls { display: flex; justify-content: center; gap: 1rem; }
+.spawn-btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; background: white; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.spawn-btn:hover { background: #3498db; color: white; }
