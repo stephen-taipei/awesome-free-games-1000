@@ -1,0 +1,210 @@
+.game-container {
+  max-width: 600px;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f23 100%);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  perspective: 1000px;
+}
+
+#puzzle-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+}
+
+#puzzle-container:active {
+  cursor: grabbing;
+}
+
+.puzzle-scene {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  transform-style: preserve-3d;
+  transition: transform 0.1s ease-out;
+}
+
+.target-area {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translateZ(-20px);
+  background: rgba(46, 204, 113, 0.2);
+  border: 2px dashed rgba(46, 204, 113, 0.5);
+  border-radius: 8px;
+}
+
+.puzzle-block {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-style: preserve-3d;
+  cursor: pointer;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.puzzle-block:hover {
+  filter: brightness(1.2);
+}
+
+.puzzle-block.selected {
+  filter: brightness(1.3) drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.puzzle-block.placed {
+  opacity: 0.9;
+  cursor: default;
+}
+
+.cube {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.cube-face {
+  position: absolute;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  backface-visibility: visible;
+}
+
+.cube-face.front { background: inherit; filter: brightness(1); }
+.cube-face.back { background: inherit; filter: brightness(0.7); }
+.cube-face.right { background: inherit; filter: brightness(0.85); }
+.cube-face.left { background: inherit; filter: brightness(0.85); }
+.cube-face.top { background: inherit; filter: brightness(1.1); }
+.cube-face.bottom { background: inherit; filter: brightness(0.6); }
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+
+.stats-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  color: white;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.stats-card span:first-child {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.stats-card span:last-child {
+  color: #fff;
+  font-size: 1.2rem;
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: 12px;
+}
+
+.overlay-content {
+  text-align: center;
+  color: white;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.overlay-msg {
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  color: #bdc3c7;
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  margin: 0.25rem;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5);
+}
+
+.btn.success {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: white;
+}
+
+.btn.success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.5);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+}
+
+.btn.warning:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.5);
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: #95a5a6;
+  font-size: 0.85rem;
+}
+
+#next-btn {
+  display: none;
+}
