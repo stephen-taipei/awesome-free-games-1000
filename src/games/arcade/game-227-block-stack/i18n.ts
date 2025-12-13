@@ -1,0 +1,105 @@
+/**
+ * 方塊堆疊遊戲多語言翻譯
+ */
+
+export const translations = {
+  'zh-TW': {
+    game: {
+      title: '方塊堆疊',
+      subtitle: '堆疊方塊，挑戰最高紀錄！',
+      newGame: '新遊戲',
+      score: '分數',
+      best: '最高分',
+      combo: '連擊',
+      perfect: '完美！',
+      gameOver: '遊戲結束',
+      tapToStart: '點擊開始',
+      tapToPlace: '點擊放置方塊',
+      tryAgain: '再試一次',
+      howToPlay: '遊戲說明',
+      howToPlayContent: '點擊或按空白鍵放置移動中的方塊。方塊需要準確堆疊在下方方塊上。完美放置可獲得連擊獎勵！未對齊的部分會被切掉，方塊越來越小就會失敗。',
+      language: '語言',
+      close: '關閉',
+    },
+  },
+  'zh-CN': {
+    game: {
+      title: '方块堆叠',
+      subtitle: '堆叠方块，挑战最高纪录！',
+      newGame: '新游戏',
+      score: '分数',
+      best: '最高分',
+      combo: '连击',
+      perfect: '完美！',
+      gameOver: '游戏结束',
+      tapToStart: '点击开始',
+      tapToPlace: '点击放置方块',
+      tryAgain: '再试一次',
+      howToPlay: '游戏说明',
+      howToPlayContent: '点击或按空格键放置移动中的方块。方块需要准确堆叠在下方方块上。完美放置可获得连击奖励！未对齐的部分会被切掉，方块越来越小就会失败。',
+      language: '语言',
+      close: '关闭',
+    },
+  },
+  en: {
+    game: {
+      title: 'Block Stack',
+      subtitle: 'Stack blocks as high as you can!',
+      newGame: 'New Game',
+      score: 'Score',
+      best: 'Best',
+      combo: 'Combo',
+      perfect: 'Perfect!',
+      gameOver: 'Game Over',
+      tapToStart: 'Tap to Start',
+      tapToPlace: 'Tap to place block',
+      tryAgain: 'Try Again',
+      howToPlay: 'How to Play',
+      howToPlayContent: 'Tap or press spacebar to place the moving block. Blocks must be stacked accurately on top of each other. Perfect placement earns combo bonus! Misaligned parts get cut off - if blocks get too small, you lose.',
+      language: 'Language',
+      close: 'Close',
+    },
+  },
+  ja: {
+    game: {
+      title: 'ブロックスタック',
+      subtitle: 'ブロックを積み上げよう！',
+      newGame: '新しいゲーム',
+      score: 'スコア',
+      best: 'ベスト',
+      combo: 'コンボ',
+      perfect: 'パーフェクト！',
+      gameOver: 'ゲームオーバー',
+      tapToStart: 'タップして開始',
+      tapToPlace: 'タップしてブロックを置く',
+      tryAgain: 'もう一度',
+      howToPlay: '遊び方',
+      howToPlayContent: 'タップまたはスペースキーで移動中のブロックを置きます。ブロックを正確に積み重ねましょう。完璧な配置でコンボボーナス！ズレた部分はカットされ、小さくなりすぎると失敗です。',
+      language: '言語',
+      close: '閉じる',
+    },
+  },
+  ko: {
+    game: {
+      title: '블록 쌓기',
+      subtitle: '블록을 최대한 높이 쌓아보세요!',
+      newGame: '새 게임',
+      score: '점수',
+      best: '최고점',
+      combo: '콤보',
+      perfect: '퍼펙트!',
+      gameOver: '게임 오버',
+      tapToStart: '탭하여 시작',
+      tapToPlace: '탭하여 블록 놓기',
+      tryAgain: '다시 시도',
+      howToPlay: '게임 방법',
+      howToPlayContent: '탭하거나 스페이스바를 눌러 움직이는 블록을 놓으세요. 블록을 정확하게 쌓아야 합니다. 완벽한 배치로 콤보 보너스를 얻으세요! 어긋난 부분은 잘려나가고, 너무 작아지면 실패합니다.',
+      language: '언어',
+      close: '닫기',
+    },
+  },
+};
+
+export type TranslationKey = keyof typeof translations['en']['game'];
+
+export default translations;
