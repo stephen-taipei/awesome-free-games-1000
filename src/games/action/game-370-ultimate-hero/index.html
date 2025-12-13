@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ultimate Hero - Awesome Free Games 1000</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="game-container">
+    <header class="game-header">
+      <h1 data-i18n="game.title">Ultimate Hero</h1>
+      <select id="language-select">
+        <option value="zh-TW">繁體中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
+    </header>
+    <div class="game-stats">
+      <div class="stat-card"><span data-i18n="game.score">Score</span><span id="score-display" class="stat-value">0</span></div>
+      <div class="stat-card"><span data-i18n="game.form">Form</span><span id="form-display" class="stat-value form-normal">NORMAL</span></div>
+      <div class="stat-card"><span data-i18n="game.high">Best</span><span id="high-display" class="stat-value">0</span></div>
+    </div>
+    <div class="status-bars">
+      <div class="bar-row">
+        <span data-i18n="game.hp">HP</span>
+        <div class="hp-bar"><div id="hp-fill" class="hp-fill"></div></div>
+      </div>
+      <div class="bar-row">
+        <span data-i18n="game.power">Power</span>
+        <div class="power-bar"><div id="power-fill" class="power-fill"></div></div>
+      </div>
+    </div>
+    <main class="game-area">
+      <canvas id="game-canvas"></canvas>
+      <div id="game-overlay" class="overlay" style="display: flex">
+        <div class="overlay-content">
+          <h2 id="overlay-title" data-i18n="game.welcome">Ultimate Hero</h2>
+          <p id="overlay-msg" data-i18n="game.desc">Transform and destroy evil!</p>
+          <button id="start-btn" class="btn primary" data-i18n="game.start">Transform</button>
+          <div class="controls-hint"><small data-i18n="game.hint">Arrows move, Z attack, X transform, C ultimate!</small></div>
+        </div>
+      </div>
+    </main>
+    <div class="mobile-controls">
+      <div class="control-row left-side">
+        <button class="control-btn" id="mobile-left">&lt;</button>
+        <button class="control-btn" id="mobile-jump">^</button>
+        <button class="control-btn" id="mobile-right">&gt;</button>
+      </div>
+      <div class="control-row right-side">
+        <button class="control-btn action attack" id="mobile-attack">ATK</button>
+        <button class="control-btn action transform" id="mobile-transform">TRF</button>
+        <button class="control-btn action ultimate" id="mobile-ultimate">ULT</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
