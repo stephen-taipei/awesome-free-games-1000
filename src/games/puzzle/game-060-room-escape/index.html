@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Room Escape - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">Room Escape</h1>
+        <div class="header-controls">
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-controls">
+        <div class="stats-card">
+          <span data-i18n="game.room">Room</span>
+          <span id="room-display">1</span>
+        </div>
+        <div class="inventory-card">
+          <span data-i18n="game.inventory">Inventory</span>
+          <div id="inventory" class="inventory"></div>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <div id="room-view" class="room-view"></div>
+        <div id="message-box" class="message-box"></div>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.welcome">
+              Room Escape
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Find clues and escape the room!
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              Start Game
+            </button>
+            <div class="controls-hint">
+              <small data-i18n="game.hint">Click on objects to interact</small>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div class="footer-controls">
+        <button id="reset-btn" class="btn warning" data-i18n="game.reset">
+          Reset
+        </button>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
