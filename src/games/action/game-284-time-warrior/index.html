@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Time Warrior - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="game-container">
+      <header class="game-header">
+        <h1 class="title" data-i18n="game.title">Time Warrior</h1>
+        <select id="language-select"><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select>
+      </header>
+      <div class="game-info">
+        <div class="info-item"><span class="info-label" data-i18n="game.score">Score</span><span class="info-value" id="score-display">0</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.wave">Wave</span><span class="info-value" id="wave-display">1</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.defeated">Defeated</span><span class="info-value" id="defeated-display">0</span></div>
+      </div>
+      <div class="bars-container">
+        <div class="bar-wrapper"><span class="bar-label" data-i18n="game.hp">HP</span><div class="bar"><div class="bar-fill hp-fill" id="hp-fill"></div></div></div>
+        <div class="bar-wrapper"><span class="bar-label" data-i18n="game.timeEnergy">Time</span><div class="bar"><div class="bar-fill time-fill" id="time-fill"></div></div></div>
+      </div>
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.title">Time Warrior</h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">Manipulate time!</p>
+            <div class="final-score" id="final-score" style="display: none">0</div>
+            <div class="stats-grid" id="stats-grid" style="display: none"></div>
+            <button id="start-btn" class="btn btn-primary" data-i18n="game.start">Start Battle</button>
+          </div>
+        </div>
+      </main>
+      <div class="mobile-controls">
+        <div class="joystick" id="joystick"><div class="joystick-knob" id="joystick-knob"></div></div>
+        <div class="action-buttons">
+          <button class="action-btn attack-btn" id="attack-btn" data-i18n="game.attack">Attack</button>
+          <button class="action-btn dash-btn" id="dash-btn" data-i18n="game.dash">Dash</button>
+          <button class="action-btn slow-btn" id="slow-btn" data-i18n="game.slow">Slow</button>
+          <button class="action-btn freeze-btn" id="freeze-btn" data-i18n="game.freeze">Freeze</button>
+        </div>
+      </div>
+      <div class="instructions"><p data-i18n="game.controls">WASD move, J attack, K dash, L slow, I freeze</p></div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
