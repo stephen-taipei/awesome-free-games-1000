@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixel Survival - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">Pixel Survival</h1>
+        <div class="header-controls">
+          <button id="instructions-btn" class="btn-icon" title="Instructions">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </button>
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-controls">
+        <div class="stats-card">
+          <span data-i18n="game.score">Score</span>
+          <span id="score-display">0</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.time">Time</span>
+          <span id="time-display">0:00</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.enemies">Enemies</span>
+          <span id="enemy-display">0</span>
+        </div>
+        <div class="stats-card highlight">
+          <span data-i18n="game.highscore">High Score</span>
+          <span id="highscore-display">0</span>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <div class="canvas-container">
+          <canvas id="game-canvas"></canvas>
+        </div>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2
+              class="overlay-title"
+              id="overlay-title"
+              data-i18n="game.welcome"
+            >
+              Pixel Survival
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Dodge enemies, collect powerups, survive as long as possible!
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              Start Game
+            </button>
+          </div>
+        </div>
+      </main>
+
+      <div class="footer-controls">
+        <button id="restart-btn" class="btn warning" data-i18n="game.restart">
+          Restart
+        </button>
+      </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div id="instructions-modal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 data-i18n="game.instructions">Instructions</h3>
+          <button id="close-modal-btn" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="instructions-section">
+            <h4 data-i18n="game.controls">Controls</h4>
+            <ul>
+              <li data-i18n="game.move">WASD or Arrow keys to move</li>
+              <li data-i18n="game.shoot">Click or touch to shoot</li>
+            </ul>
+          </div>
+
+          <div class="instructions-section">
+            <h4 data-i18n="game.powerups">Powerups</h4>
+            <ul>
+              <li>
+                <span class="powerup-icon weapon">W</span>
+                <span data-i18n="game.weapon">Red - Weapon upgrade</span>
+              </li>
+              <li>
+                <span class="powerup-icon shield">S</span>
+                <span data-i18n="game.shield">Cyan - Shield protection</span>
+              </li>
+              <li>
+                <span class="powerup-icon speed">></span>
+                <span data-i18n="game.speed">Yellow - Speed boost</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="enemy-types">
+            <div class="enemy-card">
+              <div class="enemy-preview normal"></div>
+              <p>Normal Enemy</p>
+            </div>
+            <div class="enemy-card">
+              <div class="enemy-preview fast"></div>
+              <p>Fast Enemy</p>
+            </div>
+            <div class="enemy-card">
+              <div class="enemy-preview tank"></div>
+              <p>Tank Enemy</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
