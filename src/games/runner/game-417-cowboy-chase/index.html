@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cowboy Chase - Runner Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1 id="gameTitle">Cowboy Chase</h1>
+
+        <div class="info-bar">
+            <div class="info-item">
+                <span data-i18n="score-label">Score:</span>
+                <span id="score">0</span>
+            </div>
+            <div class="info-item">
+                <span data-i18n="distance-label">Distance:</span>
+                <span id="distance">0m</span>
+            </div>
+            <div class="info-item">
+                <span data-i18n="highscore-label">High Score:</span>
+                <span id="highScore">0</span>
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+            <button id="startButton" class="game-button">Start Game</button>
+            <button id="pauseButton" class="game-button pause-button" style="display: none;">❚❚</button>
+
+            <div id="gameOverScreen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2 data-i18n="gameover">Game Over</h2>
+                    <p>
+                        <span data-i18n="finalscore-label">Final Score:</span>
+                        <span id="finalScore" class="final-score">0</span>
+                    </p>
+                    <button id="playAgainButton" class="game-button">Play Again</button>
+                </div>
+            </div>
+
+            <div id="pauseScreen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h2 data-i18n="paused">Paused</h2>
+                    <p data-i18n="resume">Press P to Resume</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3 data-i18n="controls">Controls</h3>
+            <div class="control-list">
+                <div class="control-item" data-i18n="control-left">← / A: Move Left</div>
+                <div class="control-item" data-i18n="control-right">→ / D: Move Right</div>
+                <div class="control-item" data-i18n="control-jump">↑ / W / Space: Jump</div>
+                <div class="control-item" data-i18n="control-pause">P: Pause</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
