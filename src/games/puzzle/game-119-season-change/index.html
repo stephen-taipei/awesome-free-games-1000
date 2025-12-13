@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Season Change - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">Season Change</h1>
+        <div class="header-controls">
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-controls">
+        <div class="stats-card">
+          <span data-i18n="game.level">Level</span>
+          <span id="level-display">1</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.moves">Moves</span>
+          <span id="moves-display">0</span>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <div class="canvas-container">
+          <canvas id="game-canvas"></canvas>
+        </div>
+
+        <div class="season-controls">
+          <button class="season-btn active" data-season="spring" data-i18n="game.spring">Spring</button>
+          <button class="season-btn" data-season="summer" data-i18n="game.summer">Summer</button>
+          <button class="season-btn" data-season="autumn" data-i18n="game.autumn">Autumn</button>
+          <button class="season-btn" data-season="winter" data-i18n="game.winter">Winter</button>
+        </div>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2
+              class="overlay-title"
+              id="overlay-title"
+              data-i18n="game.welcome"
+            >
+              Season Change
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Switch seasons to solve the puzzle!
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              Start Game
+            </button>
+            <div class="controls-hint">
+              <small data-i18n="game.hint"
+                >Click season buttons to change environment</small
+              >
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div class="footer-controls">
+        <button id="reset-btn" class="btn warning" data-i18n="game.reset">
+          Reset
+        </button>
+        <button
+          id="next-btn"
+          class="btn primary"
+          data-i18n="game.next"
+          style="display: none"
+        >
+          Next Level
+        </button>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
