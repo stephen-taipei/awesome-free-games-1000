@@ -1,0 +1,44 @@
+:root { --bg-color: #2d3436; --primary-color: #e74c3c; --text-color: #e0e0e0; --text-muted: #a0a0a0; --hp-color: #e74c3c; --stamina-color: #f1c40f; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, var(--bg-color) 0%, #1e272e 100%); color: var(--text-color); min-height: 100vh; display: flex; justify-content: center; padding: 20px; }
+.game-container { width: 100%; max-width: 450px; display: flex; flex-direction: column; gap: 12px; }
+.game-header { width: 100%; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.title { font-size: 1.8rem; font-weight: bold; color: var(--primary-color); }
+.header-controls select { padding: 8px 12px; border: none; border-radius: 6px; background: #636e72; color: var(--text-color); }
+.game-info { width: 100%; display: flex; justify-content: space-around; background: rgba(99,110,114,0.3); padding: 12px; border-radius: 8px; }
+.info-item { text-align: center; min-width: 55px; }
+.info-label { display: block; font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; }
+.info-value { display: block; font-size: 1.1rem; font-weight: bold; color: var(--primary-color); }
+.info-value.wave { color: #27ae60; }
+.info-value.dragons { color: #9b59b6; }
+.bars-container { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.bar-wrapper { display: flex; align-items: center; gap: 8px; }
+.bar-label { font-size: 0.65rem; color: var(--text-muted); width: 55px; }
+.bar { flex: 1; height: 14px; background: rgba(255,255,255,0.1); border-radius: 7px; overflow: hidden; }
+.bar-fill { height: 100%; transition: width 0.3s; }
+.hp-fill { background: linear-gradient(90deg, var(--hp-color), #c0392b); }
+.stamina-fill { background: linear-gradient(90deg, var(--stamina-color), #f39c12); }
+.game-area { position: relative; width: 100%; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); overflow: hidden; }
+#game-canvas { display: block; width: 100%; height: 400px; background: #2d3436; }
+.overlay { position: absolute; inset: 0; background: rgba(45,52,54,0.95); display: flex; justify-content: center; align-items: center; z-index: 100; }
+.overlay-content { text-align: center; padding: 32px; }
+.overlay-title { font-size: 2rem; margin-bottom: 16px; color: var(--primary-color); }
+.overlay-msg { font-size: 1rem; color: var(--text-muted); margin-bottom: 24px; }
+.final-score { font-size: 3.5rem; font-weight: bold; color: #f1c40f; margin-bottom: 12px; }
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+.stat-item { background: rgba(231,76,60,0.1); padding: 12px; border-radius: 8px; }
+.stat-label { font-size: 0.75rem; color: var(--text-muted); }
+.stat-value { font-size: 1.3rem; font-weight: bold; color: var(--primary-color); }
+.btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+.btn-primary { background: var(--primary-color); color: white; }
+.btn-primary:hover { background: #c0392b; }
+.mobile-controls { width: 100%; display: none; justify-content: space-between; padding: 16px; }
+.joystick { width: 100px; height: 100px; background: rgba(231,76,60,0.2); border: 2px solid var(--primary-color); border-radius: 50%; display: flex; justify-content: center; align-items: center; touch-action: none; }
+.joystick-knob { width: 40px; height: 40px; background: var(--primary-color); border-radius: 50%; }
+.action-buttons { display: flex; flex-direction: column; gap: 10px; }
+.action-btn { width: 80px; height: 50px; border: none; border-radius: 8px; font-weight: bold; color: white; }
+.attack-btn { background: var(--primary-color); }
+.roll-btn { background: var(--stamina-color); color: #333; }
+.instructions { text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 12px; background: rgba(99,110,114,0.3); border-radius: 8px; width: 100%; }
+@media (hover: none) and (pointer: coarse) { .mobile-controls { display: flex; } .instructions { display: none; } }
+@media (max-width: 400px) { #game-canvas { height: 350px; } .title { font-size: 1.5rem; } }
