@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Space Walk - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">Space Walk</h1>
+        <div class="header-controls">
+          <button id="instructions-btn" class="icon-btn" title="Instructions">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </button>
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-stats">
+        <div class="stats-row">
+          <div class="stat-card">
+            <span class="stat-label" data-i18n="game.score">Score</span>
+            <span class="stat-value" id="score-display">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label" data-i18n="game.highScore">High Score</span>
+            <span class="stat-value" id="high-score-display">0</span>
+          </div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card oxygen">
+            <span class="stat-label" data-i18n="game.oxygen">Oxygen</span>
+            <span class="stat-value" id="oxygen-display">100%</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label" data-i18n="game.time">Time</span>
+            <span class="stat-value" id="time-display">0s</span>
+          </div>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.welcome">
+              Space Walk
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Survive in zero gravity, collect energy and avoid dangers!
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              Start Game
+            </button>
+            <div class="controls-hint">
+              <small data-i18n="game.hint">Arrow keys or WASD to move astronaut</small>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div class="mobile-controls">
+        <div class="dpad">
+          <button class="control-btn up" id="btn-up">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 4l-8 8h16z"/>
+            </svg>
+          </button>
+          <div class="dpad-row">
+            <button class="control-btn left" id="btn-left">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4 12l8-8v16z"/>
+              </svg>
+            </button>
+            <button class="control-btn right" id="btn-right">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 12l-8 8V4z"/>
+              </svg>
+            </button>
+          </div>
+          <button class="control-btn down" id="btn-down">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 20l8-8H4z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div id="instructions-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 data-i18n="game.controls">Controls</h2>
+          <button id="close-modal" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p data-i18n="game.controlDesc">
+            Collect blue energy orbs (+10pts) and yellow stars (+50pts), grab green oxygen tanks to refill, avoid grey debris and brown meteors!
+          </p>
+          <div class="controls-grid">
+            <div class="control-item">
+              <div class="control-icon energy">⚡</div>
+              <div class="control-text">Energy Orb<br><small>+10 points</small></div>
+            </div>
+            <div class="control-item">
+              <div class="control-icon star">⭐</div>
+              <div class="control-text">Star<br><small>+50 points</small></div>
+            </div>
+            <div class="control-item">
+              <div class="control-icon oxygen-tank">🧪</div>
+              <div class="control-text">Oxygen Tank<br><small>+30 oxygen</small></div>
+            </div>
+            <div class="control-item">
+              <div class="control-icon danger">💥</div>
+              <div class="control-text">Obstacles<br><small>-20 oxygen</small></div>
+            </div>
+          </div>
+          <div class="keyboard-controls">
+            <p><strong>Keyboard:</strong> Arrow Keys or WASD</p>
+            <p><strong>Mobile:</strong> Touch D-Pad buttons</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
