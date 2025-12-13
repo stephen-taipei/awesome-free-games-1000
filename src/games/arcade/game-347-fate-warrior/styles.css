@@ -1,0 +1,569 @@
+/**
+ * 命運戰士遊戲樣式
+ */
+
+:root {
+  --bg-color: #0a0014;
+  --bg-secondary: #160028;
+  --text-color: #ffffff;
+  --text-muted: #a8a8c8;
+  --primary-color: #8a2be2;
+  --secondary-color: #ffd700;
+  --health-color: #ff6b6b;
+  --fate-color: #8a2be2;
+  --overlay-bg: rgba(0, 0, 20, 0.95);
+  --border-radius: 8px;
+  --game-height: min(65vh, 450px);
+  --glow-purple: 0 0 20px rgba(138, 43, 226, 0.5);
+  --glow-gold: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(135deg, var(--bg-color), var(--bg-secondary));
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.title-section {
+  flex: 1;
+  min-width: 150px;
+}
+
+.title {
+  font-size: 2.2rem;
+  font-weight: bold;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+  text-shadow: var(--glow-purple);
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.scores-section {
+  display: flex;
+  gap: 8px;
+}
+
+.score-box {
+  background: rgba(138, 43, 226, 0.2);
+  border: 2px solid var(--primary-color);
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  text-align: center;
+  min-width: 60px;
+  box-shadow: var(--glow-purple);
+}
+
+.score-label {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.score-value {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-top: 2px;
+  color: var(--secondary-color);
+}
+
+/* 遊戲狀態 */
+.game-stats {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.stat-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-top: 2px;
+}
+
+/* 生命值和命運能量條 */
+.bars-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bar-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  min-width: 50px;
+}
+
+.bar-track {
+  flex: 1;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.health-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff6b6b, #ff8787);
+  border-radius: 7px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+}
+
+.health-bar.low {
+  background: linear-gradient(90deg, #ff3838, #ff6b6b);
+  animation: pulse-red 0.5s infinite;
+}
+
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.fate-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary-color), #a855f7);
+  border-radius: 7px;
+  transition: width 0.2s linear;
+  box-shadow: var(--glow-purple);
+}
+
+/* 命運反擊指示器 */
+.counter-indicator {
+  width: 100%;
+  text-align: center;
+  padding: 12px;
+  background: rgba(138, 43, 226, 0.3);
+  border: 2px solid var(--primary-color);
+  border-radius: var(--border-radius);
+  font-weight: bold;
+  font-size: 0.95rem;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  box-shadow: var(--glow-purple);
+}
+
+.counter-indicator.active {
+  opacity: 1;
+  transform: translateY(0);
+  animation: glow-pulse 1s infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: var(--glow-purple);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(138, 43, 226, 0.8);
+  }
+}
+
+/* 技能區 */
+.skills-section {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px;
+  border-radius: var(--border-radius);
+  border: 1px solid rgba(138, 43, 226, 0.3);
+}
+
+.skills-title {
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  color: var(--primary-color);
+  text-transform: uppercase;
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.skill-btn {
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.3), rgba(168, 85, 247, 0.3));
+  border: 2px solid var(--primary-color);
+  border-radius: var(--border-radius);
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-color);
+  font-size: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.skill-btn:hover:not(.disabled) {
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.5), rgba(168, 85, 247, 0.5));
+  transform: translateY(-2px);
+  box-shadow: var(--glow-purple);
+}
+
+.skill-btn:active:not(.disabled) {
+  transform: translateY(0);
+}
+
+.skill-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: rgba(138, 43, 226, 0.3);
+}
+
+.skill-name {
+  font-weight: bold;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.skill-cost {
+  background: var(--primary-color);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+.skill-desc {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.controls {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-color), #a855f7);
+  color: var(--text-color);
+  box-shadow: var(--glow-purple);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 25px rgba(138, 43, 226, 0.6);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.language-selector select {
+  padding: 10px 16px;
+  border: 1px solid rgba(138, 43, 226, 0.5);
+  border-radius: var(--border-radius);
+  background: rgba(138, 43, 226, 0.2);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.game-container {
+  position: relative;
+  width: 100%;
+  height: var(--game-height);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  border: 2px solid var(--primary-color);
+  box-shadow: var(--glow-purple);
+}
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: var(--bg-color);
+}
+
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--overlay-bg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  backdrop-filter: blur(5px);
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 20px;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: var(--glow-purple);
+}
+
+.overlay-score {
+  font-size: 1rem;
+  margin-bottom: 24px;
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.overlay-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 20, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: linear-gradient(135deg, #160028, #0a0014);
+  padding: 32px;
+  border-radius: var(--border-radius);
+  max-width: 400px;
+  width: 100%;
+  position: relative;
+  border: 2px solid var(--primary-color);
+  box-shadow: var(--glow-purple);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.modal-close:hover {
+  color: var(--text-color);
+}
+
+.modal-content h2 {
+  margin-bottom: 16px;
+  color: var(--secondary-color);
+}
+
+.modal-content p {
+  line-height: 1.6;
+  margin-bottom: 24px;
+  color: var(--text-muted);
+}
+
+.controls-guide {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 16px;
+  border-radius: var(--border-radius);
+  text-align: left;
+}
+
+.controls-guide p {
+  margin-bottom: 8px;
+  color: var(--text-color);
+  font-size: 0.9rem;
+}
+
+.controls-guide strong {
+  color: var(--secondary-color);
+}
+
+.footer {
+  margin-top: 24px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.footer a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  :root {
+    --game-height: 55vh;
+  }
+
+  .title {
+    font-size: 1.8rem;
+  }
+
+  .score-box {
+    padding: 6px 10px;
+    min-width: 50px;
+  }
+
+  .score-value {
+    font-size: 1rem;
+  }
+
+  .skills-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .skill-btn {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 8px 12px;
+  }
+
+  .skill-name {
+    font-size: 0.8rem;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .scores-section {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .game-stats {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
