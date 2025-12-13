@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="傳送帶工廠 - 快節奏物品分類街機遊戲。在正確時機將物品分類到正確容器！">
+  <meta name="keywords" content="Conveyor Factory, 傳送帶工廠, arcade game, 街機遊戲, 分類遊戲, 免費遊戲">
+  <meta name="theme-color" content="#1a1a2e">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="傳送帶工廠 - Conveyor Factory">
+  <meta property="og:description" content="快節奏物品分類街機遊戲，在正確時機將物品分類到正確容器！">
+  <meta property="og:type" content="website">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <title>傳送帶工廠 Conveyor Factory - Awesome Free Games</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 標題區 -->
+    <header class="header">
+      <h1 class="title" data-i18n="game.title">傳送帶工廠</h1>
+      <p class="subtitle" data-i18n="game.subtitle">在正確時機將物品分類到正確容器！</p>
+    </header>
+
+    <!-- 控制區 -->
+    <div class="controls">
+      <button class="btn btn-primary" id="new-game-btn" data-i18n="game.newGame">新遊戲</button>
+      <button class="btn btn-secondary" id="pause-btn" data-i18n="game.pause">暫停</button>
+      <button class="btn btn-secondary" id="help-btn" data-i18n="game.controls">操作說明</button>
+      <div class="language-selector">
+        <select id="language-select">
+          <option value="zh-TW">繁體中文</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 遊戲主區域 -->
+    <div class="game-area">
+      <!-- 遊戲畫布容器 -->
+      <div class="game-container" id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- 覆蓋層 -->
+        <div class="game-overlay" id="game-overlay" style="display: none;">
+          <h2 class="overlay-title" id="overlay-title">遊戲結束</h2>
+          <p class="overlay-score">分數: <span id="final-score">0</span></p>
+          <button class="btn btn-primary" id="retry-btn" data-i18n="game.tryAgain">再試一次</button>
+        </div>
+      </div>
+
+      <!-- 統計面板 -->
+      <div class="stats-panel">
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="game.score">分數</span>
+          <span class="stat-value score" id="score">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="game.highScore">最高分</span>
+          <span class="stat-value high-score" id="high-score">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="game.level">等級</span>
+          <span class="stat-value level" id="level">1</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="game.lives">生命</span>
+          <span class="stat-value lives" id="lives">❤️❤️❤️❤️❤️</span>
+        </div>
+        <div class="stat-item combo-display" id="combo" style="display: none;">
+          <span class="combo-text">Combo x0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作提示 -->
+    <div class="instructions-hint">
+      <p>💡 <span data-i18n="game.controlsContent">點擊或按數字鍵 1-5 來將物品分類到對應顏色的容器</span></p>
+    </div>
+
+    <!-- 說明彈窗 -->
+    <div class="modal" id="help-modal" style="display: none;">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">&times;</button>
+        <h2 data-i18n="game.instructions">遊戲說明</h2>
+        <div class="instructions">
+          <p data-i18n="game.instructionsContent">
+            物品從傳送帶上方滾下，在物品靠近底部時，點擊正確顏色的容器進行分類。
+            分類錯誤或讓物品掉落會失去生命。隨著等級提升，速度會加快！
+          </p>
+          <h3 data-i18n="game.controls">操作說明</h3>
+          <div class="controls-list">
+            <div class="control-item">
+              <span class="key">1</span>
+              <span class="key-desc"><span style="color: #ff4444;">●</span> <span data-i18n="game.red">紅色</span></span>
+            </div>
+            <div class="control-item">
+              <span class="key">2</span>
+              <span class="key-desc"><span style="color: #4444ff;">●</span> <span data-i18n="game.blue">藍色</span></span>
+            </div>
+            <div class="control-item">
+              <span class="key">3</span>
+              <span class="key-desc"><span style="color: #44ff44;">●</span> <span data-i18n="game.green">綠色</span></span>
+            </div>
+            <div class="control-item">
+              <span class="key">4</span>
+              <span class="key-desc"><span style="color: #ffdd44;">●</span> <span data-i18n="game.yellow">黃色</span></span>
+            </div>
+            <div class="control-item">
+              <span class="key">5</span>
+              <span class="key-desc"><span style="color: #dd44ff;">●</span> <span data-i18n="game.purple">紫色</span></span>
+            </div>
+            <div class="control-item">
+              <span class="key">P / Esc</span>
+              <span class="key-desc" data-i18n="game.pause">暫停</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="footer">
+      <p>Game #232 | <a href="https://github.com/awesome-free-games" target="_blank">Awesome Free Games 1000</a></p>
+    </footer>
+  </div>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,542 @@
+/**
+ * 傳送帶工廠遊戲樣式
+ * 響應式設計，支援手機與電腦
+ */
+
+:root {
+  --bg-color: #1a1a2e;
+  --panel-bg: #16213e;
+  --text-color: #eee;
+  --text-muted: #888;
+  --border-color: #0f3460;
+  --accent-color: #e94560;
+
+  /* 物品顏色 */
+  --color-red: #ff4444;
+  --color-blue: #4444ff;
+  --color-green: #44ff44;
+  --color-yellow: #ffdd44;
+  --color-purple: #dd44ff;
+
+  /* 尺寸 */
+  --border-radius: 8px;
+  --spacing: 16px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(135deg, var(--bg-color) 0%, #0f0f23 100%);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing);
+  width: 100%;
+  max-width: 800px;
+}
+
+/* 標題區 */
+.header {
+  text-align: center;
+  width: 100%;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  background: linear-gradient(90deg, var(--color-red), var(--color-yellow), var(--color-green), var(--color-blue), var(--color-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* 控制區 */
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #ff6b7a;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: var(--panel-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--border-color);
+}
+
+.language-selector select {
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--panel-bg);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* 遊戲主區域 */
+.game-area {
+  display: flex;
+  gap: var(--spacing);
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* 遊戲畫布容器 */
+.game-container {
+  position: relative;
+  background: var(--panel-bg);
+  border: 3px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 4px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+#game-canvas {
+  display: block;
+  background: #1a1a2e;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* 覆蓋層 */
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  border-radius: var(--border-radius);
+  z-index: 10;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--accent-color);
+  text-shadow: 0 0 20px var(--accent-color);
+}
+
+.overlay-score {
+  font-size: 1.2rem;
+  color: var(--text-color);
+}
+
+/* 統計面板 */
+.stats-panel {
+  background: var(--panel-bg);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 160px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+.stat-value.score {
+  color: var(--color-yellow);
+}
+
+.stat-value.high-score {
+  color: var(--color-purple);
+}
+
+.stat-value.level {
+  color: var(--color-blue);
+}
+
+.stat-value.lives {
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+}
+
+.combo-display {
+  background: linear-gradient(135deg, var(--color-red), var(--color-purple));
+  padding: 12px;
+  border-radius: var(--border-radius);
+  margin-top: 8px;
+}
+
+.combo-text {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* 操作提示 */
+.instructions-hint {
+  background: var(--panel-bg);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 12px 20px;
+  text-align: center;
+  max-width: 600px;
+}
+
+.instructions-hint p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* 反饋效果 */
+.feedback-effect {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2.5rem;
+  font-weight: bold;
+  animation: feedback-pop 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 100;
+}
+
+@keyframes feedback-pop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+/* 升級效果 */
+.levelup-effect {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3rem;
+  font-weight: bold;
+  color: var(--color-yellow);
+  text-shadow: 0 0 30px var(--color-yellow);
+  animation: levelup-animation 1.5s ease-out forwards;
+  pointer-events: none;
+  z-index: 100;
+}
+
+@keyframes levelup-animation {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3) rotate(-10deg);
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1.3) rotate(5deg);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1) rotate(-2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.5) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+/* 說明彈窗 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--panel-bg);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 24px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.modal-close:hover {
+  color: var(--text-color);
+}
+
+.modal-content h2 {
+  margin-bottom: 16px;
+  color: var(--accent-color);
+}
+
+.modal-content h3 {
+  margin-top: 20px;
+  margin-bottom: 12px;
+  color: var(--text-color);
+  font-size: 1.2rem;
+}
+
+.instructions p {
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.controls-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.key {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 50px;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--border-color);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--text-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.key-desc {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* 頁尾 */
+.footer {
+  margin-top: var(--spacing);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.footer a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer a:hover {
+  color: var(--accent-color);
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+  .title {
+    font-size: 2rem;
+  }
+
+  .game-area {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stats-panel {
+    width: 100%;
+    max-width: 600px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+  }
+
+  .stat-item {
+    min-width: 80px;
+  }
+
+  .combo-display {
+    width: 100%;
+    text-align: center;
+  }
+
+  #game-canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .instructions-hint p {
+    font-size: 0.85rem;
+  }
+
+  .modal-content {
+    padding: 20px;
+  }
+
+  .feedback-effect {
+    font-size: 2rem;
+  }
+
+  .levelup-effect {
+    font-size: 2rem;
+  }
+}
+
+/* 動畫減少偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .feedback-effect,
+  .levelup-effect {
+    animation: none;
+  }
+
+  .btn {
+    transition: none;
+  }
+
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 高對比度模式支援 */
+@media (prefers-contrast: high) {
+  .btn {
+    border: 2px solid currentColor;
+  }
+
+  #game-canvas {
+    border: 2px solid var(--text-color);
+  }
+}
+
+/* 暗色模式已經是預設，但這裡可以添加亮色模式支援 */
+@media (prefers-color-scheme: light) {
+  /* 如果需要可以添加亮色模式樣式 */
+}
