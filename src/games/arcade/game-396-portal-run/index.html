@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portal Run - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">Portal Run</h1>
+        <div class="header-controls">
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-controls">
+        <div class="stats-card">
+          <span data-i18n="game.distance">Distance</span>
+          <span id="distance-display">0</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.coins">Coins</span>
+          <span id="coins-display">0</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.score">Score</span>
+          <span id="score-display">0</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.high">Best</span>
+          <span id="high-display">0</span>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.welcome">
+              Portal Run
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Jump, slide, and teleport through obstacles!
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              Start Game
+            </button>
+            <div class="controls-hint">
+              <small data-i18n="game.hint">Space to jump / Down to slide / Click to place portal</small>
+            </div>
+            <div class="portal-indicators">
+              <div class="portal-indicator blue">
+                <div class="portal-icon blue-portal"></div>
+                <span data-i18n="game.portal">Portal</span>
+              </div>
+              <div class="portal-indicator orange">
+                <div class="portal-icon orange-portal"></div>
+                <span data-i18n="game.portal">Portal</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div class="mobile-controls">
+        <button class="control-btn jump-btn" id="btn-jump">
+          <span data-i18n="game.jump">Jump</span>
+        </button>
+        <button class="control-btn slide-btn" id="btn-slide">
+          <span data-i18n="game.slide">Slide</span>
+        </button>
+      </div>
+
+      <div class="instructions">
+        <h3 data-i18n="game.controls">Controls</h3>
+        <ul>
+          <li><strong>Space / W / ↑</strong> - <span data-i18n="game.jump">Jump</span></li>
+          <li><strong>S / ↓</strong> - <span data-i18n="game.slide">Slide</span></li>
+          <li><strong>Click</strong> - <span data-i18n="game.portal">Place Portal</span></li>
+        </ul>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
