@@ -1,0 +1,389 @@
+/**
+ * Combination Lock Styles
+ * Game #100
+ */
+
+:root {
+  --bg-color: #1a1a2e;
+  --lock-body: #3d3d5c;
+  --lock-metal: #5a5a7a;
+  --dial-bg: #2d2d44;
+  --dial-number: #ffd700;
+  --dial-highlight: #ffeb3b;
+  --text-color: #e0e0e0;
+  --text-muted: #a0a0a0;
+  --btn-primary: #4caf50;
+  --btn-secondary: #607d8b;
+  --correct: #4caf50;
+  --wrong-position: #ff9800;
+  --wrong: #f44336;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, var(--bg-color) 0%, #0f0f1a 100%);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.game-container {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.game-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--dial-number);
+}
+
+.header-controls select {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--btn-secondary);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.game-info {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  background: var(--lock-body);
+  padding: 12px 20px;
+  border-radius: 8px;
+}
+
+.info-item {
+  text-align: center;
+}
+
+.info-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.info-value {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--dial-number);
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+}
+
+.lock-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
+  background: var(--lock-body);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.lock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lock-body {
+  position: relative;
+  background: linear-gradient(180deg, var(--lock-metal), #4a4a6a);
+  padding: 20px;
+  padding-top: 40px;
+  border-radius: 12px;
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.lock-shackle {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 50px;
+  border: 12px solid var(--lock-metal);
+  border-bottom: none;
+  border-radius: 40px 40px 0 0;
+  transition: all 0.5s ease;
+}
+
+.lock-shackle.unlocked {
+  transform: translateX(-50%) rotate(-30deg);
+  transform-origin: bottom left;
+}
+
+.dials-container {
+  display: flex;
+  gap: 8px;
+}
+
+.dial {
+  position: relative;
+  width: 60px;
+  height: 80px;
+  background: var(--dial-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.dial-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  transition: transform 0.2s ease;
+}
+
+.dial-number {
+  width: 100%;
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--dial-number);
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.dial-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dial-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dial-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--dial-highlight);
+}
+
+.dial-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dial-indicator {
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4px;
+  background: var(--dial-highlight);
+  border-radius: 2px;
+  pointer-events: none;
+  box-shadow: 0 0 8px var(--dial-highlight);
+}
+
+.hints-container {
+  width: 100%;
+  max-width: 350px;
+}
+
+.hints-title {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.hints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hint-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+
+.hint-code {
+  display: flex;
+  gap: 4px;
+}
+
+.hint-digit {
+  width: 28px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--dial-bg);
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.hint-digit.correct {
+  background: var(--correct);
+  color: white;
+}
+
+.hint-digit.wrong-position {
+  background: var(--wrong-position);
+  color: white;
+}
+
+.hint-digit.wrong {
+  background: var(--wrong);
+  color: white;
+}
+
+.hint-text {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(26, 26, 46, 0.95);
+  border-radius: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 32px;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  color: var(--dial-number);
+}
+
+.overlay-msg {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--btn-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #66bb6a;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: var(--btn-secondary);
+  color: var(--text-color);
+}
+
+.btn-secondary:hover {
+  background: #78909c;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  .dial {
+    width: 50px;
+    height: 70px;
+  }
+
+  .dial-number {
+    height: 70px;
+    font-size: 2rem;
+  }
+
+  .hint-digit {
+    width: 24px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  .hint-text {
+    font-size: 0.75rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+}
