@@ -1,14 +1,23 @@
-import { MotoRunGame } from './game.js';
-import { translations } from './i18n.js';
-import { getTranslation } from '../../../shared/i18n.js';
+import { MotoRunGame } from './game';
+import { translations } from './i18n';
+import { i18n, type Locale } from '../../../shared/i18n';
+
+function initI18n() {
+  Object.entries(translations).forEach(([locale, trans]) => i18n.loadTranslations(locale as Locale, trans));
+  const browserLang = navigator.language;
+  if (browserLang.includes('zh')) i18n.setLocale('zh-TW');
+  else if (browserLang.includes('ja')) i18n.setLocale('ja');
+  else i18n.setLocale('en');
+}
+
+const t = (key: string) => i18n.t(key);
 
 let game: MotoRunGame | null = null;
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 
-const t = (key: string): string => getTranslation(translations, key);
-
 function initGame(): void {
+  initI18n();
   canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
   ctx = canvas.getContext('2d')!;
 

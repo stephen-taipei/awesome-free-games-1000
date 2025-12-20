@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Wingsuit Run - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="game-container">
+      <header class="game-header">
+        <h1 class="title" data-i18n="game.title">Wingsuit Run</h1>
+        <select id="language-select"><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select>
+      </header>
+      <div class="game-info">
+        <div class="info-item"><span class="info-label" data-i18n="game.score">Score</span><span class="info-value" id="score-display">0</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.distance">Distance</span><span class="info-value" id="distance-display">0m</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.rings">Rings</span><span class="info-value" id="rings-display">0</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.altitude">Altitude</span><span class="info-value" id="altitude-display">1000m</span></div>
+      </div>
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.title">Wingsuit Run</h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">Glide through the valley!</p>
+            <div class="final-score" id="final-score" style="display: none">0</div>
+            <div class="stats-grid" id="stats-grid" style="display: none"></div>
+            <button id="start-btn" class="btn btn-primary" data-i18n="game.start">Start Flying</button>
+          </div>
+        </div>
+      </main>
+      <div class="mobile-controls">
+        <button class="control-btn" id="glide-btn">↑ Glide</button>
+        <button class="control-btn" id="dive-btn">↓ Dive</button>
+      </div>
+      <div class="instructions"><p data-i18n="game.controls">Hold Space to glide, S to dive</p></div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shadow Run - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <div class="title-section">
+          <h1 data-i18n="game.title">Shadow Run</h1>
+          <p class="subtitle" data-i18n="game.subtitle">Navigate light and shadow, fear no darkness!</p>
+        </div>
+        <div class="header-controls">
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-stats">
+        <div class="stats-card">
+          <span data-i18n="game.distance">Distance</span>
+          <span id="distance-display" class="value">0</span>
+        </div>
+        <div class="stats-card energy-card">
+          <div class="energy-info">
+            <span data-i18n="game.energy">Energy</span>
+            <span id="energy-display" class="value">100</span>
+          </div>
+          <div class="energy-bar-container">
+            <div id="energy-bar" class="energy-bar"></div>
+          </div>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.world">World</span>
+          <span id="world-display" class="world-badge light">Light</span>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <div class="canvas-container">
+          <canvas id="game-canvas"></canvas>
+        </div>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.welcome">
+              Shadow Run
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Switch between light and shadow worlds to avoid obstacles!
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              Start Game
+            </button>
+            <div class="controls-hint">
+              <small data-i18n="game.hint.jump">Left click or Space: Jump</small><br />
+              <small data-i18n="game.hint.switch">Right click or Shift: Switch World</small><br />
+              <small data-i18n="game.hint.energy">Switching costs energy, auto-regenerates</small>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div class="footer-controls">
+        <button id="restart-btn" class="btn warning" data-i18n="game.restart">
+          Restart
+        </button>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
