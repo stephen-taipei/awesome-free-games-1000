@@ -1,8 +1,16 @@
-import { RacingRunGame, GameState, Obstacle, Collectible, Particle } from './game.js';
-import { translations } from './i18n.js';
-import { getTranslator } from '../../../shared/i18n.js';
+import { RacingRunGame, type GameState, type Obstacle, type Collectible, type Particle } from './game';
+import { translations } from './i18n';
+import { i18n, type Locale } from '../../../shared/i18n';
 
-const t = getTranslator(translations);
+function initI18n() {
+  Object.entries(translations).forEach(([locale, trans]) => i18n.loadTranslations(locale as Locale, trans));
+  const browserLang = navigator.language;
+  if (browserLang.includes('zh')) i18n.setLocale('zh-TW');
+  else if (browserLang.includes('ja')) i18n.setLocale('ja');
+  else i18n.setLocale('en');
+}
+
+const t = (key: string) => i18n.t(key);
 
 class GameRenderer {
   private canvas: HTMLCanvasElement;
@@ -597,7 +605,11 @@ class GameRenderer {
 
 // Initialize game when DOM is loaded
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => new GameRenderer());
+  document.addEventListener('DOMContentLoaded', () => {
+    initI18n();
+    new GameRenderer();
+  });
 } else {
+  initI18n();
   new GameRenderer();
 }

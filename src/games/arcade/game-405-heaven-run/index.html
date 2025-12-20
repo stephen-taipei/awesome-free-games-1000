@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Heaven Run - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">Heaven Run</h1>
+        <div class="header-controls">
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-controls">
+        <div class="stats-card">
+          <span data-i18n="game.score">Score</span>
+          <span id="score-display">0</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.height">Height</span>
+          <span id="height-display">0</span>m
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.high">Best</span>
+          <span id="high-display">0</span>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.welcome">
+              Heaven Run
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Soar through the sky and run on clouds!
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              Start Game
+            </button>
+            <div class="controls-hint">
+              <small data-i18n="game.hint">Arrow keys to move, Space or ↑ to jump!</small>
+            </div>
+            <div class="powerup-hints">
+              <div class="powerup-hint">
+                <span class="powerup-icon halo-icon">◯</span>
+                <span data-i18n="game.halo">Halo: Enhanced Jump</span>
+              </div>
+              <div class="powerup-hint">
+                <span class="powerup-icon feather-icon">🪶</span>
+                <span data-i18n="game.feather">Feather: Slow Fall</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div class="mobile-controls">
+        <button class="control-btn jump-btn" id="btn-jump">↑ Jump</button>
+        <div class="control-row">
+          <button class="control-btn" id="btn-left">←</button>
+          <button class="control-btn" id="btn-right">→</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

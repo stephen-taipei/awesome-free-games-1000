@@ -1,8 +1,16 @@
-import { PirateEscapeGame, GameState } from './game.js';
-import { translations } from './i18n.js';
-import { getTranslator } from '../../../shared/i18n.js';
+import { PirateEscapeGame, type GameState } from './game';
+import { translations } from './i18n';
+import { i18n, type Locale } from '../../../shared/i18n';
 
-const t = getTranslator(translations);
+function initI18n() {
+  Object.entries(translations).forEach(([locale, trans]) => i18n.loadTranslations(locale as Locale, trans));
+  const browserLang = navigator.language;
+  if (browserLang.includes('zh')) i18n.setLocale('zh-TW');
+  else if (browserLang.includes('ja')) i18n.setLocale('ja');
+  else i18n.setLocale('en');
+}
+
+const t = (key: string) => i18n.t(key);
 
 let game: PirateEscapeGame;
 let animationId: number;
@@ -23,6 +31,8 @@ const finalScoreElement = document.getElementById('finalScore') as HTMLSpanEleme
 const leftBtn = document.getElementById('leftBtn') as HTMLButtonElement;
 const rightBtn = document.getElementById('rightBtn') as HTMLButtonElement;
 const jumpBtn = document.getElementById('jumpBtn') as HTMLButtonElement;
+
+initI18n();
 
 // Update UI text
 document.getElementById('gameTitle')!.textContent = t('game.title');

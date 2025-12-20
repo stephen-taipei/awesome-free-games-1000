@@ -1,6 +1,14 @@
-import { BikeRunGame } from './game.js';
-import { translations } from './i18n.js';
-import { initI18n, getTranslation } from '../../../shared/i18n.js';
+import { BikeRunGame } from './game';
+import { translations } from './i18n';
+import { i18n, type Locale } from '../../../shared/i18n';
+
+function initSharedI18n() {
+  Object.entries(translations).forEach(([locale, trans]) => i18n.loadTranslations(locale as Locale, trans));
+  const browserLang = navigator.language;
+  if (browserLang.includes('zh')) i18n.setLocale('zh-TW');
+  else if (browserLang.includes('ja')) i18n.setLocale('ja');
+  else i18n.setLocale('en');
+}
 
 class BikeRunRenderer {
   private canvas: HTMLCanvasElement;
@@ -660,13 +668,13 @@ class BikeRunRenderer {
 
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  initI18n(translations);
+  initSharedI18n();
 
   // Update all text elements
   document.querySelectorAll('[data-i18n]').forEach(element => {
     const key = element.getAttribute('data-i18n');
     if (key) {
-      element.textContent = getTranslation(key);
+      element.textContent = i18n.t(key);
     }
   });
 

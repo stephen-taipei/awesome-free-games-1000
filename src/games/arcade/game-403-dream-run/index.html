@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dream Run - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <header class="game-header">
+        <h1 data-i18n="game.title">Dream Run</h1>
+        <div class="header-controls">
+          <select id="language-select">
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="game-controls">
+        <div class="stats-card">
+          <span data-i18n="game.distance">Distance</span>
+          <span id="distance-display">0</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.stardust">Stardust</span>
+          <span id="stardust-display">0</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.score">Score</span>
+          <span id="score-display">0</span>
+        </div>
+        <div class="stats-card">
+          <span data-i18n="game.high">Best</span>
+          <span id="high-display">0</span>
+        </div>
+      </div>
+
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.welcome">
+              Dream Run
+            </h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">
+              Float through dreams, chase the stars!
+            </p>
+            <button id="start-btn" class="btn primary" data-i18n="game.start">
+              Start Game
+            </button>
+            <div class="controls-hint">
+              <small data-i18n="game.hint">Space to jump / Hold to float / F to phase</small>
+            </div>
+            <div class="feature-list">
+              <div class="feature-item">
+                <div class="feature-icon float-icon">✨</div>
+                <p><small data-i18n="game.floatInfo">Hold Space to float temporarily</small></p>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon phase-icon">🌙</div>
+                <p><small data-i18n="game.phaseInfo">Collect 3 fragments to phase through obstacles</small></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div class="mobile-controls">
+        <button class="control-btn jump-btn" id="btn-jump">
+          <span data-i18n="game.jump">Jump</span>
+        </button>
+        <button class="control-btn float-btn" id="btn-float">
+          <span data-i18n="game.float">Float</span>
+        </button>
+        <button class="control-btn phase-btn" id="btn-phase">
+          <span data-i18n="game.phase">Phase</span>
+        </button>
+      </div>
+
+      <div class="instructions">
+        <h3 data-i18n="game.controls">Controls</h3>
+        <ul>
+          <li><strong>Space / W / ↑</strong> - <span data-i18n="game.jump">Jump</span></li>
+          <li><strong>Hold Space</strong> - <span data-i18n="game.float">Float (Limited)</span></li>
+          <li><strong>F</strong> - <span data-i18n="game.phase">Phase Through (Costs 3 Fragments)</span></li>
+        </ul>
+        <div class="collectibles-info">
+          <div class="info-item">
+            <span class="icon stardust-icon">⭐</span>
+            <span>Stardust: +5 points</span>
+          </div>
+          <div class="info-item">
+            <span class="icon fragment-icon">💎</span>
+            <span data-i18n="game.fragments">Dream Fragments: +20 points, changes dream color</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
