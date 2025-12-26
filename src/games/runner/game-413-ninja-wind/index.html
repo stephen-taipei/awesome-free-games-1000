@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="game.title">忍者疾風</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="game-container">
+    <header class="game-header">
+      <h1 data-i18n="game.title">忍者疾風</h1>
+      <p class="game-desc" data-i18n="game.desc">化身忍者疾風般奔跑！</p>
+      <select id="language-select" aria-label="Language">
+        <option value="zh-TW">繁體中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
+    </header>
+
+    <div class="stats-bar">
+      <div class="stat"><span data-i18n="game.score">分數</span>: <span id="score-display">0</span></div>
+      <div class="stat"><span data-i18n="game.distance">距離</span>: <span id="distance-display">0m</span></div>
+      <div class="stat"><span data-i18n="game.scrolls">卷軸</span>: <span id="scrolls-display">0</span></div>
+      <div class="stat"><span data-i18n="game.speed">速度</span>: <span id="speed-display">5.0</span></div>
+    </div>
+
+    <main class="game-main">
+      <div class="canvas-wrapper">
+        <canvas id="game-canvas"></canvas>
+        <div id="game-overlay" class="game-overlay">
+          <h2 id="overlay-title" data-i18n="game.title">忍者疾風</h2>
+          <p id="overlay-msg" data-i18n="game.desc">化身忍者疾風般奔跑！</p>
+          <div id="final-score" class="final-score" style="display:none;"></div>
+          <div id="stats-grid" class="stats-grid" style="display:none;"></div>
+          <button id="start-btn" data-i18n="game.start">開始遊戲</button>
+        </div>
+      </div>
+    </main>
+
+    <div class="mobile-controls">
+      <button id="left-btn" class="control-btn">&#9664;</button>
+      <button id="jump-btn" class="control-btn">&#9650;</button>
+      <button id="right-btn" class="control-btn">&#9654;</button>
+    </div>
+
+    <footer class="game-footer">
+      <p data-i18n="game.controls">A/D 或 ←/→ 換道，空白鍵跳躍，S 煙霧遁</p>
+    </footer>
+  </div>
+  <script type="module" src="main.ts"></script>
+</body>
+</html>

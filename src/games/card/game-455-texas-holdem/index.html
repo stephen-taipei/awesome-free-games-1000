@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Texas Hold'em - Awesome Free Games 1000</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="game-container">
+    <header class="game-header">
+      <h1 data-i18n="game.title">Texas Hold'em</h1>
+      <select id="language-select">
+        <option value="zh-TW">繁體中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
+    </header>
+    <div class="game-stats">
+      <div class="stat-card"><span data-i18n="game.pot">Pot</span><span id="pot-display" class="stat-value">0</span></div>
+      <div class="stat-card phase" id="phase-display">Pre-Flop</div>
+    </div>
+    <main class="game-area">
+      <canvas id="game-canvas"></canvas>
+      <div id="action-panel" class="action-panel" style="display: none;">
+        <button id="fold-btn" class="btn" data-i18n="game.fold">Fold</button>
+        <button id="check-btn" class="btn" data-i18n="game.check">Check</button>
+        <button id="call-btn" class="btn" data-i18n="game.call">Call</button>
+        <button id="raise-btn" class="btn" data-i18n="game.raise">Raise</button>
+        <button id="allin-btn" class="btn" data-i18n="game.allIn">All In</button>
+      </div>
+      <div id="result-panel" class="result-panel" style="display: none;">
+        <h2 id="result-text"></h2>
+        <button id="new-hand-btn" class="btn primary" data-i18n="game.newHand">Next Hand</button>
+      </div>
+      <div id="game-overlay" class="overlay">
+        <div class="overlay-content">
+          <h2 data-i18n="game.welcome">Texas Hold'em</h2>
+          <p data-i18n="game.desc">Play against AI!</p>
+          <button id="start-btn" class="btn primary" data-i18n="game.start">Start</button>
+          <div class="controls-hint"><small data-i18n="game.hint">Use strategy to win!</small></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
