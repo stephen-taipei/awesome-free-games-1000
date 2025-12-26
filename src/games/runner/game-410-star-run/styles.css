@@ -1,0 +1,30 @@
+:root { --bg-color: #0a0015; --primary-color: #aa66ff; --text-color: #e0d0ff; --text-muted: #9080b0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, var(--bg-color) 0%, #200045 100%); color: var(--text-color); min-height: 100vh; display: flex; justify-content: center; padding: 20px; }
+.game-container { width: 100%; max-width: 450px; display: flex; flex-direction: column; gap: 12px; }
+.game-header { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+.title { font-size: 1.8rem; font-weight: bold; color: var(--primary-color); text-shadow: 0 0 15px rgba(170, 102, 255, 0.5); }
+.game-header select { padding: 8px 12px; border: none; border-radius: 6px; background: #200045; color: var(--text-color); }
+.game-info { display: flex; justify-content: space-around; background: rgba(170,102,255,0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(170,102,255,0.3); }
+.info-item { text-align: center; }
+.info-label { display: block; font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; }
+.info-value { font-size: 1.1rem; font-weight: bold; color: var(--primary-color); }
+.game-area { position: relative; width: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(170,102,255,0.3); }
+#game-canvas { display: block; width: 100%; height: 400px; }
+.overlay { position: absolute; inset: 0; background: rgba(10,0,21,0.95); display: flex; justify-content: center; align-items: center; z-index: 100; }
+.overlay-content { text-align: center; padding: 32px; }
+.overlay-title { font-size: 2rem; margin-bottom: 16px; color: var(--primary-color); text-shadow: 0 0 20px rgba(170, 102, 255, 0.5); }
+.overlay-msg { color: var(--text-muted); margin-bottom: 24px; }
+.final-score { font-size: 3.5rem; font-weight: bold; color: #ffff66; margin-bottom: 12px; text-shadow: 0 0 20px rgba(255, 255, 102, 0.5); }
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+.stat-item { background: rgba(170,102,255,0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(170,102,255,0.3); }
+.stat-label { font-size: 0.75rem; color: var(--text-muted); }
+.stat-value { font-size: 1.3rem; font-weight: bold; color: var(--primary-color); }
+.btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+.btn-primary { background: linear-gradient(135deg, #aa66ff, #7744cc); color: #fff; box-shadow: 0 4px 15px rgba(170, 102, 255, 0.4); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(170, 102, 255, 0.5); }
+.mobile-controls { display: none; justify-content: center; gap: 20px; padding: 16px; }
+.control-btn { width: 60px; height: 60px; border: 2px solid var(--primary-color); background: rgba(170,102,255,0.2); border-radius: 50%; font-size: 1.5rem; color: var(--primary-color); }
+.jump-btn { width: 80px; height: 80px; }
+.instructions { text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 12px; background: rgba(170,102,255,0.1); border-radius: 8px; }
+@media (hover: none) and (pointer: coarse) { .mobile-controls { display: flex; } .instructions { display: none; } }

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Speed Chase - Awesome Free Games 1000</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="game-container">
+      <header class="game-header">
+        <h1 class="title" data-i18n="game.title">Speed Chase</h1>
+        <select id="language-select"><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select>
+      </header>
+      <div class="game-info">
+        <div class="info-item"><span class="info-label" data-i18n="game.score">Score</span><span class="info-value" id="score-display">0</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.captures">Captures</span><span class="info-value" id="captures-display">0</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.streak">Streak</span><span class="info-value streak-value" id="streak-display">0</span></div>
+        <div class="info-item"><span class="info-label" data-i18n="game.speed">Speed</span><span class="info-value" id="speed-display">6.0</span></div>
+      </div>
+      <div class="pursuit-bar-container">
+        <span class="pursuit-label" data-i18n="game.pursuit">Pursuit</span>
+        <div class="pursuit-bar-bg"><div class="pursuit-bar" id="pursuit-bar"></div></div>
+        <span class="nitro-count" id="nitro-count">0</span>
+      </div>
+      <main class="game-area">
+        <canvas id="game-canvas"></canvas>
+        <div id="game-overlay" class="overlay" style="display: flex">
+          <div class="overlay-content">
+            <h2 class="overlay-title" id="overlay-title" data-i18n="game.title">Speed Chase</h2>
+            <p class="overlay-msg" id="overlay-msg" data-i18n="game.desc">Catch criminals, uphold justice!</p>
+            <div class="final-score" id="final-score" style="display: none">0</div>
+            <div class="stats-grid" id="stats-grid" style="display: none"></div>
+            <button id="start-btn" class="btn btn-primary" data-i18n="game.start">Start Game</button>
+          </div>
+        </div>
+      </main>
+      <div class="mobile-controls">
+        <button class="control-btn" id="left-btn">&larr;</button>
+        <button class="control-btn jump-btn" id="jump-btn">&uarr;</button>
+        <button class="control-btn" id="right-btn">&rarr;</button>
+        <button class="control-btn nitro-btn" id="nitro-btn">N</button>
+      </div>
+      <div class="instructions"><p data-i18n="game.controls">A/D to switch lanes, Space to jump, S for nitro</p></div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

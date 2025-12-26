@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spider Solitaire - Awesome Free Games 1000</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="game-container">
+    <header class="game-header">
+      <h1 data-i18n="game.title">Spider Solitaire</h1>
+      <select id="language-select">
+        <option value="zh-TW">繁體中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
+    </header>
+    <div class="game-stats">
+      <div class="stat-card"><span data-i18n="game.moves">Moves</span><span id="moves-display" class="stat-value">0</span></div>
+      <div class="stat-card"><span data-i18n="game.score">Score</span><span id="score-display" class="stat-value">500</span></div>
+      <div class="stat-card"><span data-i18n="game.completed">Complete</span><span id="completed-display" class="stat-value">0/8</span></div>
+    </div>
+    <div class="game-controls">
+      <button id="deal-btn" class="btn" data-i18n="game.deal">Deal</button>
+      <span id="stock-display" class="stock-info">5</span>
+      <select id="difficulty-select">
+        <option value="1" data-i18n="game.easy">Easy</option>
+        <option value="2" data-i18n="game.medium">Medium</option>
+        <option value="4" data-i18n="game.hard">Hard</option>
+      </select>
+      <button id="new-game-btn" class="btn" data-i18n="game.newGame">New Game</button>
+    </div>
+    <main class="game-area">
+      <canvas id="game-canvas"></canvas>
+      <div id="game-overlay" class="overlay">
+        <div class="overlay-content">
+          <h2 id="overlay-title" data-i18n="game.welcome">Spider Solitaire</h2>
+          <p id="overlay-msg" data-i18n="game.desc">Build sequences!</p>
+          <button id="start-btn" class="btn primary" data-i18n="game.start">Start</button>
+          <div class="controls-hint"><small data-i18n="game.hint">Click to play!</small></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blackjack - Awesome Free Games 1000</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="game-container">
+    <header class="game-header">
+      <h1 data-i18n="game.title">Blackjack</h1>
+      <select id="language-select">
+        <option value="zh-TW">繁體中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
+    </header>
+    <div class="game-stats">
+      <div class="stat-card"><span data-i18n="game.chips">Chips</span><span id="chips-display" class="stat-value">1000</span></div>
+      <div class="stat-card"><span data-i18n="game.bet">Bet</span><span id="bet-display" class="stat-value">0</span></div>
+    </div>
+    <main class="game-area">
+      <canvas id="game-canvas"></canvas>
+      <div id="betting-panel" class="betting-panel">
+        <h3 data-i18n="game.placeBet">Place Your Bet</h3>
+        <div class="bet-buttons">
+          <button class="bet-btn" data-amount="10">10</button>
+          <button class="bet-btn" data-amount="25">25</button>
+          <button class="bet-btn" data-amount="50">50</button>
+          <button class="bet-btn" data-amount="100">100</button>
+        </div>
+      </div>
+      <div id="action-panel" class="action-panel" style="display: none;">
+        <button id="hit-btn" class="btn action" data-i18n="game.hit">Hit</button>
+        <button id="stand-btn" class="btn action" data-i18n="game.stand">Stand</button>
+        <button id="double-btn" class="btn action" data-i18n="game.double">Double</button>
+      </div>
+      <div id="result-panel" class="result-panel" style="display: none;">
+        <h2 id="result-text"></h2>
+        <button id="new-round-btn" class="btn primary" data-i18n="game.newRound">New Round</button>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
