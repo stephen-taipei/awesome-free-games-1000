@@ -3,6 +3,18 @@
  * Game #400 - Shape-shifting endless runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  flyStart: boolean;
+  flyStop: boolean;
+  transform: { form: string }[];
+  coinCollected: { total: number }[];
+  obstaclePassed: boolean;
+  collision: boolean;
+  gameOver: { score: number; highScore: number; distance: number }[];
+}
+
 export type ShapeForm = "human" | "ball" | "bird";
 
 export interface Player {
@@ -69,6 +81,26 @@ export class TransformRunGame {
   private spawnTimer: number = 0;
   private gameTime: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      flyStart: false,
+      flyStop: false,
+      transform: [],
+      coinCollected: [],
+      obstaclePassed: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -119,6 +151,7 @@ export class TransformRunGame {
     this.coinId = 0;
     this.spawnTimer = 0;
     this.gameTime = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -129,10 +162,12 @@ export class TransformRunGame {
     if (player.form === "human" && player.isGrounded) {
       player.velocityY = JUMP_FORCE;
       player.isGrounded = false;
+      this.pendingEvents.jump = true;
     } else if (player.form === "bird" && player.energy > 0) {
       // Bird can fly
       if (!player.isFlying && player.flyTime < MAX_FLY_TIME) {
         player.isFlying = true;
+        this.pendingEvents.flyStart = true;
       }
     }
 
@@ -141,7 +176,10 @@ export class TransformRunGame {
 
   public stopFlying(): void {
     if (this.state.phase !== "playing") return;
-    this.state.player.isFlying = false;
+    if (this.state.player.isFlying) {
+      this.state.player.isFlying = false;
+      this.pendingEvents.flyStop = true;
+    }
     this.emitState();
   }
 
@@ -154,6 +192,7 @@ export class TransformRunGame {
 
     player.form = form;
     player.energy -= ENERGY_COST_TRANSFORM;
+    this.pendingEvents.transform.push({ form });
 
     // Update player dimensions based on form
     switch (form) {
@@ -289,6 +328,7 @@ export class TransformRunGame {
       if (!obstacle.passed && obstacle.x + obstacle.width < this.state.player.x) {
         obstacle.passed = true;
         this.state.score += 10;
+        this.pendingEvents.obstaclePassed = true;
       }
 
       return true;
@@ -393,6 +433,7 @@ export class TransformRunGame {
         }
 
         // Collision detected - game over
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -410,6 +451,7 @@ export class TransformRunGame {
         coin.collected = true;
         this.state.score += 5;
         this.state.player.energy = Math.min(ENERGY_MAX, this.state.player.energy + 10);
+        this.pendingEvents.coinCollected.push({ total: this.state.score });
       }
     }
   }
@@ -433,6 +475,12 @@ export class TransformRunGame {
       this.state.highScore = this.state.score;
       localStorage.setItem("transformRunHighScore", this.state.highScore.toString());
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      distance: this.state.distance,
+    });
 
     this.emitState();
   }
