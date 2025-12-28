@@ -22,6 +22,14 @@ export interface GameState {
   totalTime: number;
 }
 
+export interface PendingEvents {
+  spawn: { x: number; y: number; radius: number }[];
+  hit: { x: number; y: number; reactionTime: number; score: number }[];
+  miss: { isTarget: boolean }[];
+  start: boolean;
+  gameOver: { score: number; hits: number; misses: number; accuracy: number; avgTime: number }[];
+}
+
 const GAME_DURATION = 30; // seconds
 const TARGET_LIFETIME = 1500; // ms - target disappears if not clicked
 const MIN_RADIUS = 25;
@@ -49,8 +57,26 @@ export class AimTrainerGame {
   private canvasWidth: number = 450;
   private canvasHeight: number = 400;
 
+  public pendingEvents: PendingEvents = {
+    spawn: [],
+    hit: [],
+    miss: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      spawn: [],
+      hit: [],
+      miss: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -77,6 +103,7 @@ export class AimTrainerGame {
       phase: "playing",
     };
 
+    this.pendingEvents.start = true;
     this.spawnTarget();
     this.startTimer();
     this.emitState();
@@ -109,11 +136,13 @@ export class AimTrainerGame {
       spawnTime: performance.now(),
       color,
     };
+    this.pendingEvents.spawn.push({ x, y, radius });
 
     // Target expires after lifetime
     this.targetTimeout = window.setTimeout(() => {
       if (this.state.target) {
         this.state.misses++;
+        this.pendingEvents.miss.push({ isTarget: true });
         this.spawnTarget();
         this.emitState();
       }
@@ -139,7 +168,9 @@ export class AimTrainerGame {
         // Score based on reaction time and target size
         const timeBonus = Math.max(0, 500 - reactionTime);
         const sizeBonus = Math.round((MAX_RADIUS - target.radius + MIN_RADIUS) * 2);
-        this.state.score += 100 + timeBonus + sizeBonus;
+        const hitScore = 100 + timeBonus + sizeBonus;
+        this.state.score += hitScore;
+        this.pendingEvents.hit.push({ x: target.x, y: target.y, reactionTime, score: hitScore });
 
         if (this.targetTimeout) {
           clearTimeout(this.targetTimeout);
@@ -152,6 +183,7 @@ export class AimTrainerGame {
         // Miss - clicked outside target
         this.state.misses++;
         this.state.score = Math.max(0, this.state.score - 25);
+        this.pendingEvents.miss.push({ isTarget: false });
       }
 
       this.emitState();
@@ -173,6 +205,13 @@ export class AimTrainerGame {
   private endGame(): void {
     this.state.phase = "gameOver";
     this.state.target = null;
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      hits: this.state.hits,
+      misses: this.state.misses,
+      accuracy: this.getAccuracy(),
+      avgTime: this.getAverageTime(),
+    });
 
     if (this.gameInterval) {
       clearInterval(this.gameInterval);
