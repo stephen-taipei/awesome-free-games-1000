@@ -39,6 +39,12 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  levelComplete: { level: number; time: number }[];
+  victory: { totalTime: number }[];
+}
+
 const GRAVITY = 400;
 const FRICTION = 0.98;
 const BALL_RADIUS = 12;
@@ -118,6 +124,20 @@ export class SpinMazeGame {
   private lastTime = 0;
   private size = 0;
 
+  public pendingEvents: PendingEvents = {
+    start: false,
+    levelComplete: [],
+    victory: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      levelComplete: [],
+      victory: [],
+    };
+  }
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -182,6 +202,7 @@ export class SpinMazeGame {
     this.loadLevel();
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -192,6 +213,7 @@ export class SpinMazeGame {
     this.rotation = 0;
     if (this.level > MAX_LEVELS) {
       this.status = "victory";
+      this.pendingEvents.victory.push({ totalTime: this.time });
       this.emitState();
       return;
     }
@@ -350,6 +372,7 @@ export class SpinMazeGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.levelComplete.push({ level: this.level, time: this.time });
     this.emitState();
   }
 
