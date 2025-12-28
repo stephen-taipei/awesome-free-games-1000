@@ -33,6 +33,13 @@ export interface GameState {
   cameraY: number;
 }
 
+export interface PendingEvents {
+  jump: { platformType: string }[];
+  springJump: boolean;
+  start: boolean;
+  gameOver: { score: number; highScore: number; isNewHighScore: boolean }[];
+}
+
 const GRAVITY = 0.5;
 const JUMP_FORCE = -14;
 const SPRING_FORCE = -20;
@@ -46,8 +53,24 @@ export class PixelJumpGame {
   private canvasHeight: number = 550;
   private highestY: number = 0;
 
+  public pendingEvents: PendingEvents = {
+    jump: [],
+    springJump: false,
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      jump: [],
+      springJump: false,
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -91,6 +114,7 @@ export class PixelJumpGame {
         direction: 1,
       },
     };
+    this.pendingEvents.start = true;
     this.highestY = this.canvasHeight - 100;
     this.generateInitialPlatforms();
     this.emitState();
@@ -199,8 +223,10 @@ export class PixelJumpGame {
         if (this.checkPlatformCollision(player, platform)) {
           if (platform.type === "spring") {
             player.vy = SPRING_FORCE;
+            this.pendingEvents.springJump = true;
           } else {
             player.vy = JUMP_FORCE;
+            this.pendingEvents.jump.push({ platformType: platform.type });
           }
 
           if (platform.type === "crumbling" && platform.crumbleTimer === undefined) {
@@ -256,10 +282,17 @@ export class PixelJumpGame {
   private gameOver(): void {
     this.state.phase = "gameOver";
 
-    if (this.state.score > this.state.highScore) {
+    const isNewHighScore = this.state.score > this.state.highScore;
+    if (isNewHighScore) {
       this.state.highScore = this.state.score;
       localStorage.setItem("pixelJumpHighScore", this.state.highScore.toString());
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      isNewHighScore,
+    });
 
     this.emitState();
   }

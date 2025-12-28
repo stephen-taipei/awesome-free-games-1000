@@ -13,6 +13,14 @@ export interface GameState {
   countdown: number;
 }
 
+export interface PendingEvents {
+  draw: boolean;
+  win: { round: number; reactionTime: number; isNewBest: boolean }[];
+  lose: { round: number; reactionTime: number }[];
+  tooEarly: { round: number }[];
+  start: boolean;
+}
+
 const MAX_ROUNDS = 5;
 
 export class QuickDrawGame {
@@ -21,8 +29,26 @@ export class QuickDrawGame {
   private countdownInterval: number | null = null;
   private drawTimeout: number | null = null;
 
+  public pendingEvents: PendingEvents = {
+    draw: false,
+    win: [],
+    lose: [],
+    tooEarly: [],
+    start: false,
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      draw: false,
+      win: [],
+      lose: [],
+      tooEarly: [],
+      start: false,
+    };
   }
 
   private createInitialState(): GameState {
@@ -44,6 +70,7 @@ export class QuickDrawGame {
       phase: "waiting",
       countdown: 3,
     };
+    this.pendingEvents.start = true;
     this.startCountdown();
     this.emitState();
   }
@@ -78,6 +105,7 @@ export class QuickDrawGame {
     this.drawTimeout = window.setTimeout(() => {
       this.state.phase = "draw";
       this.state.drawStartTime = performance.now();
+      this.pendingEvents.draw = true;
       this.emitState();
 
       // Auto-lose after 1 second
@@ -96,6 +124,7 @@ export class QuickDrawGame {
       // Shot too early
       this.clearTimeouts();
       this.state.phase = "tooEarly";
+      this.pendingEvents.tooEarly.push({ round: this.state.round });
       this.emitState();
       return;
     }
@@ -112,12 +141,15 @@ export class QuickDrawGame {
         this.state.wins++;
 
         // Update best time
-        if (this.state.bestTime === 0 || reactionTime < this.state.bestTime) {
+        const isNewBest = this.state.bestTime === 0 || reactionTime < this.state.bestTime;
+        if (isNewBest) {
           this.state.bestTime = reactionTime;
           localStorage.setItem("quickDrawBest", reactionTime.toString());
         }
+        this.pendingEvents.win.push({ round: this.state.round, reactionTime, isNewBest });
       } else {
         this.state.phase = "lost";
+        this.pendingEvents.lose.push({ round: this.state.round, reactionTime });
       }
 
       this.emitState();

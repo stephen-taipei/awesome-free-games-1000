@@ -33,6 +33,14 @@ export interface GameState {
   groundY: number;
 }
 
+export interface PendingEvents {
+  jump: boolean;
+  slide: boolean;
+  coinCollect: { coins: number }[];
+  start: boolean;
+  gameOver: { score: number; highScore: number; distance: number; coins: number }[];
+}
+
 const GRAVITY = 0.8;
 const JUMP_FORCE = -15;
 const INITIAL_SPEED = 6;
@@ -48,8 +56,26 @@ export class SpeedRunnerGame {
   private canvasHeight: number = 500;
   private obstacleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = {
+    jump: false,
+    slide: false,
+    coinCollect: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      jump: false,
+      slide: false,
+      coinCollect: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -90,6 +116,7 @@ export class SpeedRunnerGame {
     };
     this.state.player.y = this.state.groundY - PLAYER_HEIGHT;
     this.obstacleTimer = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -99,6 +126,7 @@ export class SpeedRunnerGame {
     if (!this.state.player.isJumping && !this.state.player.isSliding) {
       this.state.player.vy = JUMP_FORCE;
       this.state.player.isJumping = true;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -109,6 +137,7 @@ export class SpeedRunnerGame {
       this.state.player.isSliding = true;
       this.state.player.height = SLIDE_HEIGHT;
       this.state.player.y = this.state.groundY - SLIDE_HEIGHT;
+      this.pendingEvents.slide = true;
     }
   }
 
@@ -164,6 +193,7 @@ export class SpeedRunnerGame {
         if (this.checkCollision(player, obs)) {
           obs.x = -100; // Remove coin
           this.state.coins++;
+          this.pendingEvents.coinCollect.push({ coins: this.state.coins });
         }
         continue;
       }
@@ -254,6 +284,13 @@ export class SpeedRunnerGame {
       this.state.highScore = this.state.score;
       localStorage.setItem("speedRunnerHighScore", this.state.highScore.toString());
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      distance: this.state.distance,
+      coins: this.state.coins,
+    });
 
     this.emitState();
   }
