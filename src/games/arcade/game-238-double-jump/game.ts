@@ -23,6 +23,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  jump: { jumpsLeft: number; isDoubleJump: boolean }[];
+  land: { platformType: Platform["type"] }[];
+  gameOver: { score: number; highScore: number; isNewBest: boolean }[];
+}
+
 const PLAYER_SIZE = 30;
 const GRAVITY = 0.5;
 const JUMP_FORCE = -12;
@@ -46,6 +53,22 @@ export class DoubleJumpGame {
   private platforms: Platform[] = [];
   private cameraY = 0;
   private highestY = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    jump: [],
+    land: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      jump: [],
+      land: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -97,6 +120,7 @@ export class DoubleJumpGame {
     this.cameraY = 0;
     this.highestY = this.playerY;
 
+    this.pendingEvents.start = true;
     this.generatePlatforms();
     this.emitState();
     this.gameLoop();
@@ -142,8 +166,10 @@ export class DoubleJumpGame {
     if (this.status !== "playing") return;
     if (this.jumpsLeft <= 0) return;
 
+    const isDoubleJump = this.jumpsLeft < MAX_JUMPS;
     this.playerVelY = JUMP_FORCE;
     this.jumpsLeft--;
+    this.pendingEvents.jump.push({ jumpsLeft: this.jumpsLeft, isDoubleJump });
     this.emitState();
   }
 
@@ -213,6 +239,7 @@ export class DoubleJumpGame {
           this.playerY = platform.y - PLAYER_SIZE / 2;
           this.playerVelY = 0;
           this.jumpsLeft = MAX_JUMPS;
+          this.pendingEvents.land.push({ platformType: platform.type });
 
           if (platform.type === "crumbling" && platform.crumbleTimer === undefined) {
             platform.crumbleTimer = 30;
@@ -269,6 +296,8 @@ export class DoubleJumpGame {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+    const isNewBest = this.score >= this.highScore;
+    this.pendingEvents.gameOver.push({ score: this.score, highScore: this.highScore, isNewBest });
     this.emitState();
   }
 
