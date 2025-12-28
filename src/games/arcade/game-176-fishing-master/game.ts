@@ -26,6 +26,14 @@ interface GameState {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  cast: { x: number; y: number }[];
+  fishCatch: { x: number; y: number; points: number; color: string }[];
+  fishLand: { x: number; y: number; points: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; score: number }[];
+}
+
 const FISH_TYPES = [
   { points: 10, color: "#3498db", width: 40, height: 20, speed: 1.5 },
   { points: 20, color: "#e74c3c", width: 50, height: 25, speed: 2 },
@@ -60,9 +68,27 @@ export class FishingMasterGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  public pendingEvents: PendingEvents = {
+    cast: [],
+    fishCatch: [],
+    fishLand: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      cast: [],
+      fishCatch: [],
+      fishLand: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(callback: StateChangeCallback) {
@@ -134,6 +160,7 @@ export class FishingMasterGame {
       this.spawnFish();
     }
 
+    this.pendingEvents.start = true;
     this.lastTime = performance.now();
     this.gameLoop();
   }
@@ -149,6 +176,11 @@ export class FishingMasterGame {
     if (this.timeRemaining <= 0) {
       this.timeRemaining = 0;
       this.isPlaying = false;
+      this.pendingEvents.gameOver.push({
+        x: this.width / 2,
+        y: this.height / 2,
+        score: this.score,
+      });
       this.emitState();
       this.draw();
       return;
@@ -192,6 +224,12 @@ export class FishingMasterGame {
           if (this.checkCollision(fish)) {
             this.caughtFish = fish;
             this.isRetracting = true;
+            this.pendingEvents.fishCatch.push({
+              x: fish.x + fish.width / 2,
+              y: fish.y + fish.height / 2,
+              points: fish.points,
+              color: fish.color,
+            });
             break;
           }
         }
@@ -210,6 +248,11 @@ export class FishingMasterGame {
         this.isFishing = false;
         this.isRetracting = false;
         if (this.caughtFish) {
+          this.pendingEvents.fishLand.push({
+            x: this.hookX,
+            y: this.hookY,
+            points: this.caughtFish.points,
+          });
           this.score += this.caughtFish.points;
           const idx = this.fishes.indexOf(this.caughtFish);
           if (idx !== -1) this.fishes.splice(idx, 1);
@@ -234,6 +277,7 @@ export class FishingMasterGame {
     this.isFishing = true;
     this.isRetracting = false;
     this.caughtFish = null;
+    this.pendingEvents.cast.push({ x: this.hookX, y: this.hookY });
   }
 
   reset() {
