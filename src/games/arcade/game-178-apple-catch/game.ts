@@ -19,6 +19,14 @@ interface GameState {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  appleCatch: { x: number; y: number; type: "red" | "green" | "golden"; points: number }[];
+  rottenCatch: { x: number; y: number }[];
+  appleMiss: { x: number; y: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; score: number }[];
+}
+
 export class AppleCatchGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -41,9 +49,27 @@ export class AppleCatchGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  public pendingEvents: PendingEvents = {
+    appleCatch: [],
+    rottenCatch: [],
+    appleMiss: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      appleCatch: [],
+      rottenCatch: [],
+      appleMiss: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(callback: StateChangeCallback) {
@@ -114,6 +140,7 @@ export class AppleCatchGame {
     this.spawnTimer = 0;
     this.basketX = this.width / 2 - this.basketWidth / 2;
 
+    this.pendingEvents.start = true;
     this.lastTime = performance.now();
     this.gameLoop();
   }
@@ -127,6 +154,11 @@ export class AppleCatchGame {
 
     if (this.lives <= 0) {
       this.isPlaying = false;
+      this.pendingEvents.gameOver.push({
+        x: this.width / 2,
+        y: this.height / 2,
+        score: this.score,
+      });
       this.emitState();
       this.draw();
       return;
@@ -165,18 +197,26 @@ export class AppleCatchGame {
         apple.x >= this.basketX - apple.size / 2 &&
         apple.x <= this.basketX + this.basketWidth + apple.size / 2
       ) {
+        let points = 0;
         switch (apple.type) {
           case "red":
-            this.score += 10;
+            points = 10;
+            this.score += points;
+            this.pendingEvents.appleCatch.push({ x: apple.x, y: apple.y, type: "red", points });
             break;
           case "green":
-            this.score += 20;
+            points = 20;
+            this.score += points;
+            this.pendingEvents.appleCatch.push({ x: apple.x, y: apple.y, type: "green", points });
             break;
           case "golden":
-            this.score += 50;
+            points = 50;
+            this.score += points;
+            this.pendingEvents.appleCatch.push({ x: apple.x, y: apple.y, type: "golden", points });
             break;
           case "rotten":
             this.lives--;
+            this.pendingEvents.rottenCatch.push({ x: apple.x, y: apple.y });
             break;
         }
         this.apples.splice(i, 1);
@@ -187,6 +227,7 @@ export class AppleCatchGame {
       if (apple.y > this.height) {
         if (apple.type !== "rotten") {
           this.lives--;
+          this.pendingEvents.appleMiss.push({ x: apple.x, y: apple.y });
         }
         this.apples.splice(i, 1);
       }
