@@ -100,6 +100,16 @@ export interface GameConfig {
   playerSpeed: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  fire: boolean;
+  enemyKilled: { type: string; points: number }[];
+  coreHit: { shieldRemaining: number; healthRemaining: number }[];
+  skillUsed: { skill: string }[];
+  waveComplete: { wave: number }[];
+  gameOver: { score: number; bestScore: number; wave: number }[];
+}
+
 const ENEMY_TYPES = {
   basic: { health: 1, speed: 80, color: '#ff6b6b', radius: 12 },
   fast: { health: 1, speed: 140, color: '#feca57', radius: 10 },
@@ -114,6 +124,16 @@ export class GuardianGame {
   private spawnTimer: number = 0;
   private autoFireTimer: number = 0;
   private onStateChange?: (state: GameState) => void;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    fire: false,
+    enemyKilled: [],
+    coreHit: [],
+    skillUsed: [],
+    waveComplete: [],
+    gameOver: [],
+  };
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -199,12 +219,25 @@ export class GuardianGame {
     return { ...this.state };
   }
 
+  clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      fire: false,
+      enemyKilled: [],
+      coreHit: [],
+      skillUsed: [],
+      waveComplete: [],
+      gameOver: [],
+    };
+  }
+
   newGame(): void {
     this.state = this.createInitialState();
     this.state.isPlaying = true;
     this.lastTime = performance.now();
     this.spawnTimer = 0;
     this.autoFireTimer = 0;
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -440,6 +473,8 @@ export class GuardianGame {
         damage: 1,
         fromPlayer: true,
       });
+
+      this.pendingEvents.fire = true;
     }
 
     // 反擊風暴技能：向所有方向發射
@@ -483,8 +518,10 @@ export class GuardianGame {
 
           if (enemy.health <= 0) {
             // 敵人死亡
+            const points = enemy.type === 'heavy' ? 30 : enemy.type === 'fast' ? 20 : 10;
             this.state.enemies.splice(j, 1);
-            this.state.score += enemy.type === 'heavy' ? 30 : enemy.type === 'fast' ? 20 : 10;
+            this.state.score += points;
+            this.pendingEvents.enemyKilled.push({ type: enemy.type, points });
             this.createParticles(enemy.x, enemy.y, enemy.color, 15);
           }
           break;
@@ -520,6 +557,11 @@ export class GuardianGame {
         this.state.enemies.splice(i, 1);
         this.createParticles(enemy.x, enemy.y, '#ff0000', 10);
 
+        this.pendingEvents.coreHit.push({
+          shieldRemaining: this.state.core.shield,
+          healthRemaining: this.state.core.health,
+        });
+
         if (this.state.core.health <= 0) {
           this.gameOver();
         }
@@ -545,6 +587,7 @@ export class GuardianGame {
   }
 
   private nextWave(): void {
+    this.pendingEvents.waveComplete.push({ wave: this.state.wave });
     this.state.wave++;
     this.state.enemiesInWave = 5 + this.state.wave * 2;
     this.state.enemiesRemaining = this.state.enemiesInWave;
@@ -601,6 +644,8 @@ export class GuardianGame {
         this.state.activeSkills.storm = true;
         break;
     }
+
+    this.pendingEvents.skillUsed.push({ skill });
   }
 
   private gameOver(): void {
@@ -616,6 +661,12 @@ export class GuardianGame {
       this.state.bestScore = this.state.score;
       this.saveBestScore(this.state.bestScore);
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bestScore: this.state.bestScore,
+      wave: this.state.wave,
+    });
 
     this.notifyStateChange();
   }
