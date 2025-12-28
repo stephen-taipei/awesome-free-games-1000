@@ -24,6 +24,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  ballHit: { x: number; y: number; combo: number; points: number }[];
+  ballDrop: { x: number; y: number }[];
+  ballAdd: { x: number; y: number }[];
+  start: boolean;
+  gameOver: { score: number; maxCombo: number }[];
+}
+
 const BALL_COLORS = [
   { main: "#e74c3c", glow: "#ff6b6b" },
   { main: "#3498db", glow: "#5dade2" },
@@ -47,9 +55,27 @@ export class JugglerGame {
   private maxBalls = 7;
   private gravity = 0.15;
 
+  public pendingEvents: PendingEvents = {
+    ballHit: [],
+    ballDrop: [],
+    ballAdd: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      ballHit: [],
+      ballDrop: [],
+      ballAdd: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(cb: StateCallback) {
@@ -89,6 +115,7 @@ export class JugglerGame {
     }
 
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -98,7 +125,7 @@ export class JugglerGame {
     const h = this.canvas.height;
     const colorSet = BALL_COLORS[this.balls.length % BALL_COLORS.length];
 
-    this.balls.push({
+    const newBall = {
       x: w * 0.2 + Math.random() * w * 0.6,
       y: h * 0.3,
       vx: (Math.random() - 0.5) * 4,
@@ -106,7 +133,9 @@ export class JugglerGame {
       radius: w * 0.05,
       color: colorSet.main,
       glowColor: colorSet.glow,
-    });
+    };
+    this.balls.push(newBall);
+    this.pendingEvents.ballAdd.push({ x: newBall.x, y: newBall.y });
 
     this.emitState();
   }
@@ -134,7 +163,9 @@ export class JugglerGame {
         // Score
         this.combo++;
         this.maxCombo = Math.max(this.maxCombo, this.combo);
-        this.score += 10 * this.combo;
+        const points = 10 * this.combo;
+        this.score += points;
+        this.pendingEvents.ballHit.push({ x: ball.x, y: ball.y, combo: this.combo, points });
         this.emitState();
 
         return;
@@ -197,12 +228,14 @@ export class JugglerGame {
 
       // Check if ball fell
       if (ball.y - ball.radius > h) {
+        this.pendingEvents.ballDrop.push({ x: ball.x, y: ball.y });
         this.balls.splice(i, 1);
         this.combo = 0;
         this.emitState();
 
         if (this.balls.length === 0) {
           this.status = "over";
+          this.pendingEvents.gameOver.push({ score: this.score, maxCombo: this.maxCombo });
           this.emitState();
         }
       }
