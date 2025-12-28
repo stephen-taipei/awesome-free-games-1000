@@ -1,6 +1,7 @@
 /**
  * 3D Maze Game Engine
  * Game #079 - First-person maze exploration using raycasting
+ * Sci-Fi Corridor / Cyberpunk Dungeon Theme
  */
 
 interface Player {
@@ -15,6 +16,15 @@ interface Level {
   startY: number;
   endX: number;
   endY: number;
+}
+
+export interface GameState {
+  level: number;
+  maxLevel: number;
+  time: string;
+  status: "playing" | "won";
+  event?: "move" | "turn" | "wallHit" | "portal" | "goalReached" | "victory" | "levelStart" | "reset";
+  playerAngle?: number;
 }
 
 const LEVELS: Level[] = [
@@ -103,7 +113,12 @@ export class Maze3DGame {
   rotSpeed: number = 0.05;
   keys: { [key: string]: boolean } = {};
 
-  onStateChange: ((state: any) => void) | null = null;
+  // Event tracking
+  private lastMoveTime: number = 0;
+  private lastTurnTime: number = 0;
+  private portalProximityEmitted: boolean = false;
+
+  onStateChange: ((state: GameState) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -114,6 +129,7 @@ export class Maze3DGame {
     this.currentLevel = 0;
     this.loadLevel(this.currentLevel);
     this.startTime = Date.now();
+    this.notifyState("levelStart");
     this.loop();
   }
 
@@ -134,7 +150,8 @@ export class Maze3DGame {
 
     this.status = "playing";
     this.startTime = Date.now();
-    this.notifyState();
+    this.portalProximityEmitted = false;
+    this.notifyState("levelStart");
   }
 
   private loop = () => {
@@ -147,47 +164,86 @@ export class Maze3DGame {
     if (this.status === "playing") {
       requestAnimationFrame(this.loop);
     }
-    this.notifyState();
   };
 
   private update() {
     // Handle movement
     let dx = 0;
     let dy = 0;
+    let moved = false;
+    let turned = false;
+    const now = Date.now();
 
     if (this.keys["w"] || this.keys["ArrowUp"]) {
       dx += Math.cos(this.player.angle) * this.moveSpeed;
       dy += Math.sin(this.player.angle) * this.moveSpeed;
+      moved = true;
     }
     if (this.keys["s"] || this.keys["ArrowDown"]) {
       dx -= Math.cos(this.player.angle) * this.moveSpeed;
       dy -= Math.sin(this.player.angle) * this.moveSpeed;
+      moved = true;
     }
     if (this.keys["a"] || this.keys["ArrowLeft"]) {
       this.player.angle -= this.rotSpeed;
+      turned = true;
     }
     if (this.keys["d"] || this.keys["ArrowRight"]) {
       this.player.angle += this.rotSpeed;
+      turned = true;
     }
 
     // Collision detection
     const newX = this.player.x + dx;
     const newY = this.player.y + dy;
+    let hitWall = false;
 
     if (this.map[Math.floor(this.player.y)][Math.floor(newX)] === 0 ||
         this.map[Math.floor(this.player.y)][Math.floor(newX)] === 2) {
       this.player.x = newX;
+    } else if (dx !== 0) {
+      hitWall = true;
     }
+
     if (this.map[Math.floor(newY)][Math.floor(this.player.x)] === 0 ||
         this.map[Math.floor(newY)][Math.floor(this.player.x)] === 2) {
       this.player.y = newY;
+    } else if (dy !== 0) {
+      hitWall = true;
+    }
+
+    // Emit events with throttling
+    if (moved && now - this.lastMoveTime > 150) {
+      this.lastMoveTime = now;
+      if (hitWall) {
+        this.notifyState("wallHit");
+      } else {
+        this.notifyState("move");
+      }
+    }
+
+    if (turned && now - this.lastTurnTime > 100) {
+      this.lastTurnTime = now;
+      this.notifyState("turn");
+    }
+
+    // Check if near portal (exit)
+    const distToEnd = Math.hypot(this.player.x - this.endX, this.player.y - this.endY);
+
+    if (distToEnd < 2 && !this.portalProximityEmitted) {
+      this.portalProximityEmitted = true;
+      this.notifyState("portal");
+    } else if (distToEnd >= 2) {
+      this.portalProximityEmitted = false;
     }
 
     // Check if reached end
-    const distToEnd = Math.hypot(this.player.x - this.endX, this.player.y - this.endY);
     if (distToEnd < 0.5) {
       this.status = "won";
-      this.notifyState();
+      this.notifyState("goalReached");
+      setTimeout(() => {
+        this.notifyState("victory");
+      }, 300);
     }
   }
 
@@ -219,10 +275,17 @@ export class Maze3DGame {
     const width = this.canvas.width;
     const height = this.canvas.height;
 
-    // Clear and draw sky/floor
-    this.ctx.fillStyle = "#1a1a2e";
+    // Clear and draw sky/floor with sci-fi gradient
+    const skyGradient = this.ctx.createLinearGradient(0, 0, 0, height / 2);
+    skyGradient.addColorStop(0, "#0a0a15");
+    skyGradient.addColorStop(1, "#1a1a2e");
+    this.ctx.fillStyle = skyGradient;
     this.ctx.fillRect(0, 0, width, height / 2);
-    this.ctx.fillStyle = "#2d2d44";
+
+    const floorGradient = this.ctx.createLinearGradient(0, height / 2, 0, height);
+    floorGradient.addColorStop(0, "#1a1a2e");
+    floorGradient.addColorStop(1, "#2d2d44");
+    this.ctx.fillStyle = floorGradient;
     this.ctx.fillRect(0, height / 2, width, height / 2);
 
     // Raycasting
@@ -242,37 +305,55 @@ export class Maze3DGame {
       const shade = Math.max(0, 1 - correctedDist / this.maxDepth);
 
       if (isEnd) {
-        // Exit is green
+        // Exit portal is neon green/cyan
         const green = Math.floor(100 + shade * 155);
-        this.ctx.fillStyle = `rgb(0, ${green}, 0)`;
+        const cyan = Math.floor(80 + shade * 100);
+        this.ctx.fillStyle = `rgb(0, ${green}, ${cyan})`;
+
+        // Add glow effect for portal
+        this.ctx.shadowColor = "#00ff88";
+        this.ctx.shadowBlur = 15 * shade;
       } else {
-        // Walls are blue-ish
+        // Walls are cyberpunk blue
         const blue = Math.floor(50 + shade * 150);
-        const gray = Math.floor(30 + shade * 100);
-        this.ctx.fillStyle = `rgb(${gray}, ${gray}, ${blue})`;
+        const gray = Math.floor(30 + shade * 80);
+        this.ctx.fillStyle = `rgb(${gray}, ${gray + 10}, ${blue})`;
+        this.ctx.shadowBlur = 0;
       }
 
       const wallTop = (height - wallHeight) / 2;
       this.ctx.fillRect(i * rayWidth, wallTop, rayWidth + 1, wallHeight);
 
-      // Add edge shading for depth
+      // Add neon edge lighting for depth
       if (shade > 0.3) {
-        this.ctx.fillStyle = `rgba(255, 255, 255, ${shade * 0.1})`;
-        this.ctx.fillRect(i * rayWidth, wallTop, rayWidth + 1, 3);
+        this.ctx.fillStyle = `rgba(0, 255, 255, ${shade * 0.15})`;
+        this.ctx.fillRect(i * rayWidth, wallTop, rayWidth + 1, 2);
+        this.ctx.fillStyle = `rgba(0, 200, 255, ${shade * 0.1})`;
+        this.ctx.fillRect(i * rayWidth, wallTop + wallHeight - 2, rayWidth + 1, 2);
       }
     }
+
+    this.ctx.shadowBlur = 0;
 
     // Draw minimap
     this.drawMinimap();
 
-    // Draw crosshair
-    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+    // Draw crosshair (sci-fi style)
+    this.ctx.strokeStyle = "rgba(0, 255, 255, 0.7)";
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
-    this.ctx.moveTo(width / 2 - 10, height / 2);
-    this.ctx.lineTo(width / 2 + 10, height / 2);
-    this.ctx.moveTo(width / 2, height / 2 - 10);
-    this.ctx.lineTo(width / 2, height / 2 + 10);
+    // Horizontal line
+    this.ctx.moveTo(width / 2 - 15, height / 2);
+    this.ctx.lineTo(width / 2 - 5, height / 2);
+    this.ctx.moveTo(width / 2 + 5, height / 2);
+    this.ctx.lineTo(width / 2 + 15, height / 2);
+    // Vertical line
+    this.ctx.moveTo(width / 2, height / 2 - 15);
+    this.ctx.lineTo(width / 2, height / 2 - 5);
+    this.ctx.moveTo(width / 2, height / 2 + 5);
+    this.ctx.lineTo(width / 2, height / 2 + 15);
+    // Center dot
+    this.ctx.arc(width / 2, height / 2, 2, 0, Math.PI * 2);
     this.ctx.stroke();
   }
 
@@ -308,19 +389,22 @@ export class Maze3DGame {
     const offsetX = 10;
     const offsetY = 10;
 
-    // Background
-    this.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    this.ctx.fillRect(offsetX - 2, offsetY - 2, this.mapWidth * scale + 4, this.mapHeight * scale + 4);
+    // Background with sci-fi border
+    this.ctx.fillStyle = "rgba(0, 20, 40, 0.7)";
+    this.ctx.fillRect(offsetX - 3, offsetY - 3, this.mapWidth * scale + 6, this.mapHeight * scale + 6);
+    this.ctx.strokeStyle = "rgba(0, 255, 255, 0.4)";
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeRect(offsetX - 3, offsetY - 3, this.mapWidth * scale + 6, this.mapHeight * scale + 6);
 
     // Draw map cells
     for (let y = 0; y < this.mapHeight; y++) {
       for (let x = 0; x < this.mapWidth; x++) {
         if (this.map[y][x] === 1) {
-          this.ctx.fillStyle = "#4a4a6a";
+          this.ctx.fillStyle = "#3a3a5a";
         } else if (this.map[y][x] === 2) {
-          this.ctx.fillStyle = "#00ff00";
+          this.ctx.fillStyle = "#00ff88";
         } else {
-          this.ctx.fillStyle = "#1a1a2e";
+          this.ctx.fillStyle = "#0a0a15";
         }
         this.ctx.fillRect(offsetX + x * scale, offsetY + y * scale, scale - 1, scale - 1);
       }
@@ -330,21 +414,24 @@ export class Maze3DGame {
     const px = offsetX + this.player.x * scale;
     const py = offsetY + this.player.y * scale;
 
-    this.ctx.fillStyle = "#ff0000";
+    this.ctx.fillStyle = "#00ffff";
     this.ctx.beginPath();
     this.ctx.arc(px, py, 3, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // Draw direction
-    this.ctx.strokeStyle = "#ff0000";
+    // Draw direction with glow
+    this.ctx.strokeStyle = "#00ffff";
+    this.ctx.shadowColor = "#00ffff";
+    this.ctx.shadowBlur = 5;
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     this.ctx.moveTo(px, py);
     this.ctx.lineTo(
-      px + Math.cos(this.player.angle) * 10,
-      py + Math.sin(this.player.angle) * 10
+      px + Math.cos(this.player.angle) * 12,
+      py + Math.sin(this.player.angle) * 12
     );
     this.ctx.stroke();
+    this.ctx.shadowBlur = 0;
   }
 
   public nextLevel() {
@@ -366,17 +453,18 @@ export class Maze3DGame {
 
   public reset() {
     this.loadLevel(this.currentLevel);
+    this.notifyState("reset");
     if (this.status !== "playing") {
       this.status = "playing";
       this.loop();
     }
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 
-  private notifyState() {
+  private notifyState(event?: GameState["event"]) {
     if (this.onStateChange) {
       const seconds = Math.floor(this.elapsedTime / 1000);
       const minutes = Math.floor(seconds / 60);
@@ -386,6 +474,8 @@ export class Maze3DGame {
         maxLevel: LEVELS.length,
         time: `${minutes}:${secs.toString().padStart(2, "0")}`,
         status: this.status,
+        event,
+        playerAngle: (this.player.angle * 180 / Math.PI) % 360,
       });
     }
   }

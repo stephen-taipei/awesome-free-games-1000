@@ -1,3 +1,20 @@
+/* Map Puzzle - Cartography / Explorer Theme */
+/* Game #120 */
+
+:root {
+  --parchment-light: #f5e6c8;
+  --parchment-dark: #d4c4a8;
+  --sepia: #6b4423;
+  --ink-brown: #3d2914;
+  --compass-gold: #d4a421;
+  --discovery-gold: #ffd966;
+  --land-green: #7cb342;
+  --water-blue: #42a5f5;
+  --mountain-brown: #795548;
+  --forest-green: #388e3c;
+  --desert-tan: #ffb74d;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,8 +22,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  background: linear-gradient(160deg, #3d2914 0%, #2a1a0d 50%, #1a0f07 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -24,21 +41,27 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  color: #4CAF50;
+  color: var(--parchment-light);
 }
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+  font-weight: 600;
+  font-style: italic;
+  text-shadow:
+    0 0 10px rgba(212, 164, 33, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.05em;
 }
 
 .header-controls select {
   padding: 0.5rem;
   border-radius: 8px;
-  border: none;
-  background: #252540;
-  color: #4CAF50;
+  border: 1px solid rgba(212, 164, 33, 0.3);
+  background: linear-gradient(180deg, #4a3020 0%, #3d2914 100%);
+  color: var(--parchment-light);
   cursor: pointer;
+  font-family: inherit;
 }
 
 .game-controls {
@@ -49,35 +72,64 @@ body {
 }
 
 .stats-card {
-  background: rgba(76, 175, 80, 0.1);
-  color: #4CAF50;
+  background: linear-gradient(145deg,
+    rgba(245, 230, 200, 0.15) 0%,
+    rgba(107, 68, 35, 0.1) 100%);
+  color: var(--parchment-light);
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: bold;
   display: flex;
   gap: 0.5rem;
-  border: 1px solid rgba(76, 175, 80, 0.3);
+  border: 1px solid rgba(212, 164, 33, 0.3);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  background: #1a1a2e;
+  background: linear-gradient(180deg,
+    rgba(245, 230, 200, 0.08) 0%,
+    rgba(107, 68, 35, 0.05) 100%);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 60px rgba(212, 164, 33, 0.1);
   overflow: hidden;
+  border: 2px solid rgba(107, 68, 35, 0.4);
 }
 
 .canvas-container {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
 }
 
-canvas {
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
   max-width: 100%;
   border-radius: 8px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 0 40px rgba(245, 230, 200, 0.05);
+  border: 1px solid rgba(107, 68, 35, 0.3);
 }
 
 .overlay {
@@ -86,11 +138,14 @@ canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(26, 26, 46, 0.95);
+  background: radial-gradient(ellipse at center,
+    rgba(42, 26, 13, 0.92) 0%,
+    rgba(26, 15, 7, 0.98) 100%);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
+  backdrop-filter: blur(4px);
 }
 
 .overlay-content {
@@ -102,43 +157,71 @@ canvas {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #4CAF50;
-  text-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+  color: var(--compass-gold);
+  font-weight: 600;
+  font-style: italic;
+  text-shadow:
+    0 0 30px rgba(212, 164, 33, 0.5),
+    0 0 60px rgba(212, 164, 33, 0.3);
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
   opacity: 0.9;
+  color: var(--parchment-dark);
 }
 
 .controls-hint {
   margin-top: 1rem;
   opacity: 0.7;
+  color: rgba(245, 230, 200, 0.7);
+  font-style: italic;
 }
 
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 20px;
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: inherit;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #4CAF50, #388E3C);
-  color: white;
+  background: linear-gradient(135deg, var(--sepia) 0%, var(--ink-brown) 100%);
+  color: var(--parchment-light);
+  box-shadow:
+    0 4px 15px rgba(107, 68, 35, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(212, 164, 33, 0.3);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 6px 25px rgba(212, 164, 33, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .btn.warning {
-  background: #e74c3c;
-  color: white;
+  background: linear-gradient(135deg, #8b4513 0%, #654321 100%);
+  color: var(--parchment-light);
+  box-shadow:
+    0 4px 15px rgba(139, 69, 19, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn.warning:hover {
+  box-shadow:
+    0 6px 20px rgba(139, 69, 19, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .footer-controls {
@@ -148,6 +231,56 @@ canvas {
   margin-top: 1rem;
 }
 
+/* Compass glow animation */
+@keyframes compassGlow {
+  0%, 100% {
+    box-shadow:
+      0 4px 15px rgba(212, 164, 33, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 4px 25px rgba(212, 164, 33, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+}
+
+.btn.primary:active {
+  animation: compassGlow 0.5s ease-in-out;
+}
+
+/* Parchment texture overlay */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(245, 230, 200, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(212, 164, 33, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Map grid decorative lines */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(107, 68, 35, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(107, 68, 35, 0.1) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.3;
+}
+
 @media (max-width: 500px) {
   .game-header h1 {
     font-size: 1.2rem;
@@ -155,6 +288,15 @@ canvas {
 
   .stats-card {
     padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
     font-size: 0.9rem;
   }
 }

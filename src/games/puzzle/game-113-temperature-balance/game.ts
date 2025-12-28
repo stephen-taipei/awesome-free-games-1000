@@ -182,6 +182,16 @@ export class TemperatureBalanceGame {
       ) {
         if (this.selectedZone === null) {
           this.selectedZone = zone;
+          // Emit zone click for effects
+          if (this.onStateChange) {
+            this.onStateChange({
+              zoneClicked: {
+                x: zone.x + zone.width / 2,
+                y: zone.y + zone.height / 2,
+                temperature: zone.temperature,
+              },
+            });
+          }
         } else if (this.selectedZone.id === zone.id) {
           this.selectedZone = null;
         } else if (this.selectedZone.neighbors.includes(zone.id)) {
@@ -190,6 +200,16 @@ export class TemperatureBalanceGame {
           this.selectedZone = null;
         } else {
           this.selectedZone = zone;
+          // Emit zone click for effects
+          if (this.onStateChange) {
+            this.onStateChange({
+              zoneClicked: {
+                x: zone.x + zone.width / 2,
+                y: zone.y + zone.height / 2,
+                temperature: zone.temperature,
+              },
+            });
+          }
         }
         return;
       }
@@ -200,12 +220,25 @@ export class TemperatureBalanceGame {
   private transferHeat(from: Zone, to: Zone) {
     const transfer = 10;
     if (from.temperature >= transfer) {
+      const fromTemp = from.temperature;
+      const toTemp = to.temperature;
+
       from.temperature -= transfer;
       to.temperature += transfer;
       this.moves++;
 
       if (this.onStateChange) {
-        this.onStateChange({ moves: this.moves });
+        this.onStateChange({
+          moves: this.moves,
+          heatTransfer: {
+            fromX: from.x + from.width / 2,
+            fromY: from.y + from.height / 2,
+            toX: to.x + to.width / 2,
+            toY: to.y + to.height / 2,
+            fromTemp: fromTemp,
+            toTemp: toTemp,
+          },
+        });
       }
 
       this.checkWin();

@@ -1,7 +1,20 @@
 /**
  * Dino Bones Game Engine
  * Game #081 - Assemble dinosaur skeletons
+ * WebGPU Enhanced with Event Emissions
  */
+
+export interface GameState {
+  dinoName: string;
+  placedCount: number;
+  totalBones: number;
+  status: "playing" | "won";
+  maxDinos: number;
+  currentDino: number;
+  event?: "pickup" | "drag" | "place" | "drop" | "victory" | "gameStart" | "reset";
+  eventX?: number;
+  eventY?: number;
+}
 
 interface Bone {
   id: string;
@@ -329,8 +342,9 @@ export class DinoBoneGame {
   status: "playing" | "won" = "playing";
 
   snapDistance: number = 30;
+  dragFrameCounter: number = 0;
 
-  onStateChange: ((state: any) => void) | null = null;
+  onStateChange: ((state: GameState) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -340,6 +354,7 @@ export class DinoBoneGame {
   public start() {
     this.currentDino = 0;
     this.loadDinosaur(this.currentDino);
+    this.notifyState("gameStart");
     this.loop();
   }
 
@@ -386,15 +401,24 @@ export class DinoBoneGame {
         if (!bone.placed && this.isPointInBone(x, y, bone)) {
           this.draggingBone = bone;
           this.dragOffset = { x: x - bone.x, y: y - bone.y };
+          this.dragFrameCounter = 0;
           // Move to top
           this.bones.splice(i, 1);
           this.bones.push(bone);
+          // Emit pickup event
+          this.notifyState("pickup", bone.x + bone.width / 2, bone.y + bone.height / 2);
           break;
         }
       }
     } else if (type === "move" && this.draggingBone) {
       this.draggingBone.x = x - this.dragOffset.x;
       this.draggingBone.y = y - this.dragOffset.y;
+
+      // Emit drag event occasionally (every 10 frames)
+      this.dragFrameCounter++;
+      if (this.dragFrameCounter % 10 === 0) {
+        this.notifyState("drag", x, y);
+      }
     } else if (type === "up" && this.draggingBone) {
       // Check if close to target
       const bone = this.draggingBone;
@@ -409,11 +433,15 @@ export class DinoBoneGame {
         bone.y = bone.targetY;
         bone.placed = true;
         this.placedCount++;
+        // Emit place event
+        this.notifyState("place", bone.x + bone.width / 2, bone.y + bone.height / 2);
         this.checkWin();
+      } else {
+        // Emit drop event (not snapped)
+        this.notifyState("drop", bone.x + bone.width / 2, bone.y + bone.height / 2);
       }
 
       this.draggingBone = null;
-      this.notifyState();
     }
   }
 
@@ -430,7 +458,7 @@ export class DinoBoneGame {
   private checkWin() {
     if (this.placedCount >= this.bones.length) {
       this.status = "won";
-      this.notifyState();
+      this.notifyState("victory");
     }
   }
 
@@ -562,6 +590,7 @@ export class DinoBoneGame {
     if (this.currentDino < DINOSAURS.length - 1) {
       this.currentDino++;
       this.loadDinosaur(this.currentDino);
+      this.notifyState("gameStart");
       this.loop();
     }
   }
@@ -576,17 +605,22 @@ export class DinoBoneGame {
 
   public reset() {
     this.loadDinosaur(this.currentDino);
+    this.notifyState("reset");
     if (this.status !== "playing") {
       this.status = "playing";
       this.loop();
     }
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 
-  private notifyState() {
+  private notifyState(
+    event?: GameState["event"],
+    eventX?: number,
+    eventY?: number
+  ) {
     if (this.onStateChange) {
       const dino = DINOSAURS[this.currentDino];
       this.onStateChange({
@@ -596,6 +630,9 @@ export class DinoBoneGame {
         status: this.status,
         maxDinos: DINOSAURS.length,
         currentDino: this.currentDino + 1,
+        event,
+        eventX,
+        eventY,
       });
     }
   }

@@ -1,6 +1,7 @@
 /**
  * Rope Puzzle Game Engine
  * Game #086 - Untangle the ropes by moving nodes
+ * Neon / String / Glow Theme
  */
 
 export interface Node {
@@ -8,6 +9,7 @@ export interface Node {
   x: number;
   y: number;
   radius: number;
+  colorIndex: number;
 }
 
 export interface Edge {
@@ -18,6 +20,17 @@ export interface Edge {
 export interface Level {
   nodes: { x: number; y: number }[];
   edges: [number, number][];
+}
+
+type GameEvent = "grab" | "drag" | "release" | "untangle" | "victory" | "levelStart" | "reset";
+
+export interface GameState {
+  moves: number;
+  status: "playing" | "won";
+  event?: GameEvent;
+  eventX?: number;
+  eventY?: number;
+  eventColorIndex?: number;
 }
 
 export class RopePuzzleGame {
@@ -32,8 +45,9 @@ export class RopePuzzleGame {
   private currentLevel = 0;
   private moves = 0;
   private status: "playing" | "won" = "playing";
+  private previousIntersections = 0;
 
-  private onStateChange: ((state: any) => void) | null = null;
+  private onStateChange: ((state: GameState) => void) | null = null;
 
   private levels: Level[] = [
     // Level 1 - Simple cross (4 nodes)
@@ -145,6 +159,8 @@ export class RopePuzzleGame {
     this.status = "playing";
     this.loadLevel(this.currentLevel);
     this.scrambleNodes();
+    this.previousIntersections = this.countIntersections();
+    this.emitState("levelStart");
     this.loop();
   }
 
@@ -159,6 +175,7 @@ export class RopePuzzleGame {
       x: padding + n.x * (w - padding * 2),
       y: padding + n.y * (h - padding * 2),
       radius: 18,
+      colorIndex: i % 6,
     }));
 
     this.edges = level.edges.map(([from, to]) => ({ from, to }));
@@ -263,6 +280,19 @@ export class RopePuzzleGame {
     return count;
   }
 
+  private emitState(event?: GameEvent, node?: Node) {
+    if (this.onStateChange) {
+      this.onStateChange({
+        moves: this.moves,
+        status: this.status,
+        event,
+        eventX: node?.x,
+        eventY: node?.y,
+        eventColorIndex: node?.colorIndex,
+      });
+    }
+  }
+
   public handleInput(type: "down" | "move" | "up", x: number, y: number) {
     if (this.status === "won") return;
 
@@ -273,6 +303,7 @@ export class RopePuzzleGame {
         if (dist < node.radius + 10) {
           this.draggingNode = node;
           this.dragOffset = { x: node.x - x, y: node.y - y };
+          this.emitState("grab", node);
           break;
         }
       }
@@ -287,26 +318,31 @@ export class RopePuzzleGame {
           padding,
           Math.min(this.canvas.height - padding, y + this.dragOffset.y)
         );
+
+        // Emit drag event occasionally
+        if (Math.random() < 0.2) {
+          this.emitState("drag", this.draggingNode);
+        }
       }
     } else if (type === "up") {
       if (this.draggingNode) {
         this.moves++;
+        const releasedNode = this.draggingNode;
         this.draggingNode = null;
 
-        if (this.onStateChange) {
-          this.onStateChange({ moves: this.moves });
+        // Check if untangle happened
+        const currentIntersections = this.countIntersections();
+        if (currentIntersections < this.previousIntersections) {
+          this.emitState("untangle", releasedNode);
+        } else {
+          this.emitState("release", releasedNode);
         }
+        this.previousIntersections = currentIntersections;
 
         // Check win condition
         if (this.checkWin()) {
           this.status = "won";
-          if (this.onStateChange) {
-            this.onStateChange({
-              status: "won",
-              moves: this.moves,
-              level: this.currentLevel,
-            });
-          }
+          this.emitState("victory", releasedNode);
         }
       }
     }
@@ -315,20 +351,6 @@ export class RopePuzzleGame {
   private draw() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // Draw background gradient
-    const gradient = ctx.createRadialGradient(
-      this.canvas.width / 2,
-      this.canvas.height / 2,
-      0,
-      this.canvas.width / 2,
-      this.canvas.height / 2,
-      this.canvas.width / 2
-    );
-    gradient.addColorStop(0, "#2d2d44");
-    gradient.addColorStop(1, "#1a1a2e");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Find intersecting edges for coloring
     const intersectingEdges = new Set<number>();
@@ -358,11 +380,12 @@ export class RopePuzzleGame {
       }
     }
 
-    // Draw edges (ropes)
+    // Draw edges (ropes) with neon glow
     this.edges.forEach((edge, index) => {
       const from = this.nodes[edge.from];
       const to = this.nodes[edge.to];
 
+      // Glow effect
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.lineTo(to.x, to.y);
@@ -370,29 +393,42 @@ export class RopePuzzleGame {
       if (this.status === "won") {
         ctx.strokeStyle = "#2ecc71";
         ctx.shadowColor = "#2ecc71";
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 15;
       } else if (intersectingEdges.has(index)) {
         ctx.strokeStyle = "#e74c3c";
         ctx.shadowColor = "#e74c3c";
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 12;
       } else {
         ctx.strokeStyle = "#9b59b6";
         ctx.shadowColor = "#9b59b6";
-        ctx.shadowBlur = 5;
+        ctx.shadowBlur = 10;
       }
 
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 5;
       ctx.lineCap = "round";
       ctx.stroke();
       ctx.shadowBlur = 0;
     });
 
-    // Draw nodes
+    // Draw nodes with neon glow
     this.nodes.forEach((node) => {
+      // Outer glow
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.radius + 8, 0, Math.PI * 2);
+
+      if (this.status === "won") {
+        ctx.fillStyle = "rgba(46, 204, 113, 0.3)";
+      } else if (node === this.draggingNode) {
+        ctx.fillStyle = "rgba(243, 156, 18, 0.4)";
+      } else {
+        ctx.fillStyle = "rgba(102, 126, 234, 0.3)";
+      }
+      ctx.fill();
+
+      // Main node
       ctx.beginPath();
       ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
 
-      // Gradient fill
       const nodeGradient = ctx.createRadialGradient(
         node.x - 5,
         node.y - 5,
@@ -405,36 +441,44 @@ export class RopePuzzleGame {
       if (this.status === "won") {
         nodeGradient.addColorStop(0, "#2ecc71");
         nodeGradient.addColorStop(1, "#27ae60");
+        ctx.shadowColor = "#2ecc71";
       } else if (node === this.draggingNode) {
         nodeGradient.addColorStop(0, "#f39c12");
         nodeGradient.addColorStop(1, "#e67e22");
+        ctx.shadowColor = "#f39c12";
       } else {
         nodeGradient.addColorStop(0, "#667eea");
         nodeGradient.addColorStop(1, "#764ba2");
+        ctx.shadowColor = "#667eea";
       }
 
+      ctx.shadowBlur = 15;
       ctx.fillStyle = nodeGradient;
       ctx.fill();
 
       // Border
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
       ctx.lineWidth = 2;
       ctx.stroke();
+      ctx.shadowBlur = 0;
 
       // Shine effect
       ctx.beginPath();
       ctx.arc(node.x - 5, node.y - 5, node.radius / 3, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
       ctx.fill();
     });
 
     // Draw intersection count
     if (this.status !== "won") {
       const intersections = this.countIntersections();
-      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-      ctx.font = "16px sans-serif";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.font = "bold 16px sans-serif";
       ctx.textAlign = "right";
+      ctx.shadowColor = "#667eea";
+      ctx.shadowBlur = 5;
       ctx.fillText(`Intersections: ${intersections}`, this.canvas.width - 20, 30);
+      ctx.shadowBlur = 0;
     }
   }
 
@@ -447,6 +491,7 @@ export class RopePuzzleGame {
   }
 
   public reset() {
+    this.emitState("reset");
     this.start(this.currentLevel);
   }
 
@@ -467,7 +512,7 @@ export class RopePuzzleGame {
     return this.moves;
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 }

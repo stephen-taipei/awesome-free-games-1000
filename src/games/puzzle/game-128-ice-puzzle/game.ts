@@ -97,6 +97,16 @@ export class IcePuzzleGame {
     this.ctx = canvas.getContext('2d')!;
   }
 
+  // Convert grid position to normalized 0-1 coordinates for WebGPU
+  private getNormalizedPos(row: number, col: number): { x: number; y: number } {
+    const x = this.offsetX + col * this.cellSize + this.cellSize / 2;
+    const y = this.offsetY + row * this.cellSize + this.cellSize / 2;
+    return {
+      x: x / this.canvas.width,
+      y: y / this.canvas.height,
+    };
+  }
+
   start() {
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
@@ -217,6 +227,28 @@ export class IcePuzzleGame {
       return;
     }
 
+    // Emit slide start event for WebGPU
+    if (this.onStateChange) {
+      const startPos = this.getNormalizedPos(this.playerPos.row, this.playerPos.col);
+      this.onStateChange({
+        slideStart: { x: startPos.x, y: startPos.y },
+      });
+    }
+
+    // Emit slide trail event for WebGPU
+    if (this.onStateChange) {
+      const fromPos = this.getNormalizedPos(this.playerPos.row, this.playerPos.col);
+      const toPos = this.getNormalizedPos(currentRow, currentCol);
+      this.onStateChange({
+        slideTrail: {
+          fromX: fromPos.x,
+          fromY: fromPos.y,
+          toX: toPos.x,
+          toY: toPos.y,
+        },
+      });
+    }
+
     this.animationFrom = { ...this.playerPos };
     this.animationTo = this.slidePath[this.slidePath.length - 1];
     this.animating = true;
@@ -246,9 +278,24 @@ export class IcePuzzleGame {
     this.animating = false;
     this.slidePath = [];
 
+    // Emit slide stop event for WebGPU
+    if (this.onStateChange) {
+      const stopPos = this.getNormalizedPos(this.playerPos.row, this.playerPos.col);
+      this.onStateChange({
+        slideStop: { x: stopPos.x, y: stopPos.y },
+      });
+    }
+
     // Check win
     if (this.playerPos.row === this.goalPos.row && this.playerPos.col === this.goalPos.col) {
       this.status = 'won';
+      // Emit goal reached event for WebGPU
+      if (this.onStateChange) {
+        const goalPos = this.getNormalizedPos(this.goalPos.row, this.goalPos.col);
+        this.onStateChange({
+          goalReached: { x: goalPos.x, y: goalPos.y },
+        });
+      }
     }
 
     this.notifyState();
@@ -473,6 +520,10 @@ export class IcePuzzleGame {
   }
 
   reset() {
+    // Emit reset event for WebGPU
+    if (this.onStateChange) {
+      this.onStateChange({ reset: true });
+    }
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
     this.draw();
@@ -491,11 +542,15 @@ export class IcePuzzleGame {
 
   private notifyState() {
     if (this.onStateChange) {
+      // Get player position for WebGPU
+      const playerNormPos = this.getNormalizedPos(this.playerPos.row, this.playerPos.col);
+
       this.onStateChange({
         status: this.status,
         level: this.currentLevel + 1,
         totalLevels: LEVELS.length,
-        moves: this.moveCount
+        moves: this.moveCount,
+        playerPos: playerNormPos,
       });
     }
   }

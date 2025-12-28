@@ -28,6 +28,10 @@ interface GameState {
   maxLevel: number;
   heatPercent: number;
   status: "idle" | "playing" | "won";
+  tileRotate?: { x: number; y: number };
+  heatConnect?: { x: number; y: number };
+  heatDisconnect?: { x: number; y: number };
+  reset?: boolean;
 }
 
 type StateCallback = (state: GameState) => void;
@@ -141,6 +145,14 @@ export class VolcanoPuzzleGame {
   private animationId: number | null = null;
   private heatProgress = 0;
   private heatedTiles: Set<string> = new Set();
+  private previousHeatedTiles: Set<string> = new Set();
+
+  private pendingEvents: {
+    tileRotate?: { x: number; y: number };
+    heatConnect?: { x: number; y: number };
+    heatDisconnect?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -160,7 +172,9 @@ export class VolcanoPuzzleGame {
         maxLevel: LEVELS.length,
         heatPercent: Math.round((heatedCount / totalTiles) * 100),
         status: this.status,
+        ...this.pendingEvents,
       });
+      this.pendingEvents = {};
     }
   }
 
@@ -192,6 +206,7 @@ export class VolcanoPuzzleGame {
   }
 
   reset() {
+    this.pendingEvents.reset = true;
     this.loadLevel();
     this.status = "playing";
     this.emitState();
@@ -235,6 +250,7 @@ export class VolcanoPuzzleGame {
     this.tiles[sy][sx].heated = true;
 
     this.heatedTiles.clear();
+    this.previousHeatedTiles.clear();
     this.heatProgress = 0;
     this.calculateLayout();
     this.propagateHeat();
@@ -257,12 +273,43 @@ export class VolcanoPuzzleGame {
     // Rotate tile
     tile.rotation = (tile.rotation + 90) % 360;
 
+    // Calculate pixel position for effects
+    const tileCenterX = this.offsetX + tileX * this.tileSize + this.tileSize / 2;
+    const tileCenterY = this.offsetY + tileY * this.tileSize + this.tileSize / 2;
+
+    this.pendingEvents.tileRotate = { x: tileCenterX, y: tileCenterY };
+
+    // Store previous heated tiles
+    this.previousHeatedTiles = new Set(this.heatedTiles);
+
     // Recalculate heat propagation
     this.propagateHeat();
+
+    // Check for heat changes
+    this.checkHeatChanges(tileCenterX, tileCenterY);
+
     this.emitState();
 
     // Check win
     this.checkWin();
+  }
+
+  private checkHeatChanges(x: number, y: number) {
+    // Check for new connections
+    for (const key of this.heatedTiles) {
+      if (!this.previousHeatedTiles.has(key)) {
+        this.pendingEvents.heatConnect = { x, y };
+        return;
+      }
+    }
+
+    // Check for disconnections
+    for (const key of this.previousHeatedTiles) {
+      if (!this.heatedTiles.has(key)) {
+        this.pendingEvents.heatDisconnect = { x, y };
+        return;
+      }
+    }
   }
 
   private getConnections(tile: Tile): boolean[] {
@@ -355,12 +402,8 @@ export class VolcanoPuzzleGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Background - volcanic rock
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, "#2d3436");
-    bgGrad.addColorStop(1, "#636e72");
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, w, h);
+    // Transparent background (WebGPU behind)
+    ctx.clearRect(0, 0, w, h);
 
     // Draw tiles
     for (let y = 0; y < this.gridHeight; y++) {

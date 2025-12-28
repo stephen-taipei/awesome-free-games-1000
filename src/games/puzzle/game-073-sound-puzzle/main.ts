@@ -5,7 +5,9 @@
 import { SoundPuzzleGame } from "./game";
 import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
+import { WebGPURenderer } from "./webgpu";
 
+const webgpuCanvas = document.getElementById("webgpu-canvas") as HTMLCanvasElement;
 const languageSelect = document.getElementById("language-select") as HTMLSelectElement;
 const levelDisplay = document.getElementById("level-display")!;
 const scoreDisplay = document.getElementById("score-display")!;
@@ -22,6 +24,8 @@ const noteButtons = document.querySelectorAll(".note-btn") as NodeListOf<HTMLBut
 const phaseDisplay = document.getElementById("phase-display")!;
 
 let game: SoundPuzzleGame;
+let renderer: WebGPURenderer | null = null;
+let animationId: number;
 
 function initI18n() {
   Object.entries(translations).forEach(([locale, trans]) => {
@@ -55,6 +59,31 @@ function updateTexts() {
     const key = el.getAttribute("data-i18n");
     if (key) el.textContent = i18n.t(key);
   });
+}
+
+async function initWebGPU() {
+  if (!webgpuCanvas) return;
+
+  renderer = new WebGPURenderer();
+  const success = await renderer.initialize(webgpuCanvas);
+
+  if (success) {
+    function animate() {
+      renderer?.render();
+      animationId = requestAnimationFrame(animate);
+    }
+    animate();
+  }
+}
+
+function getButtonCenter(btn: HTMLButtonElement): { x: number; y: number } {
+  const rect = btn.getBoundingClientRect();
+  const canvasRect = webgpuCanvas?.getBoundingClientRect() || { left: 0, top: 0 };
+  const dpr = Math.min(window.devicePixelRatio, 2);
+  return {
+    x: (rect.left + rect.width / 2 - canvasRect.left) * dpr,
+    y: (rect.top + rect.height / 2 - canvasRect.top) * dpr,
+  };
 }
 
 function initGame() {
@@ -108,6 +137,58 @@ function initGame() {
     levelDisplay.textContent = `${state.level} / ${game.getTotalLevels()}`;
     scoreDisplay.textContent = state.score?.toString() || "0";
 
+    // Handle events for WebGPU effects
+    if (state.event && renderer) {
+      const centerX = webgpuCanvas?.width / 2 || 200;
+      const centerY = webgpuCanvas?.height / 2 || 200;
+
+      switch (state.event) {
+        case "notePlay": {
+          const noteIndex = state.noteIndex ?? 0;
+          const btn = noteButtons[noteIndex];
+          if (btn) {
+            const pos = getButtonCenter(btn);
+            renderer.emitNotePlay(pos.x, pos.y, noteIndex);
+            renderer.setActiveNote(noteIndex);
+          }
+          break;
+        }
+        case "noteOff":
+          renderer.setActiveNote(-1);
+          break;
+        case "sequenceStart":
+          renderer.emitSequenceStart(centerX, centerY);
+          break;
+        case "playerTurn":
+          renderer.emitPlayerTurn(centerX, centerY);
+          break;
+        case "correctNote": {
+          const noteIndex = state.noteIndex ?? 0;
+          const btn = noteButtons[noteIndex];
+          if (btn) {
+            const pos = getButtonCenter(btn);
+            renderer.emitCorrectNote(pos.x, pos.y, noteIndex);
+          }
+          break;
+        }
+        case "wrongNote":
+          renderer.emitWrongNote(centerX, centerY);
+          break;
+        case "victory":
+          renderer.emitVictory();
+          break;
+        case "levelStart":
+          renderer.emitLevelStart();
+          break;
+        case "reset":
+          renderer.emitReset();
+          break;
+        case "gameComplete":
+          renderer.emitGameComplete();
+          break;
+      }
+    }
+
     // Update phase display
     if (state.phase === "ready") {
       phaseDisplay.textContent = i18n.t("game.hint");
@@ -124,7 +205,6 @@ function initGame() {
     }
 
     // Update active note visual
-    const notes = game.getNotes();
     noteButtons.forEach((btn, index) => {
       if (state.activeNote === index) {
         btn.style.backgroundColor = notes[index].activeColor;
@@ -199,3 +279,4 @@ playBtn.addEventListener("click", () => game.playSequence());
 
 initI18n();
 initGame();
+initWebGPU();

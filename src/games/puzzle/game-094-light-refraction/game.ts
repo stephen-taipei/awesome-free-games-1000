@@ -3,6 +3,36 @@
  * Game #094 - Refract light through prisms to hit targets
  */
 
+export interface GameState {
+  event?:
+    | "drag"
+    | "rotate"
+    | "prismHit"
+    | "beamPath"
+    | "targetHit"
+    | "victory"
+    | "levelStart"
+    | "reset";
+  hit?: boolean;
+  prismId?: number;
+  prismX?: number;
+  prismY?: number;
+  prismRotation?: number;
+  hitX?: number;
+  hitY?: number;
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
+  colorIndex?: number;
+  targetX?: number;
+  targetY?: number;
+  sourceX?: number;
+  sourceY?: number;
+  level?: number;
+  status?: "playing" | "won";
+}
+
 export interface Prism {
   id: number;
   x: number;
@@ -35,10 +65,12 @@ export class LightRefractionGame {
   private status: "playing" | "won" = "playing";
   private animationId = 0;
   private targetHit = false;
+  private wasTargetHit = false;
 
   private prismSize = 40;
+  private emitBeamTimer = 0;
 
-  private onStateChange: ((state: any) => void) | null = null;
+  private onStateChange: ((state: GameState) => void) | null = null;
 
   private levels: LevelConfig[] = [
     // Level 1 - Single prism
@@ -112,7 +144,19 @@ export class LightRefractionGame {
     this.currentLevel = level ?? this.currentLevel;
     this.status = "playing";
     this.targetHit = false;
+    this.wasTargetHit = false;
     this.loadLevel(this.currentLevel);
+
+    // Emit level start event
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "levelStart",
+        sourceX: this.source.x,
+        sourceY: this.source.y,
+        level: this.currentLevel,
+      });
+    }
+
     this.loop();
   }
 
@@ -169,10 +213,46 @@ export class LightRefractionGame {
       this.onStateChange({ hit: this.targetHit });
     }
 
+    // Emit target hit event when first hitting target
+    if (this.targetHit && !this.wasTargetHit) {
+      this.wasTargetHit = true;
+      if (this.onStateChange) {
+        this.onStateChange({
+          event: "targetHit",
+          targetX: this.target.x,
+          targetY: this.target.y,
+        });
+      }
+    }
+
     if (this.targetHit && this.status === "playing") {
       this.status = "won";
       if (this.onStateChange) {
-        this.onStateChange({ status: "won", level: this.currentLevel });
+        this.onStateChange({
+          event: "victory",
+          status: "won",
+          level: this.currentLevel,
+        });
+      }
+    }
+
+    // Periodically emit beam path for visual effects
+    this.emitBeamTimer++;
+    if (this.emitBeamTimer >= 10 && this.lightPath.length > 1) {
+      this.emitBeamTimer = 0;
+      for (let i = 0; i < this.lightPath.length - 1; i++) {
+        const p1 = this.lightPath[i];
+        const p2 = this.lightPath[i + 1];
+        if (this.onStateChange) {
+          this.onStateChange({
+            event: "beamPath",
+            x1: p1.x,
+            y1: p1.y,
+            x2: p2.x,
+            y2: p2.y,
+            colorIndex: i % 5,
+          });
+        }
       }
     }
   }
@@ -199,6 +279,17 @@ export class LightRefractionGame {
         // Refract through prism
         const prism = this.prisms.find((p) => p.id === hit.prismId);
         if (prism) {
+          // Emit prism hit event
+          if (this.onStateChange) {
+            this.onStateChange({
+              event: "prismHit",
+              hitX: hit.x,
+              hitY: hit.y,
+              prismId: prism.id,
+              prismRotation: prism.rotation,
+            });
+          }
+
           // Simple refraction: change angle based on prism rotation
           angle = 2 * prism.rotation - angle + Math.PI;
           x = hit.x + Math.cos(angle) * 2;
@@ -388,6 +479,17 @@ export class LightRefractionGame {
         padding,
         Math.min(this.canvas.height - padding, y + this.dragOffset.y)
       );
+
+      // Emit drag event
+      if (this.onStateChange) {
+        this.onStateChange({
+          event: "drag",
+          prismId: this.draggingPrism.id,
+          prismX: this.draggingPrism.x,
+          prismY: this.draggingPrism.y,
+          prismRotation: this.draggingPrism.rotation,
+        });
+      }
     } else if (type === "up") {
       this.draggingPrism = null;
     } else if (type === "click") {
@@ -395,6 +497,17 @@ export class LightRefractionGame {
       for (const prism of this.prisms) {
         if (Math.hypot(x - prism.x, y - prism.y) < prism.size) {
           prism.rotation += Math.PI / 8;
+
+          // Emit rotate event
+          if (this.onStateChange) {
+            this.onStateChange({
+              event: "rotate",
+              prismId: prism.id,
+              prismX: prism.x,
+              prismY: prism.y,
+              prismRotation: prism.rotation,
+            });
+          }
           break;
         }
       }
@@ -406,9 +519,8 @@ export class LightRefractionGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Clear
-    ctx.fillStyle = "#0c0c0c";
-    ctx.fillRect(0, 0, w, h);
+    // Clear with transparency for WebGPU background
+    ctx.clearRect(0, 0, w, h);
 
     // Draw grid
     ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
@@ -521,6 +633,12 @@ export class LightRefractionGame {
 
   public reset() {
     this.stop();
+
+    // Emit reset event
+    if (this.onStateChange) {
+      this.onStateChange({ event: "reset" });
+    }
+
     this.start(this.currentLevel);
   }
 
@@ -537,7 +655,7 @@ export class LightRefractionGame {
     return this.currentLevel + 1;
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 }

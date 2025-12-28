@@ -1,9 +1,19 @@
 /**
  * Symmetry Draw Game Engine
  * Game #089 - Draw symmetric patterns with mirroring
+ * Kaleidoscope / Rainbow / Prismatic Theme
  */
 
 export type SymmetryMode = "vertical" | "horizontal" | "quad" | "radial";
+
+export interface GameState {
+  event?: "draw" | "drawStart" | "drawEnd" | "modeChange" | "clear" | "save" | "levelStart";
+  x?: number;
+  y?: number;
+  colorIndex?: number;
+  mode?: SymmetryMode;
+  brushSize?: number;
+}
 
 export class SymmetryDrawGame {
   private canvas: HTMLCanvasElement;
@@ -15,10 +25,12 @@ export class SymmetryDrawGame {
 
   private brushColor = "#e74c3c";
   private brushSize = 8;
+  private colorIndex = 0;
   private mode: SymmetryMode = "vertical";
   private radialSegments = 8;
 
-  private onStateChange: ((state: any) => void) | null = null;
+  private drawCounter = 0;
+  private onStateChange: ((state: GameState) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -30,6 +42,16 @@ export class SymmetryDrawGame {
   public start() {
     this.clear();
     this.drawGuideLines();
+
+    // Emit level start
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "levelStart",
+        x: this.canvas.width / 2,
+        y: this.canvas.height / 2,
+        mode: this.mode,
+      });
+    }
   }
 
   private drawGuideLines() {
@@ -37,7 +59,7 @@ export class SymmetryDrawGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.strokeStyle = "rgba(170, 68, 255, 0.15)";
     ctx.lineWidth = 1;
     ctx.setLineDash([5, 5]);
 
@@ -78,11 +100,39 @@ export class SymmetryDrawGame {
       this.isDrawing = true;
       this.lastX = x;
       this.lastY = y;
+
+      // Emit draw start
+      if (this.onStateChange) {
+        this.onStateChange({
+          event: "drawStart",
+          x,
+          y,
+          colorIndex: this.colorIndex,
+        });
+      }
     } else if (type === "move" && this.isDrawing) {
       this.drawSymmetric(this.lastX, this.lastY, x, y);
       this.lastX = x;
       this.lastY = y;
+
+      // Emit draw event periodically
+      this.drawCounter++;
+      if (this.drawCounter % 3 === 0 && this.onStateChange) {
+        this.onStateChange({
+          event: "draw",
+          x,
+          y,
+          colorIndex: this.colorIndex,
+        });
+      }
     } else if (type === "up") {
+      if (this.isDrawing && this.onStateChange) {
+        this.onStateChange({
+          event: "drawEnd",
+          x: this.lastX,
+          y: this.lastY,
+        });
+      }
       this.isDrawing = false;
     }
   }
@@ -153,8 +203,11 @@ export class SymmetryDrawGame {
     ctx.stroke();
   }
 
-  public setColor(color: string) {
+  public setColor(color: string, index?: number) {
     this.brushColor = color;
+    if (index !== undefined) {
+      this.colorIndex = index;
+    }
   }
 
   public setBrushSize(size: number) {
@@ -163,11 +216,16 @@ export class SymmetryDrawGame {
 
   public setMode(mode: SymmetryMode) {
     this.mode = mode;
-    this.clear();
+    this.clearCanvas();
     this.drawGuideLines();
 
     if (this.onStateChange) {
-      this.onStateChange({ mode });
+      this.onStateChange({
+        event: "modeChange",
+        mode,
+        x: this.canvas.width / 2,
+        y: this.canvas.height / 2,
+      });
     }
   }
 
@@ -182,14 +240,35 @@ export class SymmetryDrawGame {
     return this.mode;
   }
 
-  public clear() {
+  private clearCanvas() {
     const ctx = this.ctx;
-    ctx.fillStyle = "#1a1a1a";
+    ctx.fillStyle = "rgba(13, 10, 20, 0.95)";
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  public clear() {
+    this.clearCanvas();
     this.drawGuideLines();
+
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "clear",
+        x: this.canvas.width / 2,
+        y: this.canvas.height / 2,
+      });
+    }
   }
 
   public save() {
+    // Emit save event
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "save",
+        x: this.canvas.width / 2,
+        y: this.canvas.height / 2,
+      });
+    }
+
     // Create a temporary canvas without guide lines
     const tempCanvas = document.createElement("canvas");
     tempCanvas.width = this.canvas.width;
@@ -212,11 +291,12 @@ export class SymmetryDrawGame {
       const size = Math.min(rect.width, rect.height);
       this.canvas.width = size;
       this.canvas.height = size;
-      this.clear();
+      this.clearCanvas();
+      this.drawGuideLines();
     }
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 }

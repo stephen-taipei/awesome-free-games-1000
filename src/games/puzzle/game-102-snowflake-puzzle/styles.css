@@ -1,5 +1,6 @@
 /**
  * Snowflake Puzzle Styles
+ * Winter Wonderland / Frozen Crystal Theme
  * Game #102
  */
 
@@ -9,10 +10,17 @@
   --snow-active: #b8d4e8;
   --snow-highlight: #e8f4fc;
   --crystal-glow: #87ceeb;
+  --crystal-blue: #5bc0eb;
+  --aurora-green: #20bf6b;
+  --aurora-purple: #9b59b6;
+  --frost-white: #f0f8ff;
+  --ice-blue: #a8d8ea;
   --text-color: #e0f0ff;
   --text-muted: #8ab4d4;
   --btn-primary: #4a90c2;
   --btn-secondary: #2a4a6e;
+  --glass-bg: rgba(26, 47, 78, 0.7);
+  --glass-border: rgba(135, 206, 235, 0.3);
 }
 
 * {
@@ -32,7 +40,19 @@ body {
   padding: 20px;
 }
 
+#webgpu-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .game-container {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 500px;
   display: flex;
@@ -48,23 +68,56 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
 }
 
 .title {
   font-size: 1.8rem;
   font-weight: bold;
   color: var(--snow-highlight);
-  text-shadow: 0 0 15px var(--crystal-glow);
+  text-shadow:
+    0 0 15px var(--crystal-glow),
+    0 0 30px rgba(135, 206, 235, 0.5);
+  animation: crystal-shimmer 3s infinite;
+  letter-spacing: 1px;
+}
+
+@keyframes crystal-shimmer {
+  0%, 100% {
+    text-shadow:
+      0 0 15px var(--crystal-glow),
+      0 0 30px rgba(135, 206, 235, 0.5);
+  }
+  50% {
+    text-shadow:
+      0 0 20px var(--crystal-glow),
+      0 0 40px rgba(135, 206, 235, 0.7),
+      0 0 60px rgba(135, 206, 235, 0.3);
+  }
 }
 
 .header-controls select {
   padding: 8px 12px;
   border: none;
   border-radius: 6px;
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text-color);
   font-size: 0.9rem;
   cursor: pointer;
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  border-color: var(--crystal-glow);
+  box-shadow: 0 0 10px rgba(135, 206, 235, 0.4);
 }
 
 .game-info {
@@ -72,10 +125,15 @@ body {
   display: flex;
   justify-content: center;
   gap: 40px;
-  background: var(--snow-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   padding: 12px 20px;
   border-radius: 8px;
   border: 1px solid var(--crystal-glow);
+  box-shadow:
+    0 0 15px rgba(135, 206, 235, 0.2),
+    inset 0 0 20px rgba(135, 206, 235, 0.05);
 }
 
 .info-item {
@@ -87,6 +145,7 @@ body {
   font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .info-value {
@@ -94,12 +153,15 @@ body {
   font-size: 1.4rem;
   font-weight: bold;
   color: var(--snow-highlight);
+  text-shadow: 0 0 10px rgba(135, 206, 235, 0.5);
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  background: var(--snow-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 50%;
   aspect-ratio: 1;
   display: flex;
@@ -107,8 +169,25 @@ body {
   align-items: center;
   box-shadow:
     0 0 30px rgba(135, 206, 235, 0.3),
+    0 0 60px rgba(135, 206, 235, 0.15),
     inset 0 0 50px rgba(0, 0, 0, 0.3);
   border: 2px solid var(--crystal-glow);
+  animation: frost-pulse 4s infinite alternate;
+}
+
+@keyframes frost-pulse {
+  from {
+    box-shadow:
+      0 0 30px rgba(135, 206, 235, 0.3),
+      0 0 60px rgba(135, 206, 235, 0.15),
+      inset 0 0 50px rgba(0, 0, 0, 0.3);
+  }
+  to {
+    box-shadow:
+      0 0 40px rgba(135, 206, 235, 0.5),
+      0 0 80px rgba(135, 206, 235, 0.25),
+      inset 0 0 60px rgba(0, 0, 0, 0.2);
+  }
 }
 
 #game-canvas {
@@ -124,6 +203,8 @@ body {
   right: 0;
   bottom: 0;
   background: rgba(10, 22, 40, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 50%;
   display: flex;
   justify-content: center;
@@ -134,13 +215,36 @@ body {
 .overlay-content {
   text-align: center;
   padding: 32px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 2px solid var(--crystal-glow);
+  box-shadow: 0 0 30px rgba(135, 206, 235, 0.4);
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 16px;
   color: var(--snow-highlight);
-  text-shadow: 0 0 15px var(--crystal-glow);
+  text-shadow:
+    0 0 15px var(--crystal-glow),
+    0 0 30px var(--crystal-glow);
+  animation: title-sparkle 2s infinite alternate;
+}
+
+@keyframes title-sparkle {
+  from {
+    text-shadow:
+      0 0 15px var(--crystal-glow),
+      0 0 30px var(--crystal-glow);
+  }
+  to {
+    text-shadow:
+      0 0 25px var(--crystal-glow),
+      0 0 50px var(--crystal-glow),
+      0 0 70px rgba(135, 206, 235, 0.5);
+  }
 }
 
 .overlay-msg {
@@ -164,27 +268,66 @@ body {
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn-primary {
-  background: var(--btn-primary);
+  background: linear-gradient(180deg, var(--btn-primary) 0%, #3a7ab0 100%);
   color: white;
-  box-shadow: 0 0 15px rgba(74, 144, 194, 0.5);
+  box-shadow:
+    0 0 15px rgba(74, 144, 194, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(135, 206, 235, 0.5);
 }
 
 .btn-primary:hover {
-  background: #5aa0d2;
+  background: linear-gradient(180deg, #5aa0d2 0%, var(--btn-primary) 100%);
   transform: translateY(-2px);
+  box-shadow:
+    0 0 25px rgba(74, 144, 194, 0.7),
+    0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .btn-secondary {
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text-color);
+  border: 1px solid var(--glass-border);
 }
 
 .btn-secondary:hover {
-  background: #3a5a7e;
+  background: rgba(58, 90, 126, 0.7);
+  border-color: var(--crystal-glow);
+  box-shadow: 0 0 15px rgba(135, 206, 235, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+  box-shadow: 0 0 20px rgba(135, 206, 235, 0.5);
 }
 
 .instructions {
@@ -192,9 +335,71 @@ body {
   color: var(--text-muted);
   font-size: 0.85rem;
   padding: 12px;
-  background: var(--snow-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 8px;
+  border: 1px solid var(--glass-border);
   width: 100%;
+}
+
+/* Snowflake formation animation */
+@keyframes snowflake-form {
+  from {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+/* Cell activation effect */
+.cell-activate {
+  animation: cell-glow 0.3s ease;
+}
+
+@keyframes cell-glow {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(2) drop-shadow(0 0 15px var(--crystal-glow)); }
+  100% { filter: brightness(1); }
+}
+
+/* Victory effect */
+.victory-effect {
+  animation: victory-sparkle 1s ease infinite;
+}
+
+@keyframes victory-sparkle {
+  0%, 100% {
+    box-shadow:
+      0 0 30px rgba(135, 206, 235, 0.3),
+      0 0 60px rgba(135, 206, 235, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 50px rgba(135, 206, 235, 0.6),
+      0 0 100px rgba(135, 206, 235, 0.3),
+      0 0 150px rgba(135, 206, 235, 0.15);
+  }
+}
+
+/* Frost spread effect overlay */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at center,
+    transparent 60%,
+    rgba(135, 206, 235, 0.05) 100%
+  );
+  pointer-events: none;
 }
 
 /* Responsive */
@@ -206,5 +411,13 @@ body {
   .btn {
     padding: 10px 16px;
     font-size: 0.9rem;
+  }
+
+  .overlay-content {
+    padding: 24px;
+  }
+
+  .overlay-title {
+    font-size: 1.6rem;
   }
 }

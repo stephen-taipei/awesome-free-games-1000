@@ -1,3 +1,26 @@
+/**
+ * Billiard Puzzle Styles
+ * Game #116 - Pool Table / Classic Theme
+ * WebGPU Enhanced
+ */
+
+:root {
+  --felt-green: #0d6d3a;
+  --felt-dark: #0a5a30;
+  --wood-brown: #5d3a1a;
+  --wood-dark: #3d2010;
+  --chalk-blue: #7ec8e3;
+  --pocket-black: #0a0a0a;
+  --ball-red: #e74c3c;
+  --ball-yellow: #f1c40f;
+  --cue-white: #f5f5f5;
+  --bg-dark: #0d1520;
+  --bg-room: #1a2a3a;
+  --gold-accent: #c9a44a;
+  --text-primary: #e8e8e8;
+  --text-secondary: rgba(232, 232, 232, 0.7);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,18 +28,41 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg, #0d1520 0%, #1a2a3a 100%);
+  font-family: "Georgia", "Times New Roman", serif;
+  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-room) 50%, #0a1520 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Room ambiance */
+body::before {
+  content: "";
+  position: fixed;
+  top: -50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(ellipse, rgba(255, 240, 200, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+  animation: lampGlow 4s ease-in-out infinite;
+}
+
+@keyframes lampGlow {
+  0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
 }
 
 .game-container {
   max-width: 700px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .game-header {
@@ -24,21 +70,34 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  color: #0d6d3a;
+  color: var(--gold-accent);
 }
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 0 0 10px rgba(13, 109, 58, 0.5);
+  font-weight: 400;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 10px rgba(201, 164, 74, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .header-controls select {
-  padding: 0.5rem;
-  border-radius: 8px;
-  border: none;
-  background: #1a2a3a;
-  color: #0d6d3a;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: 1px solid var(--wood-brown);
+  background: linear-gradient(180deg, var(--wood-brown) 0%, var(--wood-dark) 100%);
+  color: var(--gold-accent);
   cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  border-color: var(--gold-accent);
+  box-shadow: 0 0 10px rgba(201, 164, 74, 0.3);
 }
 
 .game-controls {
@@ -49,35 +108,66 @@ body {
 }
 
 .stats-card {
-  background: rgba(13, 109, 58, 0.2);
-  color: #2ecc71;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-weight: bold;
+  background: linear-gradient(135deg, var(--felt-dark) 0%, var(--felt-green) 100%);
+  color: var(--text-primary);
+  padding: 0.5rem 1.2rem;
+  border-radius: 4px;
+  font-weight: 500;
   display: flex;
   gap: 0.5rem;
-  border: 1px solid rgba(46, 204, 113, 0.3);
+  border: 2px solid var(--wood-brown);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 4px 8px rgba(0, 0, 0, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+
+.stats-card span:last-child {
+  color: var(--chalk-blue);
+  font-weight: bold;
+  min-width: 20px;
+  text-align: center;
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  background: #0d1520;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, var(--wood-brown) 0%, var(--wood-dark) 100%);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 60px rgba(13, 109, 58, 0.2);
   overflow: hidden;
+  border: 3px solid var(--wood-dark);
 }
 
 .canvas-container {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
 }
 
-canvas {
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#game-canvas {
   max-width: 100%;
-  border-radius: 8px;
+  border-radius: 4px;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .overlay {
@@ -87,6 +177,7 @@ canvas {
   width: 100%;
   height: 100%;
   background: rgba(13, 21, 32, 0.95);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -95,50 +186,77 @@ canvas {
 
 .overlay-content {
   text-align: center;
-  color: white;
+  color: var(--text-primary);
   padding: 2rem;
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #2ecc71;
-  text-shadow: 0 0 20px rgba(46, 204, 113, 0.5);
+  color: var(--gold-accent);
+  text-shadow:
+    0 0 20px rgba(201, 164, 74, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 400;
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
-  opacity: 0.9;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
 }
 
 .controls-hint {
   margin-top: 1rem;
-  opacity: 0.7;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 1rem;
-  font-weight: bold;
+  font-weight: 500;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: inherit;
+  margin: 0 0.25rem;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
-  color: #0d1520;
+  background: linear-gradient(180deg, var(--felt-green) 0%, var(--felt-dark) 100%);
+  color: var(--text-primary);
+  border: 2px solid var(--felt-green);
+  box-shadow:
+    0 4px 12px rgba(13, 109, 58, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 6px 20px rgba(13, 109, 58, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-color: var(--gold-accent);
 }
 
 .btn.warning {
-  background: #e74c3c;
-  color: white;
+  background: linear-gradient(180deg, var(--ball-red) 0%, #c0392b 100%);
+  color: var(--text-primary);
+  border: 2px solid var(--ball-red);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.btn.warning:hover {
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.5);
 }
 
 .footer-controls {
@@ -148,13 +266,94 @@ canvas {
   margin-top: 1rem;
 }
 
+/* Pool ball decorations */
+.game-area::before,
+.game-area::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.game-area::before {
+  top: 10px;
+  left: 10px;
+  background: radial-gradient(circle at 30% 30%, #ffcc00, #cc9900);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.game-area::after {
+  top: 10px;
+  right: 10px;
+  background: radial-gradient(circle at 30% 30%, #ff4444, #cc0000);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Chalk dust animation */
+@keyframes chalkFloat {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+  50% { transform: translateY(-10px) rotate(180deg); opacity: 0.8; }
+  100% { transform: translateY(-20px) rotate(360deg); opacity: 0; }
+}
+
+/* Table felt texture overlay */
+.canvas-container::before {
+  content: "";
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 3;
+  border-radius: 4px;
+}
+
+/* Responsive */
 @media (max-width: 500px) {
   .game-header h1 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
   }
 
   .stats-card {
     padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1rem;
     font-size: 0.9rem;
   }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* Loading animation for WebGPU */
+@keyframes tableShine {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.game-area.loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(201, 164, 74, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: tableShine 2s infinite;
+  pointer-events: none;
 }

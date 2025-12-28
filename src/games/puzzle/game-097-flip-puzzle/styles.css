@@ -1,20 +1,28 @@
 /**
  * Flip Puzzle Styles
+ * Binary / Toggle / Neon Tiles Theme
  * Game #097
  */
 
 :root {
-  --bg-color: #2d3436;
-  --board-bg: #1e272e;
-  --tile-off: #636e72;
-  --tile-on: #00cec9;
-  --tile-hover: #81ecec;
-  --text-color: #dfe6e9;
-  --text-muted: #b2bec3;
-  --btn-primary: #00b894;
-  --btn-secondary: #636e72;
-  --highlight: #ffeaa7;
-  --success: #00b894;
+  --bg-dark: #0a0c14;
+  --bg-deep: #121824;
+  --board-bg: rgba(20, 30, 50, 0.7);
+  --tile-off: #283760;
+  --tile-off-glow: rgba(40, 55, 96, 0.5);
+  --tile-on: #4ecca3;
+  --tile-on-glow: rgba(78, 204, 163, 0.6);
+  --tile-hover: #6ee7c0;
+  --text-color: #e8ecf4;
+  --text-muted: #8a94a6;
+  --btn-primary: #4ecca3;
+  --btn-secondary: #283760;
+  --highlight: #00d4ff;
+  --highlight-glow: rgba(0, 212, 255, 0.5);
+  --success: #4ecca3;
+  --accent-coral: #e87373;
+  --glass-bg: rgba(20, 30, 50, 0.6);
+  --glass-border: rgba(78, 204, 163, 0.2);
 }
 
 * {
@@ -25,7 +33,7 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, var(--bg-color) 0%, #1e272e 100%);
+  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-deep) 50%, #1a1a3e 100%);
   color: var(--text-color);
   min-height: 100vh;
   display: flex;
@@ -41,6 +49,17 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 20px;
+  position: relative;
+}
+
+#webgpu-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .game-header {
@@ -50,22 +69,55 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .title {
   font-size: 1.8rem;
   font-weight: bold;
   color: var(--tile-on);
+  text-shadow:
+    0 0 10px var(--tile-on-glow),
+    0 0 20px var(--tile-on-glow),
+    0 0 40px var(--tile-on-glow);
+  letter-spacing: 2px;
+  animation: title-pulse 3s ease-in-out infinite;
+}
+
+@keyframes title-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 10px var(--tile-on-glow),
+      0 0 20px var(--tile-on-glow);
+  }
+  50% {
+    text-shadow:
+      0 0 20px var(--tile-on-glow),
+      0 0 40px var(--tile-on-glow),
+      0 0 60px var(--tile-on-glow);
+  }
 }
 
 .header-controls select {
   padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  background: var(--btn-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
   color: var(--text-color);
   font-size: 0.9rem;
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  border-color: var(--tile-on);
+  box-shadow: 0 0 15px var(--tile-on-glow);
+}
+
+.header-controls select option {
+  background: var(--bg-deep);
 }
 
 .game-info {
@@ -73,9 +125,14 @@ body {
   display: flex;
   justify-content: center;
   gap: 40px;
-  background: var(--board-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(15px);
   padding: 12px 20px;
-  border-radius: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
 }
 
 .info-item {
@@ -87,6 +144,7 @@ body {
   font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .info-value {
@@ -94,11 +152,13 @@ body {
   font-size: 1.4rem;
   font-weight: bold;
   color: var(--tile-on);
+  text-shadow: 0 0 10px var(--tile-on-glow);
 }
 
 .game-area {
   position: relative;
   width: 100%;
+  z-index: 1;
 }
 
 .boards-container {
@@ -119,22 +179,60 @@ body {
   font-size: 0.9rem;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
 }
 
 .board {
   display: grid;
   gap: 6px;
-  background: var(--board-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(15px);
   padding: 12px;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 60px rgba(78, 204, 163, 0.1);
+  position: relative;
+}
+
+/* Animated border */
+.board::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 18px;
+  background: linear-gradient(
+    45deg,
+    var(--tile-on),
+    var(--highlight),
+    var(--accent-coral),
+    var(--tile-on)
+  );
+  background-size: 400% 400%;
+  z-index: -1;
+  animation: border-flow 6s ease infinite;
+  opacity: 0.4;
+}
+
+@keyframes border-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .board.target {
-  opacity: 0.8;
+  opacity: 0.85;
   transform: scale(0.7);
   pointer-events: none;
+}
+
+.board.target::before {
+  opacity: 0.2;
 }
 
 .target-wrapper {
@@ -146,34 +244,46 @@ body {
 .tile {
   width: 50px;
   height: 50px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
   transform-style: preserve-3d;
+  border: 1px solid transparent;
 }
 
 .tile.off {
-  background: var(--tile-off);
-  box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(145deg, #2a3a60, var(--tile-off));
+  box-shadow:
+    inset 0 -4px 10px rgba(0, 0, 0, 0.4),
+    inset 0 4px 10px rgba(255, 255, 255, 0.05);
 }
 
 .tile.on {
-  background: var(--tile-on);
-  box-shadow: 0 0 20px var(--tile-on),
-              inset 0 -4px 8px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(145deg, #5ae0b5, var(--tile-on));
+  box-shadow:
+    0 0 25px var(--tile-on-glow),
+    0 0 50px var(--tile-on-glow),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.2),
+    inset 0 4px 10px rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .tile:hover:not(.target .tile) {
-  transform: scale(1.05);
+  transform: scale(1.08);
+  border-color: var(--highlight);
+  box-shadow: 0 0 20px var(--highlight-glow);
 }
 
 .tile.off:hover:not(.target .tile) {
-  background: #74b9ff;
+  background: linear-gradient(145deg, #3a5090, #304070);
 }
 
 .tile.on:hover:not(.target .tile) {
-  background: var(--tile-hover);
+  background: linear-gradient(145deg, #6ee7c0, var(--tile-hover));
+  box-shadow:
+    0 0 35px var(--tile-on-glow),
+    0 0 60px var(--tile-on-glow);
 }
 
 .tile.flipping {
@@ -186,22 +296,25 @@ body {
 
 @keyframes flip {
   0% {
-    transform: rotateY(0deg);
+    transform: rotateY(0deg) scale(1);
   }
   50% {
-    transform: rotateY(90deg);
+    transform: rotateY(90deg) scale(0.9);
+    box-shadow: 0 0 30px var(--highlight-glow);
   }
   100% {
-    transform: rotateY(0deg);
+    transform: rotateY(0deg) scale(1);
   }
 }
 
 @keyframes hint-pulse {
   0%, 100% {
     box-shadow: 0 0 0 0 var(--highlight);
+    border-color: transparent;
   }
   50% {
-    box-shadow: 0 0 20px 5px var(--highlight);
+    box-shadow: 0 0 30px 8px var(--highlight-glow);
+    border-color: var(--highlight);
   }
 }
 
@@ -217,8 +330,9 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(45, 52, 54, 0.95);
-  border-radius: 12px;
+  background: rgba(10, 12, 20, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -234,6 +348,10 @@ body {
   font-size: 2rem;
   margin-bottom: 16px;
   color: var(--tile-on);
+  text-shadow:
+    0 0 20px var(--tile-on-glow),
+    0 0 40px var(--tile-on-glow);
+  letter-spacing: 3px;
 }
 
 .overlay-msg {
@@ -248,45 +366,75 @@ body {
   gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
+  position: relative;
+  z-index: 1;
 }
 
 .btn {
   padding: 12px 24px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 1px;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn-primary {
-  background: var(--btn-primary);
-  color: white;
+  background: linear-gradient(135deg, var(--btn-primary), #3db892);
+  color: var(--bg-dark);
+  box-shadow: 0 4px 20px var(--tile-on-glow);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .btn-primary:hover {
-  background: #00d9a5;
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px var(--tile-on-glow);
 }
 
 .btn-secondary {
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
   color: var(--text-color);
+  border: 1px solid var(--glass-border);
 }
 
 .btn-secondary:hover {
-  background: #74b9ff;
+  background: rgba(40, 55, 96, 0.8);
+  border-color: var(--tile-on);
+  box-shadow: 0 0 20px var(--tile-on-glow);
 }
 
 .instructions {
   text-align: center;
   color: var(--text-muted);
   font-size: 0.85rem;
-  padding: 12px;
-  background: var(--board-bg);
-  border-radius: 8px;
+  padding: 12px 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 /* Size variations based on grid size */

@@ -81,8 +81,23 @@ export class FilmReelGame {
   private dragOffsetX = 0;
   private dragX = 0;
 
+  // Event state for WebGPU
+  private pendingEvents: {
+    frameSelect?: { x: number; y: number };
+    frameSwap?: { fromX: number; fromY: number; toX: number; toY: number };
+    frameCorrect?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
   onStateChange: ((state: any) => void) | null = null;
+
+  private getNormalizedPos(x: number, y: number): { x: number; y: number } {
+    return {
+      x: x / this.canvas.width,
+      y: y / this.canvas.height
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -154,6 +169,12 @@ export class FilmReelGame {
           this.selectedFrame = frame;
           this.dragOffsetX = x - frameX;
           this.dragX = x;
+
+          // Emit frame select event
+          const pos = this.getNormalizedPos(frameX + this.frameWidth / 2, this.filmY + this.frameHeight / 2);
+          this.pendingEvents.frameSelect = { x: pos.x, y: pos.y };
+          this.notifyState();
+
           break;
         }
       }
@@ -180,9 +201,36 @@ export class FilmReelGame {
     const frame1 = this.frames.find(f => f.currentPosition === pos1);
     const frame2 = this.frames.find(f => f.currentPosition === pos2);
 
+    const frameStartX = (this.canvas.width - this.frames.length * (this.frameWidth + 10)) / 2;
+
     if (frame1 && frame2) {
+      // Calculate positions for swap event
+      const fromX = frameStartX + pos1 * (this.frameWidth + 10) + this.frameWidth / 2;
+      const toX = frameStartX + pos2 * (this.frameWidth + 10) + this.frameWidth / 2;
+      const centerY = this.filmY + this.frameHeight / 2;
+
+      const fromPos = this.getNormalizedPos(fromX, centerY);
+      const toPos = this.getNormalizedPos(toX, centerY);
+
+      this.pendingEvents.frameSwap = {
+        fromX: fromPos.x,
+        fromY: fromPos.y,
+        toX: toPos.x,
+        toY: toPos.y
+      };
+
       frame1.currentPosition = pos2;
       frame2.currentPosition = pos1;
+
+      // Check if any frame is now in correct position
+      if (frame1.currentPosition === frame1.correctPosition) {
+        const correctPos = this.getNormalizedPos(toX, centerY);
+        this.pendingEvents.frameCorrect = { x: correctPos.x, y: correctPos.y };
+      }
+      if (frame2.currentPosition === frame2.correctPosition) {
+        const correctPos = this.getNormalizedPos(fromX, centerY);
+        this.pendingEvents.frameCorrect = { x: correctPos.x, y: correctPos.y };
+      }
     }
 
     // Re-sort frames by position
@@ -352,6 +400,8 @@ export class FilmReelGame {
   reset() {
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
+    this.pendingEvents.reset = true;
+    this.notifyState();
     this.draw();
   }
 
@@ -373,8 +423,10 @@ export class FilmReelGame {
         level: this.currentLevel + 1,
         totalLevels: LEVELS.length,
         correctCount: this.getCorrectCount(),
-        totalFrames: this.frames.length
+        totalFrames: this.frames.length,
+        ...this.pendingEvents
       });
+      this.pendingEvents = {};
     }
   }
 

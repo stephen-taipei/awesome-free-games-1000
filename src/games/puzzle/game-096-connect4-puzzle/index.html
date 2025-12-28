@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <canvas id="webgpu-canvas"></canvas>
+
     <div id="app" class="game-container">
       <header class="game-header">
         <h1 class="title" data-i18n="game.title">Connect 4 Puzzle</h1>
@@ -36,8 +38,8 @@
 
       <main class="game-area">
         <div class="board-container">
-          <div id="board" class="board"></div>
           <div id="preview-row" class="preview-row"></div>
+          <div id="board" class="board"></div>
         </div>
 
         <div id="game-overlay" class="overlay" style="display: flex">

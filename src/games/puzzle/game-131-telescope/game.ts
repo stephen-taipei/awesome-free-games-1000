@@ -81,7 +81,21 @@ export class TelescopeGame {
   private isDragging = false;
   private backgroundStars: { x: number; y: number; size: number; twinkle: number }[] = [];
 
+  // Event state for WebGPU
+  private pendingEvents: {
+    telescopeMove?: { x: number; y: number; radius: number };
+    starDiscovery?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
+
+  private getNormalizedPos(x: number, y: number): { x: number; y: number } {
+    return {
+      x: x / this.canvas.width,
+      y: y / this.canvas.height
+    };
+  }
   onStateChange: ((state: any) => void) | null = null;
 
   private animationId: number | null = null;
@@ -161,6 +175,15 @@ export class TelescopeGame {
     this.viewY = Math.max(this.skyArea.y + this.viewRadius,
       Math.min(this.skyArea.y + this.skyArea.height - this.viewRadius, y));
 
+    // Emit telescope move event
+    const pos = this.getNormalizedPos(this.viewX, this.viewY);
+    this.pendingEvents.telescopeMove = {
+      x: pos.x,
+      y: pos.y,
+      radius: this.viewRadius / this.canvas.width
+    };
+    this.notifyState();
+
     this.checkStarDiscovery();
   }
 
@@ -175,6 +198,10 @@ export class TelescopeGame {
       if (dist < this.viewRadius * 0.5) {
         star.found = true;
         this.starsFound++;
+
+        // Emit star discovery event
+        const pos = this.getNormalizedPos(star.x, star.y);
+        this.pendingEvents.starDiscovery = { x: pos.x, y: pos.y };
         this.notifyState();
 
         if (this.starsFound >= this.totalStars) {
@@ -407,6 +434,8 @@ export class TelescopeGame {
     }
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
+    this.pendingEvents.reset = true;
+    this.notifyState();
     this.loop();
   }
 
@@ -431,8 +460,10 @@ export class TelescopeGame {
         level: this.currentLevel + 1,
         totalLevels: LEVELS.length,
         starsFound: this.starsFound,
-        totalStars: this.totalStars
+        totalStars: this.totalStars,
+        ...this.pendingEvents
       });
+      this.pendingEvents = {};
     }
   }
 

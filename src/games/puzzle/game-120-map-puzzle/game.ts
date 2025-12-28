@@ -131,11 +131,24 @@ export class MapPuzzleGame {
           // Move to top
           this.pieces.splice(i, 1);
           this.pieces.push(piece);
+
+          // Emit piece pickup event
+          if (this.onStateChange) {
+            this.onStateChange({
+              piecePickup: {
+                x: piece.currentX + piece.width / 2,
+                y: piece.currentY + piece.height / 2,
+                landType: piece.landType,
+              },
+            });
+          }
+
           break;
         }
       }
     };
 
+    let dragThrottle = 0;
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!this.draggedPiece) return;
       e.preventDefault();
@@ -144,6 +157,18 @@ export class MapPuzzleGame {
       this.draggedPiece.currentX = pos.x - this.dragOffset.x;
       this.draggedPiece.currentY = pos.y - this.dragOffset.y;
       this.draw();
+
+      // Emit drag trail event (throttled)
+      const now = Date.now();
+      if (now - dragThrottle > 50 && this.onStateChange) {
+        dragThrottle = now;
+        this.onStateChange({
+          dragTrail: {
+            x: this.draggedPiece.currentX + this.draggedPiece.width / 2,
+            y: this.draggedPiece.currentY + this.draggedPiece.height / 2,
+          },
+        });
+      }
     };
 
     const handleEnd = () => {
@@ -163,6 +188,15 @@ export class MapPuzzleGame {
         if (this.onStateChange) {
           const placed = this.pieces.filter((p) => p.placed).length;
           this.onStateChange({ pieces: `${placed}/${this.pieces.length}` });
+
+          // Emit piece placed event
+          this.onStateChange({
+            piecePlaced: {
+              x: piece.currentX + piece.width / 2,
+              y: piece.currentY + piece.height / 2,
+              landType: piece.landType,
+            },
+          });
         }
 
         this.checkWin();

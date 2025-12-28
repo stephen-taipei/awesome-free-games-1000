@@ -1,22 +1,144 @@
+/**
+ * Magnet Puzzle Styles
+ * Plasma Physics Lab / Electromagnetic Field Theme
+ * Game #052
+ */
+
+:root {
+  --lab-dark: #020510;
+  --lab-deep: #0a1628;
+  --lab-medium: #152238;
+  --plasma-purple: #6b2fb8;
+  --plasma-violet: #8b5cf6;
+  --plasma-light: #a78bfa;
+  --field-cyan: #22d3ee;
+  --field-blue: #3b82f6;
+  --pole-n: #ef4444;
+  --pole-n-glow: rgba(239, 68, 68, 0.5);
+  --pole-s: #3b82f6;
+  --pole-s-glow: rgba(59, 130, 246, 0.5);
+  --energy-green: #10b981;
+  --lab-grid: rgba(34, 211, 238, 0.1);
+  --text-primary: #e0e7ff;
+  --text-secondary: #94a3b8;
+}
+
 .game-container {
-  max-width: 600px;
+  max-width: 650px;
+  background: linear-gradient(180deg, var(--lab-dark) 0%, var(--lab-deep) 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid var(--plasma-purple);
+  box-shadow:
+    0 0 30px rgba(107, 47, 184, 0.3),
+    inset 0 0 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Lab equipment frame */
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border: 1px solid var(--field-cyan);
+  border-radius: 12px;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* Power indicator corner */
+.game-container::after {
+  content: '';
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 12px;
+  height: 12px;
+  background: var(--energy-green);
+  border-radius: 50%;
+  box-shadow:
+    0 0 10px var(--energy-green),
+    0 0 20px var(--energy-green);
+  animation: powerPulse 2s ease-in-out infinite;
+}
+
+@keyframes powerPulse {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 10px var(--energy-green); }
+  50% { opacity: 1; box-shadow: 0 0 20px var(--energy-green), 0 0 30px var(--energy-green); }
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  height: 450px;
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+  height: 500px;
+  background:
+    linear-gradient(90deg, var(--lab-grid) 1px, transparent 1px),
+    linear-gradient(var(--lab-grid) 1px, transparent 1px),
+    linear-gradient(180deg, var(--lab-deep) 0%, var(--lab-medium) 50%, var(--lab-deep) 100%);
+  background-size: 30px 30px, 30px 30px, 100% 100%;
+  border-radius: 12px;
+  border: 3px solid var(--lab-medium);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.5),
+    inset 0 0 100px rgba(107, 47, 184, 0.1),
+    inset 0 2px 0 rgba(255, 255, 255, 0.03);
+  margin-bottom: 1.5rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
 }
 
-canvas {
+/* Scanline effect */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.1) 2px,
+    rgba(0, 0, 0, 0.1) 4px
+  );
+  pointer-events: none;
+  border-radius: 10px;
+}
+
+/* Corner brackets */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 40px;
+  height: 40px;
+  border-left: 2px solid var(--field-cyan);
+  border-top: 2px solid var(--field-cyan);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#bg-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 10px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   cursor: pointer;
@@ -26,18 +148,60 @@ canvas {
   display: flex;
   justify-content: center;
   gap: 2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
+  background: linear-gradient(135deg, var(--lab-medium) 0%, var(--lab-deep) 100%);
+  color: var(--text-primary);
+  padding: 0.75rem 1.75rem;
   border-radius: 8px;
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
+  font-weight: 600;
+  border: 1px solid var(--plasma-purple);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Courier New', 'Consolas', monospace;
+}
+
+/* Data stream effect */
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50px;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(34, 211, 238, 0.2),
+    transparent
+  );
+  animation: dataScan 3s ease-in-out infinite;
+}
+
+@keyframes dataScan {
+  0%, 100% { left: -100%; }
+  50% { left: 200%; }
+}
+
+.stats-card .label {
+  color: var(--field-cyan);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.stats-card .value {
+  color: var(--plasma-light);
+  font-size: 1.1rem;
+  text-shadow: 0 0 10px var(--plasma-purple);
 }
 
 .footer-controls {
@@ -46,6 +210,216 @@ canvas {
   gap: 1rem;
 }
 
+.footer-controls button {
+  background: linear-gradient(135deg, var(--lab-medium) 0%, var(--lab-deep) 100%);
+  color: var(--text-primary);
+  border: 1px solid var(--plasma-purple);
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Courier New', 'Consolas', monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 0.85rem;
+}
+
+.footer-controls button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--field-cyan), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.footer-controls button:hover {
+  transform: translateY(-2px);
+  border-color: var(--field-cyan);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(34, 211, 238, 0.3);
+}
+
+.footer-controls button:hover::before {
+  opacity: 1;
+}
+
+.footer-controls button:active {
+  transform: translateY(0);
+}
+
+.controls-hint {
+  text-align: center;
+  margin-top: 1rem;
+}
+
 .controls-hint small {
-  color: #a0aec0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-family: 'Courier New', 'Consolas', monospace;
+  letter-spacing: 1px;
+}
+
+/* Game overlay - containment chamber style */
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse at center, rgba(10, 22, 40, 0.95) 0%, rgba(2, 5, 16, 0.98) 100%);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 10px;
+}
+
+.game-overlay h2 {
+  font-size: 2.2rem;
+  font-family: 'Courier New', 'Consolas', monospace;
+  background: linear-gradient(135deg, var(--field-cyan), var(--plasma-light), var(--field-cyan));
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+  animation: fieldGlow 3s ease-in-out infinite;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+@keyframes fieldGlow {
+  0%, 100% { background-position: 0% 50%; text-shadow: 0 0 30px var(--field-cyan); }
+  50% { background-position: 100% 50%; text-shadow: 0 0 40px var(--plasma-light); }
+}
+
+.game-overlay p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  font-family: 'Courier New', 'Consolas', monospace;
+  letter-spacing: 1px;
+}
+
+.game-overlay button {
+  background: linear-gradient(135deg, var(--plasma-purple) 0%, var(--plasma-violet) 50%, var(--plasma-purple) 100%);
+  color: white;
+  border: none;
+  padding: 1rem 3rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-family: 'Courier New', 'Consolas', monospace;
+  box-shadow:
+    0 4px 20px rgba(139, 92, 246, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.game-overlay button:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 6px 30px rgba(139, 92, 246, 0.6),
+    0 0 40px rgba(34, 211, 238, 0.3);
+}
+
+/* Corner equipment indicators */
+.game-overlay::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 60px;
+  height: 60px;
+  border-left: 2px solid var(--plasma-purple);
+  border-top: 2px solid var(--plasma-purple);
+  opacity: 0.5;
+}
+
+.game-overlay::after {
+  content: '';
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-right: 2px solid var(--plasma-purple);
+  border-bottom: 2px solid var(--plasma-purple);
+  opacity: 0.5;
+}
+
+/* Polarity indicators */
+.pole-n-indicator {
+  color: var(--pole-n);
+  text-shadow: 0 0 10px var(--pole-n-glow);
+}
+
+.pole-s-indicator {
+  color: var(--pole-s);
+  text-shadow: 0 0 10px var(--pole-s-glow);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .game-container {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .game-area {
+    height: 420px;
+    background-size: 20px 20px, 20px 20px, 100% 100%;
+  }
+
+  .game-controls {
+    gap: 1rem;
+  }
+
+  .stats-card {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .stats-card .label {
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+  }
+
+  .footer-controls button {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+  }
+
+  .game-overlay h2 {
+    font-size: 1.6rem;
+    letter-spacing: 2px;
+  }
+
+  .game-overlay button {
+    padding: 0.8rem 2rem;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+  }
+
+  .game-overlay::before,
+  .game-overlay::after {
+    width: 40px;
+    height: 40px;
+  }
 }

@@ -49,7 +49,7 @@ export class SoundPuzzleGame {
     if (levelIndex >= 10) { // 10 levels max
       this.status = "complete";
       if (this.onStateChange) {
-        this.onStateChange({ status: "complete", level: levelIndex + 1, score: this.score });
+        this.onStateChange({ status: "complete", level: levelIndex + 1, score: this.score, event: "gameComplete" });
       }
       return;
     }
@@ -72,6 +72,7 @@ export class SoundPuzzleGame {
         level: levelIndex + 1,
         score: this.score,
         phase: "ready",
+        event: "levelStart",
       });
     }
   }
@@ -86,6 +87,7 @@ export class SoundPuzzleGame {
         level: this.currentLevel + 1,
         score: this.score,
         phase: "listening",
+        event: "sequenceStart",
       });
     }
 
@@ -101,6 +103,8 @@ export class SoundPuzzleGame {
           score: this.score,
           phase: "listening",
           activeNote: noteId,
+          event: "notePlay",
+          noteIndex: noteId,
         });
       }
 
@@ -115,6 +119,7 @@ export class SoundPuzzleGame {
           score: this.score,
           phase: "listening",
           activeNote: -1,
+          event: "noteOff",
         });
       }
 
@@ -131,6 +136,7 @@ export class SoundPuzzleGame {
         level: this.currentLevel + 1,
         score: this.score,
         phase: "playerTurn",
+        event: "playerTurn",
       });
     }
   }
@@ -146,6 +152,8 @@ export class SoundPuzzleGame {
         score: this.score,
         phase: "playerTurn",
         activeNote: noteId,
+        event: "notePlay",
+        noteIndex: noteId,
       });
     }
 
@@ -159,6 +167,7 @@ export class SoundPuzzleGame {
         score: this.score,
         phase: "playerTurn",
         activeNote: -1,
+        event: "noteOff",
       });
     }
 
@@ -175,6 +184,7 @@ export class SoundPuzzleGame {
           status: "failed",
           level: this.currentLevel + 1,
           score: this.score,
+          event: "wrongNote",
         });
       }
 
@@ -183,6 +193,18 @@ export class SoundPuzzleGame {
         this.loadLevel(this.currentLevel);
       }, 1500);
       return;
+    }
+
+    // Correct note!
+    if (this.onStateChange) {
+      this.onStateChange({
+        status: "playing",
+        level: this.currentLevel + 1,
+        score: this.score,
+        phase: "playerTurn",
+        event: "correctNote",
+        noteIndex: noteId,
+      });
     }
 
     // Check if complete
@@ -197,6 +219,7 @@ export class SoundPuzzleGame {
           status: "won",
           level: this.currentLevel + 1,
           score: this.score,
+          event: "victory",
         });
       }
     }
@@ -234,6 +257,14 @@ export class SoundPuzzleGame {
   }
 
   public reset() {
+    if (this.onStateChange) {
+      this.onStateChange({
+        status: "playing",
+        level: this.currentLevel + 1,
+        score: this.score,
+        event: "reset",
+      });
+    }
     this.loadLevel(this.currentLevel);
   }
 

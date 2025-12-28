@@ -1,3 +1,17 @@
+/* Radar Puzzle - Game #091 */
+/* Radar / Sonar / Military Theme */
+
+:root {
+  --radar-dark: #050808;
+  --radar-deep: #0a1210;
+  --radar-green: #2ecc71;
+  --radar-green-dim: rgba(46, 204, 113, 0.3);
+  --radar-green-glow: rgba(46, 204, 113, 0.5);
+  --sonar-teal: #1abc9c;
+  --blip-bright: #4ade80;
+  --grid-line: rgba(46, 204, 113, 0.15);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -6,12 +20,54 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+  background: linear-gradient(135deg, var(--radar-dark) 0%, var(--radar-deep) 50%, #030505 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
+  overflow: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(46, 204, 113, 0.05) 0%, transparent 60%);
+  pointer-events: none;
+  animation: radarPulse 4s ease-in-out infinite;
+}
+
+@keyframes radarPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes blipPulse {
+  0%, 100% { opacity: 0.8; box-shadow: 0 0 10px var(--radar-green-glow); }
+  50% { opacity: 1; box-shadow: 0 0 20px var(--radar-green-glow), 0 0 30px var(--radar-green-dim); }
+}
+
+@keyframes sweepGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 20px var(--radar-green-glow),
+      inset 0 0 40px rgba(46, 204, 113, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 35px var(--radar-green-glow),
+      inset 0 0 60px rgba(46, 204, 113, 0.15);
+  }
 }
 
 .game-container {
@@ -24,21 +80,30 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  color: #2ecc71;
+  color: var(--radar-green);
 }
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+  text-shadow: 0 0 15px var(--radar-green-glow);
+  letter-spacing: 2px;
+  font-weight: 600;
 }
 
 .header-controls select {
   padding: 0.5rem;
   border-radius: 8px;
-  border: none;
-  background: #1a1a2e;
-  color: #2ecc71;
+  border: 1px solid var(--radar-green-dim);
+  background: rgba(10, 18, 16, 0.9);
+  color: var(--radar-green);
   cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.header-controls select:focus {
+  outline: none;
+  border-color: var(--radar-green);
+  box-shadow: 0 0 10px var(--radar-green-glow);
 }
 
 .game-controls {
@@ -49,32 +114,67 @@ body {
 }
 
 .stats-card {
-  background: rgba(46, 204, 113, 0.1);
-  color: #2ecc71;
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.08), rgba(26, 188, 156, 0.05));
+  color: var(--radar-green);
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: bold;
   display: flex;
   gap: 0.5rem;
-  border: 1px solid rgba(46, 204, 113, 0.3);
+  border: 1px solid var(--radar-green-dim);
+  backdrop-filter: blur(5px);
+  animation: blipPulse 3s ease-in-out infinite;
+}
+
+.stats-card span:last-child {
+  color: var(--blip-bright);
 }
 
 .game-area {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  background: #0a0a0a;
+  background: radial-gradient(circle at center, rgba(10, 18, 16, 0.95), var(--radar-dark));
   border-radius: 50%;
-  box-shadow: 0 0 30px rgba(46, 204, 113, 0.2), inset 0 0 50px rgba(0, 0, 0, 0.5);
   margin-bottom: 1rem;
   overflow: hidden;
-  border: 3px solid rgba(46, 204, 113, 0.5);
+  border: 3px solid var(--radar-green-dim);
+  animation: sweepGlow 4s ease-in-out infinite;
 }
 
-canvas {
+.game-area::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, transparent 24%, var(--grid-line) 25%, transparent 26%),
+    radial-gradient(circle at center, transparent 49%, var(--grid-line) 50%, transparent 51%),
+    radial-gradient(circle at center, transparent 74%, var(--grid-line) 75%, transparent 76%),
+    linear-gradient(0deg, transparent 49.5%, var(--grid-line) 50%, transparent 50.5%),
+    linear-gradient(90deg, transparent 49.5%, var(--grid-line) 50%, transparent 50.5%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 50%;
+}
+
+#game-canvas {
+  position: relative;
   width: 100%;
   height: 100%;
   cursor: crosshair;
+  z-index: 5;
+  border-radius: 50%;
 }
 
 .overlay {
@@ -83,12 +183,13 @@ canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.95);
+  background: radial-gradient(circle at center, rgba(10, 18, 16, 0.95), rgba(5, 8, 8, 0.98));
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
   border-radius: 50%;
+  backdrop-filter: blur(5px);
 }
 
 .overlay-content {
@@ -100,18 +201,21 @@ canvas {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #2ecc71;
-  text-shadow: 0 0 20px rgba(46, 204, 113, 0.5);
+  color: var(--radar-green);
+  text-shadow: 0 0 25px var(--radar-green-glow);
+  letter-spacing: 3px;
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
   opacity: 0.9;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .controls-hint {
   margin-top: 1rem;
   opacity: 0.7;
+  color: var(--sonar-teal);
 }
 
 .btn {
@@ -121,26 +225,68 @@ canvas {
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
-  color: #0a0a0a;
+  background: linear-gradient(135deg, var(--radar-green), #27ae60);
+  color: var(--radar-dark);
+  box-shadow: 0 4px 15px var(--radar-green-glow);
+  border: 1px solid rgba(46, 204, 113, 0.5);
+}
+
+.btn.primary:hover {
+  box-shadow: 0 6px 25px var(--radar-green-glow);
 }
 
 .btn.warning {
-  background: #e74c3c;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: white;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+  border: 1px solid rgba(231, 76, 60, 0.5);
+}
+
+.btn.warning:hover {
+  box-shadow: 0 6px 25px rgba(231, 76, 60, 0.5);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+@media (max-width: 500px) {
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .footer-controls .btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
 }

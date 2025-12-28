@@ -5,8 +5,10 @@
 import { LegoBuildGame } from "./game";
 import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
+import { WebGPURenderer } from "./webgpu";
 
 const canvas = document.getElementById("game-canvas") as HTMLCanvasElement;
+const webgpuCanvas = document.getElementById("webgpu-canvas") as HTMLCanvasElement;
 const languageSelect = document.getElementById("language-select") as HTMLSelectElement;
 const levelDisplay = document.getElementById("level-display")!;
 const piecesDisplay = document.getElementById("pieces-display")!;
@@ -19,7 +21,113 @@ const resetBtn = document.getElementById("reset-btn")!;
 const nextBtn = document.getElementById("next-btn")!;
 
 let game: LegoBuildGame;
+let renderer: WebGPURenderer | null = null;
+let ambientInterval: number | null = null;
 let isDragging = false;
+
+// Audio System
+class AudioSystem {
+  private ctx: AudioContext | null = null;
+  private initialized = false;
+
+  private init() {
+    if (this.initialized) return;
+    this.ctx = new AudioContext();
+    this.initialized = true;
+  }
+
+  private playTone(
+    frequency: number,
+    duration: number,
+    type: OscillatorType = "sine",
+    volume: number = 0.3,
+    delay: number = 0
+  ) {
+    this.init();
+    if (!this.ctx) return;
+
+    const oscillator = this.ctx.createOscillator();
+    const gainNode = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, this.ctx.currentTime);
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(2000, this.ctx.currentTime);
+
+    gainNode.gain.setValueAtTime(0, this.ctx.currentTime + delay);
+    gainNode.gain.linearRampToValueAtTime(volume, this.ctx.currentTime + delay + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + duration);
+
+    oscillator.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(this.ctx.destination);
+
+    oscillator.start(this.ctx.currentTime + delay);
+    oscillator.stop(this.ctx.currentTime + delay + duration);
+  }
+
+  playBlockPickup() {
+    // Plastic click pickup
+    this.playTone(800, 0.05, "square", 0.08);
+    this.playTone(1000, 0.03, "sine", 0.06, 0.02);
+  }
+
+  playBlockPlace() {
+    // Satisfying snap sound
+    this.playTone(600, 0.08, "square", 0.1);
+    this.playTone(800, 0.06, "sine", 0.08, 0.03);
+    this.playTone(1200, 0.05, "triangle", 0.06, 0.06);
+  }
+
+  playBlockRotate() {
+    // Click rotation
+    this.playTone(500, 0.06, "sine", 0.08);
+    this.playTone(700, 0.04, "triangle", 0.06, 0.02);
+  }
+
+  playBlockSnap() {
+    // Quick snap
+    this.playTone(900, 0.04, "square", 0.06);
+    this.playTone(1100, 0.03, "sine", 0.05, 0.02);
+  }
+
+  playWin() {
+    // Level complete melody - playful ascending
+    const melody = [523, 659, 784, 880, 1047];
+    melody.forEach((freq, i) => {
+      this.playTone(freq, 0.2, "sine", 0.1, i * 0.1);
+      this.playTone(freq * 0.5, 0.15, "triangle", 0.05, i * 0.1);
+    });
+  }
+
+  playComplete() {
+    // Grand completion fanfare
+    const melody = [392, 523, 659, 784, 880, 1047, 1175, 1319];
+    melody.forEach((freq, i) => {
+      this.playTone(freq, 0.25, "sine", 0.12, i * 0.1);
+      this.playTone(freq * 0.5, 0.2, "triangle", 0.06, i * 0.1);
+    });
+  }
+
+  playLevelStart() {
+    // Playful start sound
+    this.playTone(400, 0.1, "sine", 0.08);
+    this.playTone(500, 0.08, "sine", 0.07, 0.05);
+    this.playTone(600, 0.06, "triangle", 0.06, 0.1);
+    this.playTone(800, 0.05, "sine", 0.05, 0.15);
+  }
+
+  playReset() {
+    // Scatter sound
+    this.playTone(600, 0.08, "sine", 0.06);
+    this.playTone(400, 0.08, "sine", 0.05, 0.03);
+    this.playTone(300, 0.08, "sine", 0.04, 0.06);
+  }
+}
+
+const audio = new AudioSystem();
 
 function initI18n() {
   Object.entries(translations).forEach(([locale, trans]) => {
@@ -53,6 +161,20 @@ function updateTexts() {
     const key = el.getAttribute("data-i18n");
     if (key) el.textContent = i18n.t(key);
   });
+}
+
+async function initWebGPU() {
+  if (webgpuCanvas) {
+    renderer = new WebGPURenderer(webgpuCanvas);
+    const success = await renderer.init();
+    if (success) {
+      ambientInterval = window.setInterval(() => {
+        renderer?.emitAmbient();
+      }, 150);
+    } else {
+      renderer = null;
+    }
+  }
 }
 
 function initGame() {
@@ -123,14 +245,59 @@ function initGame() {
     levelDisplay.textContent = `${state.level} / ${game.getTotalLevels()}`;
     piecesDisplay.textContent = `${state.placedCount}/${state.totalPieces}`;
 
+    // WebGPU events
+    if (renderer) {
+      if (state.blockPickup) {
+        const nx = state.blockPickup.x / canvas.clientWidth;
+        const ny = state.blockPickup.y / canvas.clientHeight;
+        renderer.emitBlockPickup(nx, ny, state.blockPickup.colorIndex || 0);
+        audio.playBlockPickup();
+      }
+
+      if (state.blockPlace) {
+        const nx = state.blockPlace.x / canvas.clientWidth;
+        const ny = state.blockPlace.y / canvas.clientHeight;
+        renderer.emitBlockPlace(nx, ny, state.blockPlace.colorIndex || 0);
+        audio.playBlockPlace();
+      }
+
+      if (state.blockRotate) {
+        const nx = state.blockRotate.x / canvas.clientWidth;
+        const ny = state.blockRotate.y / canvas.clientHeight;
+        renderer.emitBlockRotate(nx, ny, state.blockRotate.colorIndex || 0);
+        audio.playBlockRotate();
+      }
+
+      if (state.blockSnap) {
+        const nx = state.blockSnap.x / canvas.clientWidth;
+        const ny = state.blockSnap.y / canvas.clientHeight;
+        renderer.emitBlockSnap(nx, ny);
+        audio.playBlockSnap();
+      }
+
+      if (state.reset) {
+        renderer.emitReset();
+        audio.playReset();
+      }
+    }
+
     if (state.status === "won") {
+      renderer?.emitLevelComplete();
+      audio.playWin();
       showWin();
     } else if (state.status === "complete") {
+      renderer?.emitVictory();
+      audio.playComplete();
       showComplete();
     }
   });
 
-  window.addEventListener("resize", () => game.resize());
+  window.addEventListener("resize", () => {
+    game.resize();
+    if (renderer && webgpuCanvas) {
+      renderer.resize(webgpuCanvas.clientWidth, webgpuCanvas.clientHeight);
+    }
+  });
 }
 
 function showWin() {
@@ -163,6 +330,8 @@ function startGame() {
   startBtn.style.display = "inline-block";
   nextBtn.style.display = "none";
   game.start();
+  renderer?.emitLevelStart();
+  audio.playLevelStart();
 }
 
 startBtn.addEventListener("click", startGame);
@@ -170,7 +339,10 @@ resetBtn.addEventListener("click", () => game.reset());
 nextBtn.addEventListener("click", () => {
   overlay.style.display = "none";
   game.nextLevel();
+  renderer?.emitLevelStart();
+  audio.playLevelStart();
 });
 
 initI18n();
+initWebGPU();
 initGame();

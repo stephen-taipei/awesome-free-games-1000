@@ -1,25 +1,122 @@
+/* Wind Direction - Weather / Atmospheric Theme */
+/* Game #111 - WebGPU Enhanced */
+
+:root {
+  --sky-light: #87ceeb;
+  --sky-deep: #4a90c2;
+  --cloud-white: #f0f8ff;
+  --wind-blue: #5dade2;
+  --wind-light: #aed6f1;
+  --leaf-green: #27ae60;
+  --leaf-dark: #1e8449;
+  --grass-green: #2ecc71;
+  --sun-gold: #f1c40f;
+  --glass-bg: rgba(93, 173, 226, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --shadow-sky: rgba(74, 144, 194, 0.4);
+  --shadow-dark: rgba(0, 0, 0, 0.2);
+}
+
 .game-container {
   max-width: 600px;
+}
+
+.game-header h1 {
+  background: linear-gradient(135deg, var(--wind-blue) 0%, var(--cloud-white) 50%, var(--sky-deep) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: wind-sweep 4s ease-in-out infinite;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 4px var(--shadow-dark));
+}
+
+@keyframes wind-sweep {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(135deg, #87ceeb 0%, #b0e0e6 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg,
+    var(--sky-deep) 0%,
+    var(--sky-light) 60%,
+    var(--grass-green) 85%,
+    var(--leaf-dark) 100%
+  );
+  border-radius: 12px;
+  box-shadow:
+    0 4px 20px var(--shadow-sky),
+    inset 0 0 60px rgba(255, 255, 255, 0.1),
+    0 0 30px var(--shadow-sky);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  border: 3px solid var(--sky-deep);
 }
 
-canvas {
+.game-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 85% 15%, rgba(241, 196, 15, 0.3) 0%, transparent 25%),
+    radial-gradient(ellipse at 20% 25%, rgba(255, 255, 255, 0.4) 0%, transparent 20%),
+    radial-gradient(ellipse at 60% 20%, rgba(255, 255, 255, 0.3) 0%, transparent 18%);
+  pointer-events: none;
+  animation: clouds-drift 20s linear infinite;
+}
+
+@keyframes clouds-drift {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-20px); }
+}
+
+/* Wind streaks decoration */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 30%;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 40px,
+    rgba(255, 255, 255, 0.05) 40px,
+    rgba(255, 255, 255, 0.05) 45px
+  );
+  pointer-events: none;
+  animation: wind-flow 3s linear infinite;
+}
+
+@keyframes wind-flow {
+  0% { transform: translateX(-45px); }
+  100% { transform: translateX(0); }
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+canvas#game-canvas {
   width: 100%;
   height: 100%;
   cursor: pointer;
+  position: relative;
+  z-index: 2;
 }
 
 .game-controls {
@@ -30,18 +127,209 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #5dade2 0%, #3498db 100%);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
   color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(93, 173, 226, 0.4);
+  box-shadow:
+    0 4px 15px var(--shadow-sky),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  animation: float-gentle 4s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 60%
+  );
+  animation: breeze-shine 4s ease-in-out infinite;
+}
+
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes breeze-shine {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--wind-blue) 0%, var(--sky-deep) 100%);
+  color: white;
+  border: 2px solid var(--sky-deep);
+  box-shadow: 0 4px 15px rgba(93, 173, 226, 0.4);
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 25px rgba(93, 173, 226, 0.5);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+  color: white;
+  border: 2px solid #d35400;
+}
+
+.btn.warning:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(230, 126, 34, 0.4);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn:hover::after {
+  transform: translateX(100%);
+}
+
+.overlay {
+  background: radial-gradient(ellipse at center, rgba(74, 144, 194, 0.85) 0%, rgba(44, 62, 80, 0.95) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.overlay-content {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow:
+    0 8px 32px var(--shadow-dark),
+    0 0 40px var(--shadow-sky);
+  animation: wind-reveal 0.5s ease-out;
+}
+
+@keyframes wind-reveal {
+  0% {
+    transform: translateX(-30px) scale(0.95);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(5px) scale(1.02);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.overlay-title {
+  background: linear-gradient(135deg, var(--cloud-white) 0%, var(--wind-blue) 50%, var(--cloud-white) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: wind-sweep 2s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px var(--shadow-dark));
+}
+
+.controls-hint small {
+  color: #b8d4e8;
+}
+
+/* Wind animations */
+@keyframes wind-blow {
+  0% { transform: translateX(0) scaleX(1); }
+  50% { transform: translateX(10px) scaleX(1.1); }
+  100% { transform: translateX(0) scaleX(1); }
+}
+
+/* Leaf flutter */
+@keyframes leaf-flutter {
+  0%, 100% { transform: rotate(-10deg) translateY(0); }
+  25% { transform: rotate(5deg) translateY(-5px); }
+  50% { transform: rotate(-5deg) translateY(0); }
+  75% { transform: rotate(10deg) translateY(-3px); }
+}
+
+/* Gust burst */
+@keyframes gust-burst {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* Cloud float */
+@keyframes cloud-float {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(10px) translateY(-5px); }
+}
+
+/* Victory celebration */
+@keyframes wind-celebration {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.05) rotate(-2deg);
+    filter: brightness(1.2);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: brightness(1.3);
+  }
+  75% {
+    transform: scale(1.05) rotate(2deg);
+    filter: brightness(1.2);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .game-area {
+    height: 380px;
+  }
+
+  .stats-card {
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+  }
 }

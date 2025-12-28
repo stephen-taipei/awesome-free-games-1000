@@ -1,6 +1,7 @@
 /**
  * Color Sort Game Engine
  * Game #083 - Sort colored balls into tubes
+ * WebGPU Enhanced with Event Emissions
  */
 
 type Color = string;
@@ -10,7 +11,7 @@ interface Tube {
   capacity: number;
 }
 
-interface GameState {
+interface InternalGameState {
   tubes: Tube[];
 }
 
@@ -19,6 +20,19 @@ interface Level {
   tubeCount: number;
   emptyTubes: number;
   ballsPerTube: number;
+}
+
+export interface GameState {
+  level: number;
+  maxLevel: number;
+  moves: number;
+  status: "playing" | "won";
+  canUndo: boolean;
+  event?: "select" | "pour" | "complete" | "undo" | "victory" | "levelStart" | "reset";
+  eventTubeIndex?: number;
+  eventColorIndex?: number;
+  eventX?: number;
+  eventY?: number;
 }
 
 const COLORS: Color[] = [
@@ -50,11 +64,15 @@ export class ColorSortGame {
   currentLevel: number = 0;
   status: "playing" | "won" = "playing";
 
-  history: GameState[] = [];
+  history: InternalGameState[] = [];
   maxHistory: number = 50;
 
-  onStateChange: ((state: any) => void) | null = null;
+  onStateChange: ((state: GameState) => void) | null = null;
   onRender: (() => void) | null = null;
+
+  private pendingEvent: GameState["event"] = undefined;
+  private pendingEventTubeIndex: number = 0;
+  private pendingEventColorIndex: number = 0;
 
   public start() {
     this.currentLevel = 0;
@@ -98,6 +116,8 @@ export class ColorSortGame {
       this.tubes.push({ balls: [], capacity: level.ballsPerTube });
     }
 
+    this.pendingEvent = "levelStart";
+    this.pendingEventTubeIndex = Math.floor(this.tubes.length / 2);
     this.notifyState();
     if (this.onRender) this.onRender();
   }
@@ -110,6 +130,10 @@ export class ColorSortGame {
     return this.selectedTubeIndex;
   }
 
+  private getColorIndex(color: string): number {
+    return COLORS.indexOf(color);
+  }
+
   public selectTube(index: number) {
     if (this.status !== "playing") return;
 
@@ -119,6 +143,10 @@ export class ColorSortGame {
       // Select tube if it has balls
       if (this.tubes[index].balls.length > 0) {
         this.selectedTubeIndex = index;
+        const topColor = this.tubes[index].balls[this.tubes[index].balls.length - 1];
+        this.pendingEvent = "select";
+        this.pendingEventTubeIndex = index;
+        this.pendingEventColorIndex = this.getColorIndex(topColor);
       }
     } else if (this.selectedTubeIndex === index) {
       // Deselect
@@ -164,12 +192,34 @@ export class ColorSortGame {
 
     if (ballsMoved > 0) {
       this.moves++;
+
+      // Emit pour event
+      this.pendingEvent = "pour";
+      this.pendingEventTubeIndex = toIndex;
+      this.pendingEventColorIndex = this.getColorIndex(topColor);
+
+      // Check if destination tube is now complete
+      if (this.isTubeComplete(toTube)) {
+        setTimeout(() => {
+          this.pendingEvent = "complete";
+          this.pendingEventTubeIndex = toIndex;
+          this.pendingEventColorIndex = this.getColorIndex(topColor);
+          this.notifyState();
+        }, 300);
+      }
+
       this.checkWin();
     }
   }
 
+  private isTubeComplete(tube: Tube): boolean {
+    if (tube.balls.length !== tube.capacity) return false;
+    const firstColor = tube.balls[0];
+    return tube.balls.every(b => b === firstColor);
+  }
+
   private saveState() {
-    const state: GameState = {
+    const state: InternalGameState = {
       tubes: this.tubes.map((t) => ({
         balls: [...t.balls],
         capacity: t.capacity,
@@ -190,6 +240,8 @@ export class ColorSortGame {
     this.moves = Math.max(0, this.moves - 1);
     this.selectedTubeIndex = -1;
 
+    this.pendingEvent = "undo";
+    this.pendingEventTubeIndex = Math.floor(this.tubes.length / 2);
     this.notifyState();
     if (this.onRender) this.onRender();
   }
@@ -204,6 +256,7 @@ export class ColorSortGame {
 
     if (won) {
       this.status = "won";
+      this.pendingEvent = "victory";
     }
 
     this.notifyState();
@@ -217,10 +270,11 @@ export class ColorSortGame {
   }
 
   public reset() {
+    this.pendingEvent = "reset";
     this.loadLevel(this.currentLevel);
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 
@@ -230,13 +284,18 @@ export class ColorSortGame {
 
   private notifyState() {
     if (this.onStateChange) {
-      this.onStateChange({
+      const state: GameState = {
         level: this.currentLevel + 1,
         maxLevel: LEVELS.length,
         moves: this.moves,
         status: this.status,
         canUndo: this.history.length > 0,
-      });
+        event: this.pendingEvent,
+        eventTubeIndex: this.pendingEventTubeIndex,
+        eventColorIndex: this.pendingEventColorIndex,
+      };
+      this.onStateChange(state);
+      this.pendingEvent = undefined;
     }
   }
 }

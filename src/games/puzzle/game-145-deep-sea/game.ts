@@ -24,7 +24,14 @@ interface GameState {
   totalTreasures: number;
 }
 
-type StateChangeCallback = (state: GameState) => void;
+type StateChangeCallback = (state: GameState & {
+  playerMove?: { x: number; y: number };
+  treasureCollect?: { x: number; y: number };
+  oxygenCollect?: { x: number; y: number };
+  dangerHit?: { x: number; y: number };
+  depthChange?: boolean;
+  reset?: boolean;
+}) => void;
 
 const LEVELS: Level[] = [
   {
@@ -148,6 +155,15 @@ export class DeepSeaGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  private pendingEvents: {
+    playerMove?: { x: number; y: number };
+    treasureCollect?: { x: number; y: number };
+    oxygenCollect?: { x: number; y: number };
+    dangerHit?: { x: number; y: number };
+    depthChange?: boolean;
+    reset?: boolean;
+  } = {};
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -159,6 +175,16 @@ export class DeepSeaGame {
 
   getTotalLevels(): number {
     return LEVELS.length;
+  }
+
+  private getPlayerScreenPos(): { x: number; y: number } {
+    const level = LEVELS[this.currentLevel];
+    const offsetX = (this.width - level.map[0].length * TILE_SIZE) / 2;
+    const offsetY = 20;
+    return {
+      x: offsetX + this.playerX * TILE_SIZE + TILE_SIZE / 2,
+      y: offsetY + this.playerY * TILE_SIZE + TILE_SIZE / 2,
+    };
   }
 
   resize() {
@@ -239,7 +265,10 @@ export class DeepSeaGame {
         maxOxygen: LEVELS[this.currentLevel].maxOxygen,
         treasuresCollected: this.treasuresCollected,
         totalTreasures: this.totalTreasures,
+        ...this.pendingEvents,
       });
+
+      this.pendingEvents = {};
     }
   }
 
@@ -290,6 +319,7 @@ export class DeepSeaGame {
 
   reset() {
     cancelAnimationFrame(this.animationId);
+    this.pendingEvents.reset = true;
     this.initLevel();
     this.startGameLoop();
   }
@@ -322,20 +352,31 @@ export class DeepSeaGame {
     const tile = this.grid[newY][newX];
     if (tile.type === "wall") return;
 
+    const oldY = this.playerY;
     this.playerX = newX;
     this.playerY = newY;
+
+    const screenPos = this.getPlayerScreenPos();
+    this.pendingEvents.playerMove = { x: screenPos.x, y: screenPos.y };
+
+    if (newY !== oldY) {
+      this.pendingEvents.depthChange = true;
+    }
 
     if (tile.type === "treasure" && !tile.collected) {
       tile.collected = true;
       this.treasuresCollected++;
+      this.pendingEvents.treasureCollect = { x: screenPos.x, y: screenPos.y };
     } else if (tile.type === "oxygen" && !tile.collected) {
       tile.collected = true;
       const level = LEVELS[this.currentLevel];
       this.oxygen = Math.min(this.oxygen + 15, level.maxOxygen);
+      this.pendingEvents.oxygenCollect = { x: screenPos.x, y: screenPos.y };
     } else if (tile.type === "danger" && !tile.collected) {
       tile.collected = true;
       this.oxygen -= 10;
       if (this.oxygen < 0) this.oxygen = 0;
+      this.pendingEvents.dangerHit = { x: screenPos.x, y: screenPos.y };
     } else if (tile.type === "exit" && this.treasuresCollected >= this.totalTreasures) {
       this.isPlaying = false;
       cancelAnimationFrame(this.animationId);
@@ -365,6 +406,7 @@ export class DeepSeaGame {
           });
         }
       }
+      return;
     }
 
     this.emitState();

@@ -103,6 +103,7 @@ export class MiniCityGame {
   buildingCounts: { [key: string]: number } = {};
   population: number = 0;
   targetPopulation: number = 0;
+  private lastMilestone: number = 0;
 
   status: "playing" | "won" | "complete" = "playing";
   onStateChange: ((state: any) => void) | null = null;
@@ -110,6 +111,31 @@ export class MiniCityGame {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  private getPixelCoords(gx: number, gy: number): { x: number; y: number } {
+    const offsetX = (this.canvas.width - this.gridSize * this.cellSize) / 2;
+    const offsetY = (this.canvas.height - this.gridSize * this.cellSize) / 2;
+    return {
+      x: offsetX + gx * this.cellSize + this.cellSize / 2,
+      y: offsetY + gy * this.cellSize + this.cellSize / 2,
+    };
+  }
+
+  private notifyChange(extra?: { event?: string; x?: number; y?: number; buildingType?: string }): void {
+    if (this.onStateChange) {
+      const level = LEVELS[this.currentLevel];
+      this.onStateChange({
+        status: this.status,
+        level: this.currentLevel + 1,
+        population: this.population,
+        target: this.targetPopulation,
+        buildings: this.buildingCounts,
+        maxBuildings: level?.maxBuildings || {},
+        selected: this.selectedBuilding,
+        ...extra,
+      });
+    }
   }
 
   public start() {
@@ -120,15 +146,14 @@ export class MiniCityGame {
   private loadLevel(levelIndex: number) {
     if (levelIndex >= LEVELS.length) {
       this.status = "complete";
-      if (this.onStateChange) {
-        this.onStateChange({ status: "complete", level: levelIndex + 1, population: this.population });
-      }
+      this.notifyChange({ event: "gameComplete" });
       return;
     }
 
     const level = LEVELS[levelIndex];
     this.gridSize = level.gridSize;
     this.targetPopulation = level.targetPopulation;
+    this.lastMilestone = 0;
     this.buildingCounts = {};
     level.availableBuildings.forEach(b => {
       this.buildingCounts[b] = 0;
@@ -154,17 +179,11 @@ export class MiniCityGame {
     this.status = "playing";
     this.calculatePopulation();
 
-    if (this.onStateChange) {
-      this.onStateChange({
-        status: "playing",
-        level: levelIndex + 1,
-        population: this.population,
-        target: this.targetPopulation,
-        buildings: this.buildingCounts,
-        maxBuildings: level.maxBuildings,
-        selected: this.selectedBuilding,
-      });
-    }
+    const center = this.getPixelCoords(
+      Math.floor(this.gridSize / 2),
+      Math.floor(this.gridSize / 2)
+    );
+    this.notifyChange({ event: "levelStart", x: center.x, y: center.y });
   }
 
   private loop = () => {
@@ -331,6 +350,8 @@ export class MiniCityGame {
     if (cell.type === "water" || cell.type === "mountain") return;
 
     const level = LEVELS[this.currentLevel];
+    const coords = this.getPixelCoords(gx, gy);
+    const prevPopulation = this.population;
 
     // Toggle building
     if (cell.type === "empty") {
@@ -340,24 +361,41 @@ export class MiniCityGame {
 
       cell.type = this.selectedBuilding;
       this.buildingCounts[this.selectedBuilding]++;
+
+      this.calculatePopulation();
+      this.checkWin();
+
+      // Check for population milestone (every 25% of target)
+      const milestoneStep = Math.floor(this.targetPopulation / 4);
+      const currentMilestone = Math.floor(this.population / milestoneStep);
+      if (currentMilestone > this.lastMilestone && this.population < this.targetPopulation) {
+        this.lastMilestone = currentMilestone;
+        this.notifyChange({
+          event: "populationMilestone",
+          x: coords.x,
+          y: coords.y,
+          buildingType: this.selectedBuilding,
+        });
+      } else {
+        this.notifyChange({
+          event: "buildingPlace",
+          x: coords.x,
+          y: coords.y,
+          buildingType: this.selectedBuilding,
+        });
+      }
     } else if (cell.type === this.selectedBuilding) {
       // Remove building
+      const removedType = cell.type;
       this.buildingCounts[cell.type]--;
       cell.type = "empty";
-    }
 
-    this.calculatePopulation();
-    this.checkWin();
-
-    if (this.onStateChange) {
-      this.onStateChange({
-        status: this.status,
-        level: this.currentLevel + 1,
-        population: this.population,
-        target: this.targetPopulation,
-        buildings: this.buildingCounts,
-        maxBuildings: level.maxBuildings,
-        selected: this.selectedBuilding,
+      this.calculatePopulation();
+      this.notifyChange({
+        event: "buildingRemove",
+        x: coords.x,
+        y: coords.y,
+        buildingType: removedType,
       });
     }
   }
@@ -366,30 +404,18 @@ export class MiniCityGame {
     const level = LEVELS[this.currentLevel];
     if (level.availableBuildings.includes(type)) {
       this.selectedBuilding = type;
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: this.status,
-          level: this.currentLevel + 1,
-          population: this.population,
-          target: this.targetPopulation,
-          buildings: this.buildingCounts,
-          maxBuildings: level.maxBuildings,
-          selected: this.selectedBuilding,
-        });
-      }
+      const center = this.getPixelCoords(
+        Math.floor(this.gridSize / 2),
+        Math.floor(this.gridSize / 2)
+      );
+      this.notifyChange({ event: "buildingSelect", x: center.x, y: center.y, buildingType: type });
     }
   }
 
   private checkWin() {
     if (this.population >= this.targetPopulation) {
       this.status = "won";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "won",
-          level: this.currentLevel + 1,
-          population: this.population,
-        });
-      }
+      this.notifyChange({ event: "victory" });
     }
   }
 
@@ -399,6 +425,11 @@ export class MiniCityGame {
   }
 
   public reset() {
+    const center = this.getPixelCoords(
+      Math.floor(this.gridSize / 2),
+      Math.floor(this.gridSize / 2)
+    );
+    this.notifyChange({ event: "reset", x: center.x, y: center.y });
     this.loadLevel(this.currentLevel);
   }
 

@@ -14,11 +14,12 @@ interface Artifact {
   layer: number;
   revealed: number; // 0-1 how much revealed
   found: boolean;
+  notifiedReveal: boolean;
 }
 
 interface Level {
   layers: number;
-  artifacts: Omit<Artifact, "revealed" | "found">[];
+  artifacts: Omit<Artifact, "revealed" | "found" | "notifiedReveal">[];
 }
 
 interface GameState {
@@ -28,6 +29,11 @@ interface GameState {
   totalArtifacts: number;
   currentLayer: number;
   status: "idle" | "playing" | "won";
+  digAction?: { x: number; y: number };
+  digImpact?: { x: number; y: number };
+  artifactReveal?: { x: number; y: number };
+  artifactFound?: { x: number; y: number };
+  reset?: boolean;
 }
 
 type StateCallback = (state: GameState) => void;
@@ -104,6 +110,16 @@ export class DigSiteGame {
   private gridSize = 10;
   private isDigging = false;
   private brushSize = 3;
+  private lastDigPos: { x: number; y: number } | null = null;
+  private digThrottleCounter = 0;
+
+  private pendingEvents: {
+    digAction?: { x: number; y: number };
+    digImpact?: { x: number; y: number };
+    artifactReveal?: { x: number; y: number };
+    artifactFound?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -125,7 +141,9 @@ export class DigSiteGame {
         totalArtifacts: this.artifacts.length,
         currentLayer: maxLayerRevealed,
         status: this.status,
+        ...this.pendingEvents,
       });
+      this.pendingEvents = {};
     }
   }
 
@@ -174,6 +192,7 @@ export class DigSiteGame {
   }
 
   reset() {
+    this.pendingEvents.reset = true;
     this.loadLevel();
     this.status = "playing";
     this.emitState();
@@ -200,6 +219,7 @@ export class DigSiteGame {
       height: a.height * this.canvas.height,
       revealed: 0,
       found: false,
+      notifiedReveal: false,
     }));
 
     this.initDigMask();
@@ -218,11 +238,20 @@ export class DigSiteGame {
 
   handleMouseUp() {
     this.isDigging = false;
+    this.lastDigPos = null;
   }
 
   private dig(x: number, y: number) {
     const gridX = Math.floor(x / this.gridSize);
     const gridY = Math.floor(y / this.gridSize);
+
+    // Throttle dig events
+    this.digThrottleCounter++;
+    if (this.digThrottleCounter % 3 === 0) {
+      this.pendingEvents.digAction = { x, y };
+    }
+
+    let hitDeeper = false;
 
     // Dig in brush area
     for (let dy = -this.brushSize; dy <= this.brushSize; dy++) {
@@ -235,14 +264,25 @@ export class DigSiteGame {
 
         if (gy >= 0 && gy < this.digMask.length && gx >= 0 && gx < this.digMask[gy].length) {
           if (this.digMask[gy][gx] < this.totalLayers) {
+            const oldDepth = this.digMask[gy][gx];
             this.digMask[gy][gx]++;
+            if (this.digMask[gy][gx] > oldDepth + 1) {
+              hitDeeper = true;
+            }
           }
         }
       }
     }
 
+    // Impact effect when digging deeper
+    if (hitDeeper && this.digThrottleCounter % 6 === 0) {
+      this.pendingEvents.digImpact = { x, y };
+    }
+
     // Check artifact reveals
     this.checkArtifacts();
+
+    this.lastDigPos = { x, y };
     this.emitState();
   }
 
@@ -270,12 +310,23 @@ export class DigSiteGame {
         }
       }
 
+      const oldRevealed = artifact.revealed;
       artifact.revealed = totalCells > 0 ? revealedCells / totalCells : 0;
+
+      // Notify when artifact first becomes visible (30% revealed)
+      if (!artifact.notifiedReveal && artifact.revealed >= 0.3 && oldRevealed < 0.3) {
+        artifact.notifiedReveal = true;
+        const centerX = artifact.x + artifact.width / 2;
+        const centerY = artifact.y + artifact.height / 2;
+        this.pendingEvents.artifactReveal = { x: centerX, y: centerY };
+      }
 
       // Found when 80% revealed
       if (artifact.revealed >= 0.8 && !artifact.found) {
         artifact.found = true;
-        this.onArtifactFound(artifact);
+        const centerX = artifact.x + artifact.width / 2;
+        const centerY = artifact.y + artifact.height / 2;
+        this.pendingEvents.artifactFound = { x: centerX, y: centerY };
       }
     }
 
@@ -284,10 +335,6 @@ export class DigSiteGame {
       this.status = "won";
       this.emitState();
     }
-  }
-
-  private onArtifactFound(_artifact: Artifact) {
-    // Could trigger animation/sound here
   }
 
   private gameLoop() {
@@ -300,9 +347,8 @@ export class DigSiteGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Draw base layer (deepest)
-    ctx.fillStyle = LAYER_COLORS[this.totalLayers - 1] || "#4a3728";
-    ctx.fillRect(0, 0, w, h);
+    // Transparent background (WebGPU behind)
+    ctx.clearRect(0, 0, w, h);
 
     // Draw artifacts (those that should be visible based on layer)
     for (const artifact of this.artifacts) {

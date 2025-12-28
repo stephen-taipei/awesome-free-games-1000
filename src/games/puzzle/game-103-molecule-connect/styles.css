@@ -1,21 +1,27 @@
 /**
  * Molecule Connect Styles
+ * Science Lab / Chemistry Theme
  * Game #103
  */
 
 :root {
   --bg-color: #1a1a2e;
   --molecule-bg: #16213e;
-  --atom-carbon: #3d3d3d;
+  --atom-carbon: #4a4a4a;
   --atom-oxygen: #ff4444;
   --atom-hydrogen: #ffffff;
-  --atom-nitrogen: #4444ff;
+  --atom-nitrogen: #4466ff;
   --bond-color: #888;
   --bond-active: #00ff88;
+  --bond-glow: rgba(0, 255, 136, 0.5);
+  --electron-blue: #00bfff;
+  --reaction-green: #00b894;
   --text-color: #e0e0e0;
   --text-muted: #a0a0a0;
   --btn-primary: #00b894;
   --btn-secondary: #636e72;
+  --glass-bg: rgba(22, 33, 62, 0.7);
+  --glass-border: rgba(0, 184, 148, 0.3);
 }
 
 * {
@@ -35,7 +41,19 @@ body {
   padding: 20px;
 }
 
+#webgpu-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .game-container {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 500px;
   display: flex;
@@ -51,22 +69,56 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
 }
 
 .title {
   font-size: 1.8rem;
   font-weight: bold;
   color: var(--btn-primary);
+  text-shadow:
+    0 0 10px var(--btn-primary),
+    0 0 20px rgba(0, 184, 148, 0.5);
+  animation: molecule-glow 3s infinite alternate;
+  letter-spacing: 1px;
+}
+
+@keyframes molecule-glow {
+  from {
+    text-shadow:
+      0 0 10px var(--btn-primary),
+      0 0 20px rgba(0, 184, 148, 0.5);
+  }
+  to {
+    text-shadow:
+      0 0 15px var(--btn-primary),
+      0 0 30px rgba(0, 184, 148, 0.7),
+      0 0 45px rgba(0, 184, 148, 0.3);
+  }
 }
 
 .header-controls select {
   padding: 8px 12px;
   border: none;
   border-radius: 6px;
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text-color);
   font-size: 0.9rem;
   cursor: pointer;
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  border-color: var(--btn-primary);
+  box-shadow: 0 0 10px rgba(0, 184, 148, 0.4);
 }
 
 .game-info {
@@ -74,9 +126,15 @@ body {
   display: flex;
   justify-content: center;
   gap: 40px;
-  background: var(--molecule-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   padding: 12px 20px;
   border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 0 15px rgba(0, 184, 148, 0.2),
+    inset 0 0 20px rgba(0, 184, 148, 0.05);
 }
 
 .info-item {
@@ -88,6 +146,7 @@ body {
   font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .info-value {
@@ -95,15 +154,22 @@ body {
   font-size: 1.4rem;
   font-weight: bold;
   color: var(--btn-primary);
+  text-shadow: 0 0 8px rgba(0, 184, 148, 0.5);
+  font-family: 'Courier New', monospace;
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  background: var(--molecule-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(0, 184, 148, 0.2);
   overflow: hidden;
+  border: 2px solid var(--glass-border);
 }
 
 #game-canvas {
@@ -119,6 +185,8 @@ body {
   right: 0;
   bottom: 0;
   background: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -128,12 +196,36 @@ body {
 .overlay-content {
   text-align: center;
   padding: 32px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 2px solid var(--btn-primary);
+  box-shadow: 0 0 30px rgba(0, 184, 148, 0.4);
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 16px;
   color: var(--btn-primary);
+  text-shadow:
+    0 0 15px var(--btn-primary),
+    0 0 30px rgba(0, 184, 148, 0.5);
+  animation: title-pulse 1.5s infinite alternate;
+}
+
+@keyframes title-pulse {
+  from {
+    text-shadow:
+      0 0 15px var(--btn-primary),
+      0 0 30px rgba(0, 184, 148, 0.5);
+  }
+  to {
+    text-shadow:
+      0 0 25px var(--btn-primary),
+      0 0 50px rgba(0, 184, 148, 0.7),
+      0 0 70px rgba(0, 184, 148, 0.3);
+  }
 }
 
 .overlay-msg {
@@ -157,26 +249,61 @@ body {
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn-primary {
-  background: var(--btn-primary);
+  background: linear-gradient(180deg, var(--btn-primary) 0%, #00997a 100%);
   color: white;
+  box-shadow:
+    0 0 15px rgba(0, 184, 148, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(0, 217, 165, 0.5);
 }
 
 .btn-primary:hover {
-  background: #00d9a5;
+  background: linear-gradient(180deg, #00d9a5 0%, var(--btn-primary) 100%);
   transform: translateY(-2px);
+  box-shadow:
+    0 0 25px rgba(0, 184, 148, 0.7),
+    0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .btn-secondary {
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text-color);
+  border: 1px solid var(--glass-border);
 }
 
 .btn-secondary:hover {
-  background: #74b9ff;
+  background: rgba(116, 185, 255, 0.2);
+  border-color: var(--electron-blue);
+  box-shadow: 0 0 15px rgba(0, 191, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .instructions {
@@ -184,9 +311,85 @@ body {
   color: var(--text-muted);
   font-size: 0.85rem;
   padding: 12px;
-  background: var(--molecule-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 8px;
+  border: 1px solid var(--glass-border);
   width: 100%;
+}
+
+/* Atom animations */
+@keyframes atom-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px var(--bond-active);
+  }
+  50% {
+    box-shadow: 0 0 25px var(--bond-active), 0 0 40px rgba(0, 255, 136, 0.3);
+  }
+}
+
+/* Bond creation animation */
+@keyframes bond-form {
+  from {
+    opacity: 0;
+    stroke-dashoffset: 100;
+  }
+  to {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Electron orbit animation */
+@keyframes electron-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Chemical reaction effect */
+.reaction-effect {
+  animation: reaction-burst 0.5s ease;
+}
+
+@keyframes reaction-burst {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.2);
+    filter: brightness(1.5) drop-shadow(0 0 20px var(--bond-active));
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+/* Hexagonal grid pattern overlay */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    linear-gradient(30deg, rgba(0, 184, 148, 0.03) 12%, transparent 12.5%, transparent 87%, rgba(0, 184, 148, 0.03) 87.5%, rgba(0, 184, 148, 0.03)),
+    linear-gradient(150deg, rgba(0, 184, 148, 0.03) 12%, transparent 12.5%, transparent 87%, rgba(0, 184, 148, 0.03) 87.5%, rgba(0, 184, 148, 0.03)),
+    linear-gradient(30deg, rgba(0, 184, 148, 0.03) 12%, transparent 12.5%, transparent 87%, rgba(0, 184, 148, 0.03) 87.5%, rgba(0, 184, 148, 0.03)),
+    linear-gradient(150deg, rgba(0, 184, 148, 0.03) 12%, transparent 12.5%, transparent 87%, rgba(0, 184, 148, 0.03) 87.5%, rgba(0, 184, 148, 0.03)),
+    linear-gradient(60deg, rgba(0, 191, 255, 0.02) 25%, transparent 25.5%, transparent 75%, rgba(0, 191, 255, 0.02) 75%, rgba(0, 191, 255, 0.02)),
+    linear-gradient(60deg, rgba(0, 191, 255, 0.02) 25%, transparent 25.5%, transparent 75%, rgba(0, 191, 255, 0.02) 75%, rgba(0, 191, 255, 0.02));
+  background-size: 40px 70px;
+  background-position: 0 0, 0 0, 20px 35px, 20px 35px, 0 0, 20px 35px;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Responsive */
@@ -202,5 +405,13 @@ body {
   .btn {
     padding: 10px 16px;
     font-size: 0.9rem;
+  }
+
+  .overlay-content {
+    padding: 24px;
+  }
+
+  .overlay-title {
+    font-size: 1.6rem;
   }
 }

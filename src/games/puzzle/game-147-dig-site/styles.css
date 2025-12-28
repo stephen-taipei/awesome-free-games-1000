@@ -1,3 +1,21 @@
+/**
+ * Dig Site Styles
+ * Archaeological / Desert / Earth / Discovery Theme
+ * Game #147
+ */
+
+:root {
+  --light-sand: #d2b48c;
+  --tan: #c4a882;
+  --light-brown: #a0826d;
+  --brown: #8b7355;
+  --dark-brown: #6b4423;
+  --deep-earth: #4a3728;
+  --gold: #daa520;
+  --treasure-glow: #ffd700;
+  --ancient-bronze: #cd853f;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,19 +23,65 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, sans-serif;
-  background: linear-gradient(135deg, #b8860b 0%, #8b4513 50%, #654321 100%);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(180deg, var(--light-sand) 0%, var(--brown) 50%, var(--deep-earth) 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Dust particle float */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(210, 180, 140, 0.5), transparent),
+    radial-gradient(1px 1px at 30% 40%, rgba(196, 168, 130, 0.4), transparent),
+    radial-gradient(1px 1px at 50% 15%, rgba(210, 180, 140, 0.3), transparent),
+    radial-gradient(1px 1px at 70% 35%, rgba(160, 130, 109, 0.4), transparent),
+    radial-gradient(1px 1px at 90% 25%, rgba(210, 180, 140, 0.5), transparent);
+  background-size: 300px 300px;
+  pointer-events: none;
+  animation: dustFloat 20s linear infinite;
+}
+
+@keyframes dustFloat {
+  0% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-20px) translateX(10px); }
+  100% { transform: translateY(0) translateX(0); }
+}
+
+/* Sunlight rays from above */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150%;
+  height: 60%;
+  background: radial-gradient(
+    ellipse 80% 50% at 50% 0%,
+    rgba(255, 245, 200, 0.2) 0%,
+    rgba(255, 235, 180, 0.1) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
 }
 
 .game-container {
-  max-width: 600px;
+  max-width: 500px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .game-header {
@@ -30,65 +94,142 @@ body {
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: bold;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--ancient-bronze) 50%, var(--dark-brown) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(218, 165, 32, 0.4);
 }
 
 .header-controls select {
   padding: 0.5rem;
-  border-radius: 4px;
-  border: none;
-  background: white;
+  border-radius: 6px;
+  border: 1px solid rgba(139, 115, 85, 0.4);
+  background: rgba(74, 55, 40, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: white;
   cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  background: rgba(139, 115, 85, 0.3);
+  border-color: var(--gold);
 }
 
 .game-controls {
   display: flex;
   justify-content: center;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
 }
 
 .stats-card {
-  background: white;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  background: linear-gradient(135deg, var(--dark-brown) 0%, var(--deep-earth) 100%);
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 4px 15px rgba(107, 68, 35, 0.3),
+    inset 0 1px 0 rgba(218, 165, 32, 0.1),
+    0 0 20px rgba(218, 165, 32, 0.1);
+  color: white;
   display: flex;
   gap: 0.5rem;
-  color: #8b4513;
+  align-items: center;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(218, 165, 32, 0.3);
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(107, 68, 35, 0.4),
+    inset 0 1px 0 rgba(218, 165, 32, 0.2);
+}
+
+.stats-card span:first-child {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+}
+
+.stats-card span:last-child {
+  color: var(--gold);
+  font-size: 1rem;
+  text-shadow: 0 0 10px rgba(218, 165, 32, 0.5);
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 400px;
-  background: linear-gradient(180deg, #d2b48c 0%, #a0522d 50%, #654321 100%);
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg, var(--light-sand) 0%, var(--brown) 50%, var(--deep-earth) 100%);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 12px;
+  box-shadow:
+    0 0 50px rgba(107, 68, 35, 0.3),
+    inset 0 0 30px rgba(218, 165, 32, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--ancient-bronze);
   margin-bottom: 1rem;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
 }
 
-canvas {
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 10px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
   width: 100%;
   height: 100%;
   cursor: crosshair;
+  border-radius: 10px;
 }
 
 .overlay {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(139, 69, 19, 0.95);
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(74, 55, 40, 0.95) 0%,
+    rgba(107, 68, 35, 0.98) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
-  border-radius: 16px;
+  border-radius: 10px;
 }
 
 .overlay-content {
@@ -100,11 +241,23 @@ canvas {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, var(--treasure-glow) 0%, var(--gold) 50%, var(--ancient-bronze) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(218, 165, 32, 0.5));
 }
 
 .overlay-msg {
+  font-size: 1rem;
   margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: var(--gold);
+  font-size: 0.85rem;
   opacity: 0.9;
 }
 
@@ -113,33 +266,81 @@ canvas {
   border: none;
   border-radius: 8px;
   font-size: 1rem;
-  font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  font-family: inherit;
+  margin: 0.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .btn.primary {
-  background: #daa520;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--ancient-bronze) 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+}
+
+.btn.primary:hover {
+  box-shadow: 0 6px 25px rgba(218, 165, 32, 0.6);
 }
 
 .btn.warning {
-  background: #654321;
+  background: linear-gradient(135deg, var(--dark-brown) 0%, var(--deep-earth) 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  opacity: 0.7;
+.btn.warning:hover {
+  box-shadow: 0 6px 25px rgba(218, 165, 32, 0.3);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    gap: 0.3rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .game-controls {
+    gap: 0.4rem;
+  }
 }

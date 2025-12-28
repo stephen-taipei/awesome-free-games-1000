@@ -1,3 +1,19 @@
+/* Light Refraction - Rainbow/Spectral Theme */
+:root {
+  --prism-dark: #0c0c0c;
+  --prism-void: #1a1a2e;
+  --light-red: #ff6b6b;
+  --light-orange: #ff9f43;
+  --light-yellow: #feca57;
+  --light-green: #2ecc71;
+  --light-cyan: #48dbfb;
+  --light-blue: #54a0ff;
+  --light-purple: #a55eea;
+  --light-pink: #ff9ff3;
+  --prism-glass: rgba(255, 255, 255, 0.15);
+  --glow-intensity: 0.8;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -6,7 +22,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 100%);
+  background: linear-gradient(135deg, var(--prism-dark) 0%, var(--prism-void) 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -29,18 +45,41 @@ body {
 
 .game-header h1 {
   font-size: 1.5rem;
-  background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+  background: linear-gradient(
+    90deg,
+    var(--light-red),
+    var(--light-orange),
+    var(--light-yellow),
+    var(--light-green),
+    var(--light-cyan),
+    var(--light-blue),
+    var(--light-purple)
+  );
+  background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: rainbow-shift 4s linear infinite;
+}
+
+@keyframes rainbow-shift {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
 }
 
 .header-controls select {
   padding: 0.5rem;
   border-radius: 8px;
-  border: none;
-  background: white;
+  border: 1px solid var(--prism-glass);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
   cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.header-controls select option {
+  background: var(--prism-dark);
+  color: white;
 }
 
 .game-controls {
@@ -51,7 +90,7 @@ body {
 }
 
 .stats-card {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--prism-glass);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 8px;
@@ -59,23 +98,42 @@ body {
   display: flex;
   gap: 0.5rem;
   backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: #0c0c0c;
+  background: var(--prism-dark);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 0 60px rgba(72, 219, 251, 0.05),
+    inset 0 0 120px rgba(255, 107, 107, 0.03);
   margin-bottom: 1rem;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-canvas {
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  cursor: default;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
 }
 
 .overlay {
@@ -85,6 +143,7 @@ canvas {
   width: 100%;
   height: 100%;
   background: rgba(12, 12, 12, 0.95);
+  backdrop-filter: blur(15px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -100,10 +159,21 @@ canvas {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+  background: linear-gradient(
+    90deg,
+    var(--light-red),
+    var(--light-orange),
+    var(--light-yellow),
+    var(--light-green),
+    var(--light-cyan),
+    var(--light-blue),
+    var(--light-purple)
+  );
+  background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: rainbow-shift 4s linear infinite;
 }
 
 .overlay-msg {
@@ -124,20 +194,42 @@ canvas {
   font-weight: bold;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(72, 219, 251, 0.4);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #48dbfb, #54a0ff);
-  color: #0c0c0c;
+  background: linear-gradient(135deg, var(--light-cyan), var(--light-blue));
+  color: var(--prism-dark);
 }
 
 .btn.warning {
-  background: #e74c3c;
+  background: linear-gradient(135deg, var(--light-red), var(--light-orange));
   color: white;
 }
 
@@ -145,4 +237,81 @@ canvas {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+/* Prism glow animations */
+@keyframes prism-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(255, 107, 107, 0.3),
+      0 0 40px rgba(255, 159, 67, 0.2);
+  }
+  25% {
+    box-shadow:
+      0 0 20px rgba(254, 202, 87, 0.3),
+      0 0 40px rgba(72, 219, 251, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 20px rgba(72, 219, 251, 0.3),
+      0 0 40px rgba(84, 160, 255, 0.2);
+  }
+  75% {
+    box-shadow:
+      0 0 20px rgba(165, 94, 234, 0.3),
+      0 0 40px rgba(255, 159, 243, 0.2);
+  }
+}
+
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  animation: prism-glow 8s ease-in-out infinite;
+  border-radius: 12px;
+}
+
+/* Spectral shimmer effect */
+@keyframes spectral-shimmer {
+  0% {
+    opacity: 0.03;
+    background-position: 0% 50%;
+  }
+  50% {
+    opacity: 0.08;
+    background-position: 100% 50%;
+  }
+  100% {
+    opacity: 0.03;
+    background-position: 0% 50%;
+  }
+}
+
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 107, 107, 0.1) 35%,
+    rgba(255, 159, 67, 0.1) 40%,
+    rgba(254, 202, 87, 0.1) 45%,
+    rgba(72, 219, 251, 0.1) 50%,
+    rgba(84, 160, 255, 0.1) 55%,
+    rgba(165, 94, 234, 0.1) 60%,
+    transparent 70%
+  );
+  background-size: 300% 300%;
+  pointer-events: none;
+  z-index: 3;
+  animation: spectral-shimmer 6s ease-in-out infinite;
+  border-radius: 12px;
 }

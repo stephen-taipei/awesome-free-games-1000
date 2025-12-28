@@ -1,3 +1,27 @@
+/**
+ * Solar System Puzzle Styles
+ * Space / Cosmos Theme
+ * Game #125
+ */
+
+:root {
+  --space-black: #0a0a20;
+  --space-deep: #0d0d30;
+  --space-purple: #1a1a40;
+  --star-white: #ffffff;
+  --sun-gold: #ffd700;
+  --sun-orange: #ff9800;
+  --planet-blue: #4169e1;
+  --planet-red: #cd5c5c;
+  --alignment-green: #4caf50;
+  --nebula-purple: #8a2be2;
+  --nebula-pink: #ff69b4;
+  --glass-bg: rgba(26, 26, 64, 0.6);
+  --glass-border: rgba(255, 215, 0, 0.3);
+  --text-primary: #ffffff;
+  --text-accent: #ffd700;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -6,17 +30,85 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg, #0a0a20 0%, #1a1a40 50%, #0d0d30 100%);
+  background: radial-gradient(
+    ellipse at center,
+    var(--space-purple) 0%,
+    var(--space-deep) 50%,
+    var(--space-black) 100%
+  );
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Star field background */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    radial-gradient(2px 2px at 30% 60%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 10%, rgba(255, 255, 255, 0.9) 0%, transparent 100%),
+    radial-gradient(2px 2px at 70% 80%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 40%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 20% 90%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+    radial-gradient(2px 2px at 80% 15%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 45%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 70%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
+    radial-gradient(2px 2px at 15% 55%, rgba(255, 255, 255, 0.6) 0%, transparent 100%);
+  animation: twinkle 4s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Nebula effect */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(138, 43, 226, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(255, 105, 180, 0.08) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 80%, rgba(65, 105, 225, 0.06) 0%, transparent 45%);
+  animation: nebulaPulse 8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes nebulaPulse {
+  0% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 .game-container {
   max-width: 550px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .game-header {
@@ -24,21 +116,33 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  color: #ffd700;
+  color: var(--text-accent);
 }
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  text-shadow:
+    0 0 10px rgba(255, 215, 0, 0.5),
+    0 0 20px rgba(255, 215, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 2px;
 }
 
 .header-controls select {
   padding: 0.5rem;
   border-radius: 8px;
-  border: none;
-  background: #1a1a40;
-  color: #ffd700;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text-accent);
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  background: rgba(26, 26, 64, 0.8);
+  border-color: var(--sun-gold);
 }
 
 .game-controls {
@@ -49,36 +153,71 @@ body {
 }
 
 .stats-card {
-  background: rgba(255, 215, 0, 0.1);
-  color: #ffd700;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text-accent);
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: bold;
   display: flex;
   gap: 0.5rem;
-  border: 1px solid rgba(255, 215, 0, 0.3);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 15px rgba(255, 215, 0, 0.2);
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  background: #0a0a20;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  background: var(--glass-bg);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   overflow: hidden;
 }
 
 .canvas-container {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
 }
 
-canvas {
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
   max-width: 100%;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(255, 215, 0, 0.1);
 }
 
 .overlay {
@@ -87,7 +226,13 @@ canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(10, 10, 32, 0.95);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(26, 26, 64, 0.95) 0%,
+    rgba(10, 10, 32, 0.98) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -96,50 +241,78 @@ canvas {
 
 .overlay-content {
   text-align: center;
-  color: white;
+  color: var(--text-primary);
   padding: 2rem;
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #ffd700;
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  color: var(--text-accent);
+  text-shadow:
+    0 0 20px rgba(255, 215, 0, 0.5),
+    0 0 40px rgba(255, 215, 0, 0.3);
+  letter-spacing: 3px;
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
   opacity: 0.9;
+  font-size: 1.1rem;
 }
 
 .controls-hint {
   margin-top: 1rem;
   opacity: 0.7;
+  color: var(--planet-blue);
 }
 
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(-3px);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #ffd700, #ff9800);
-  color: #0a0a20;
+  background: linear-gradient(
+    135deg,
+    var(--sun-gold) 0%,
+    var(--sun-orange) 100%
+  );
+  color: var(--space-black);
+  box-shadow:
+    0 4px 15px rgba(255, 215, 0, 0.4),
+    0 0 30px rgba(255, 215, 0, 0.2);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 6px 20px rgba(255, 215, 0, 0.6),
+    0 0 40px rgba(255, 215, 0, 0.3);
 }
 
 .btn.warning {
-  background: #e74c3c;
-  color: white;
+  background: linear-gradient(
+    135deg,
+    #e74c3c 0%,
+    #c0392b 100%
+  );
+  color: var(--text-primary);
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+.btn.warning:hover {
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.5);
 }
 
 .footer-controls {
@@ -147,6 +320,73 @@ canvas {
   justify-content: center;
   gap: 1rem;
   margin-top: 1rem;
+}
+
+/* Orbit ring effect on game area */
+.game-area::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80%;
+  height: 80%;
+  transform: translate(-50%, -50%);
+  border: 1px dashed rgba(255, 215, 0, 0.1);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: orbitRotate 60s linear infinite;
+}
+
+@keyframes orbitRotate {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Aligned planets indicator glow */
+.stats-card:nth-child(2) {
+  border-color: var(--alignment-green);
+  box-shadow:
+    0 4px 16px rgba(76, 175, 80, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.stats-card:nth-child(2):hover {
+  box-shadow:
+    0 6px 20px rgba(76, 175, 80, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Shooting star animation */
+@keyframes shootingStar {
+  0% {
+    transform: translateX(-100px) translateY(100px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(calc(100vw + 100px)) translateY(-100vh);
+    opacity: 0;
+  }
+}
+
+.game-area::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  left: -50px;
+  width: 3px;
+  height: 3px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.8);
+  animation: shootingStar 8s linear infinite;
+  pointer-events: none;
 }
 
 @media (max-width: 500px) {
@@ -158,4 +398,36 @@ canvas {
     padding: 0.4rem 0.8rem;
     font-size: 0.9rem;
   }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Sun glow effect for button */
+.btn.primary::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 215, 0, 0.3) 0%,
+    transparent 70%
+  );
+  transform: translate(-50%, -50%);
+  border-radius: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn.primary:hover::before {
+  opacity: 1;
 }

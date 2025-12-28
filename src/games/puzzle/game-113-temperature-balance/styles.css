@@ -1,25 +1,125 @@
+/* Temperature Balance - Thermal / Fire & Ice Theme */
+/* Game #113 - WebGPU Enhanced */
+
+:root {
+  --fire-orange: #e74c3c;
+  --fire-red: #c0392b;
+  --fire-yellow: #f39c12;
+  --ice-blue: #3498db;
+  --ice-light: #74b9ff;
+  --ice-dark: #2980b9;
+  --thermal-dark: #2c3e50;
+  --thermal-darker: #1a252f;
+  --steam-white: #ecf0f1;
+  --balanced-green: #2ecc71;
+  --glass-hot: rgba(231, 76, 60, 0.15);
+  --glass-cold: rgba(52, 152, 219, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.25);
+  --shadow-fire: rgba(231, 76, 60, 0.4);
+  --shadow-ice: rgba(52, 152, 219, 0.4);
+}
+
 .game-container {
   max-width: 600px;
+}
+
+.game-header h1 {
+  background: linear-gradient(135deg, var(--fire-orange) 0%, var(--fire-yellow) 25%, var(--steam-white) 50%, var(--ice-light) 75%, var(--ice-blue) 100%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: thermal-flow 4s ease-in-out infinite;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes thermal-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg,
+    var(--thermal-dark) 0%,
+    var(--thermal-darker) 100%
+  );
+  border-radius: 12px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset -50px 0 80px rgba(52, 152, 219, 0.1),
+    inset 50px 0 80px rgba(231, 76, 60, 0.1);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  border: 3px solid var(--thermal-dark);
 }
 
-canvas {
+/* Hot side glow */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: radial-gradient(ellipse at 0% 50%,
+    rgba(231, 76, 60, 0.15) 0%,
+    rgba(243, 156, 18, 0.08) 30%,
+    transparent 70%
+  );
+  pointer-events: none;
+  animation: heat-pulse 3s ease-in-out infinite;
+}
+
+@keyframes heat-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* Cold side glow */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40%;
+  height: 100%;
+  background: radial-gradient(ellipse at 100% 50%,
+    rgba(52, 152, 219, 0.15) 0%,
+    rgba(116, 185, 255, 0.08) 30%,
+    transparent 70%
+  );
+  pointer-events: none;
+  animation: cold-pulse 4s ease-in-out infinite;
+}
+
+@keyframes cold-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+canvas#game-canvas {
   width: 100%;
   height: 100%;
   cursor: pointer;
+  position: relative;
+  z-index: 2;
 }
 
 .game-controls {
@@ -30,18 +130,205 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: linear-gradient(135deg, var(--glass-hot) 0%, var(--glass-cold) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
   color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  animation: float-thermal 4s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(231, 76, 60, 0.1) 25%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(52, 152, 219, 0.1) 75%,
+    transparent 100%
+  );
+  animation: thermal-shine 5s linear infinite;
+}
+
+@keyframes float-thermal {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes thermal-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--fire-orange) 0%, var(--ice-blue) 100%);
+  color: white;
+  border: 2px solid var(--thermal-dark);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 6px 20px var(--shadow-fire),
+    0 6px 20px var(--shadow-ice);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, #e17055 0%, #d63031 100%);
+  color: white;
+  border: 2px solid #c0392b;
+}
+
+.btn.warning:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px var(--shadow-fire);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn:hover::after {
+  transform: translateX(100%);
+}
+
+.overlay {
+  background: radial-gradient(ellipse at center, rgba(44, 62, 80, 0.9) 0%, rgba(26, 37, 47, 0.98) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.overlay-content {
+  background: linear-gradient(135deg, var(--glass-hot) 0%, var(--glass-cold) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 20px var(--shadow-fire),
+    0 0 20px var(--shadow-ice);
+  animation: thermal-appear 0.5s ease-out;
+}
+
+@keyframes thermal-appear {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+    filter: blur(10px);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.overlay-title {
+  background: linear-gradient(135deg, var(--fire-yellow) 0%, var(--steam-white) 50%, var(--ice-light) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: thermal-flow 2s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.controls-hint small {
+  color: #bdc3c7;
+}
+
+/* Flame flicker animation */
+@keyframes flame-flicker {
+  0%, 100% { opacity: 0.8; transform: scaleY(1); }
+  25% { opacity: 1; transform: scaleY(1.05); }
+  50% { opacity: 0.9; transform: scaleY(0.98); }
+  75% { opacity: 1; transform: scaleY(1.02); }
+}
+
+/* Ice shimmer animation */
+@keyframes ice-shimmer {
+  0%, 100% { opacity: 0.7; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.2); }
+}
+
+/* Heat wave distortion */
+@keyframes heat-wave {
+  0%, 100% { transform: translateX(0) skewX(0deg); }
+  25% { transform: translateX(2px) skewX(1deg); }
+  75% { transform: translateX(-2px) skewX(-1deg); }
+}
+
+/* Steam rise */
+@keyframes steam-rise {
+  0% { opacity: 0.8; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(1.5); }
+}
+
+/* Victory celebration */
+@keyframes thermal-celebration {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px var(--shadow-fire), 0 0 20px var(--shadow-ice);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 40px var(--shadow-fire), 0 0 40px var(--shadow-ice);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .game-area {
+    height: 380px;
+  }
+
+  .stats-card {
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+  }
 }

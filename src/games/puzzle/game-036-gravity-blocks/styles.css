@@ -1,25 +1,121 @@
+/**
+ * Gravity Blocks Styles
+ * Space Station / Zero-G Lab Theme
+ * Game #036
+ */
+
+:root {
+  --space-black: #020205;
+  --space-dark: #0a0a15;
+  --space-mid: #151525;
+  --space-light: #252540;
+  --energy-blue: #4da6ff;
+  --energy-cyan: #4df0f0;
+  --plasma-purple: #9955ff;
+  --plasma-pink: #ff55aa;
+  --warning-orange: #ff9944;
+  --alert-red: #ff4444;
+  --success-green: #44ff88;
+  --metal-gray: #8090a0;
+  --star-white: #f8f8ff;
+  --hull-dark: #1a1e2e;
+  --hull-light: #2a3040;
+}
+
 .game-container {
-  max-width: 600px;
+  max-width: 620px;
+  background: linear-gradient(180deg, var(--space-dark) 0%, var(--space-black) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Star field pattern overlay */
+.game-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 70%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 20%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 60%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 10% 90%, rgba(255, 255, 255, 0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 10%, rgba(255, 255, 255, 0.6) 0%, transparent 100%);
+  animation: twinkle 4s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes twinkle {
+  0% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 400px;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(145deg, var(--space-mid) 0%, var(--space-dark) 100%);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 0 60px rgba(77, 166, 255, 0.1),
+    inset 0 0 30px rgba(153, 85, 255, 0.1),
+    0 4px 20px rgba(0, 0, 0, 0.6),
+    0 0 40px rgba(77, 166, 255, 0.1);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  border: 2px solid var(--hull-light);
+  z-index: 2;
+}
+
+/* Hull panel corners */
+.game-area::before,
+.game-area::after {
+  content: '';
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.game-area::before {
+  top: -2px;
+  left: -2px;
+  border-top: 3px solid var(--energy-cyan);
+  border-left: 3px solid var(--energy-cyan);
+  border-radius: 8px 0 0 0;
+  box-shadow: 0 0 15px rgba(77, 240, 240, 0.5);
+}
+
+.game-area::after {
+  bottom: -2px;
+  right: -2px;
+  border-bottom: 3px solid var(--energy-cyan);
+  border-right: 3px solid var(--energy-cyan);
+  border-radius: 0 0 8px 0;
+  box-shadow: 0 0 15px rgba(77, 240, 240, 0.5);
+}
+
+/* WebGPU overlay */
+.webgpu-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 8px;
 }
 
 canvas {
   width: 100%;
   height: 100%;
   cursor: grab;
+  background: transparent;
+  position: relative;
+  z-index: 5;
 }
 
 canvas:active {
@@ -28,33 +124,264 @@ canvas:active {
 
 .game-controls {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 1rem;
   margin-bottom: 1rem;
+  position: relative;
+  z-index: 3;
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(77, 166, 255, 0.2), rgba(153, 85, 255, 0.2));
+  color: var(--star-white);
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-family: 'Consolas', 'Monaco', monospace;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-  display: flex;
-  gap: 0.5rem;
+  font-size: 0.9rem;
+  border: 1px solid rgba(77, 240, 240, 0.3);
+  box-shadow:
+    0 0 15px rgba(77, 166, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  text-shadow: 0 0 10px currentColor;
+  letter-spacing: 1px;
 }
 
 .stats-card span:first-child {
-  opacity: 0.8;
+  opacity: 0.7;
+  text-transform: uppercase;
+  font-size: 0.75rem;
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+  position: relative;
+  z-index: 3;
+}
+
+.footer-controls button {
+  background: linear-gradient(145deg, rgba(77, 166, 255, 0.3), rgba(153, 85, 255, 0.3));
+  color: var(--star-white);
+  border: 1px solid rgba(77, 240, 240, 0.4);
+  padding: 0.7rem 1.5rem;
+  border-radius: 6px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow:
+    0 0 15px rgba(77, 166, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  text-shadow: 0 0 8px currentColor;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.footer-controls button:hover {
+  background: linear-gradient(145deg, rgba(77, 240, 240, 0.4), rgba(153, 85, 255, 0.4));
+  box-shadow:
+    0 0 25px rgba(77, 240, 240, 0.3),
+    0 0 40px rgba(153, 85, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  border-color: rgba(77, 240, 240, 0.6);
+}
+
+.footer-controls button:active {
+  transform: translateY(0);
+}
+
+/* Game overlay */
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 2, 5, 0.95);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 8px;
+}
+
+/* Nebula background */
+.game-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(77, 166, 255, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 70% 60%, rgba(153, 85, 255, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(77, 240, 240, 0.1) 0%, transparent 30%);
+  pointer-events: none;
+}
+
+/* Hull frame */
+.game-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 15px;
+  border: 1px solid rgba(77, 240, 240, 0.3);
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: inset 0 0 20px rgba(77, 166, 255, 0.1);
+}
+
+.game-overlay h2 {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 2rem;
+  background: linear-gradient(135deg, var(--energy-cyan), var(--energy-blue), var(--plasma-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 0 20px rgba(77, 240, 240, 0.5));
+  margin-bottom: 1rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.game-overlay p {
+  font-family: 'Consolas', 'Monaco', monospace;
+  color: var(--star-white);
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+  text-shadow: 0 0 10px rgba(77, 240, 240, 0.3);
+  letter-spacing: 1px;
+}
+
+.game-overlay button {
+  background: linear-gradient(145deg, rgba(77, 166, 255, 0.4), rgba(153, 85, 255, 0.4));
+  color: var(--star-white);
+  border: 2px solid rgba(77, 240, 240, 0.5);
+  padding: 0.9rem 2.5rem;
+  border-radius: 6px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow:
+    0 0 20px rgba(77, 166, 255, 0.2),
+    0 0 40px rgba(153, 85, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  text-shadow: 0 0 10px currentColor;
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Energy sweep animation */
+.game-overlay button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(77, 240, 240, 0.3) 50%,
+    transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.game-overlay button:hover::before {
+  transform: translateX(100%);
+}
+
+.game-overlay button:hover {
+  background: linear-gradient(145deg, rgba(77, 240, 240, 0.5), rgba(255, 85, 170, 0.4));
+  box-shadow:
+    0 0 30px rgba(77, 240, 240, 0.4),
+    0 0 60px rgba(153, 85, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .controls-hint {
   margin-top: 1rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--metal-gray);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.85rem;
+  text-shadow: 0 0 5px rgba(77, 166, 255, 0.2);
+}
+
+/* Language selector */
+select {
+  background: linear-gradient(145deg, var(--hull-dark), var(--space-dark));
+  color: var(--star-white);
+  border: 1px solid rgba(77, 166, 255, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+select:hover {
+  border-color: var(--energy-cyan);
+  box-shadow: 0 0 15px rgba(77, 240, 240, 0.2);
+}
+
+select option {
+  background: var(--space-dark);
+  color: var(--star-white);
+}
+
+/* Gravity indicator glow effect */
+.gravity-indicator {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--warning-orange);
+  box-shadow:
+    0 0 15px rgba(255, 153, 68, 0.4),
+    inset 0 0 10px rgba(255, 153, 68, 0.2);
+  z-index: 20;
+}
+
+/* Target zone pulse */
+@keyframes targetPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(68, 255, 136, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(68, 255, 136, 0.6);
+  }
+}
+
+.target-zone {
+  animation: targetPulse 2s ease-in-out infinite;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .game-area {
+    height: 350px;
+  }
+
+  .game-overlay h2 {
+    font-size: 1.6rem;
+  }
+
+  .stats-card {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .game-area::before,
+  .game-area::after {
+    width: 30px;
+    height: 30px;
+  }
 }

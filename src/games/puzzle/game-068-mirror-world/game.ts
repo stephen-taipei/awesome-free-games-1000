@@ -141,6 +141,10 @@ export class MirrorWorldGame {
 
   onStateChange: ((state: any) => void) | null = null;
 
+  // Track goal reached emissions
+  private leftGoalReached: boolean = false;
+  private rightGoalReached: boolean = false;
+
   colors = {
     empty: "#ecf0f1",
     wall: "#34495e",
@@ -184,6 +188,8 @@ export class MirrorWorldGame {
     this.moves = 0;
     this.status = "playing";
     this.animating = false;
+    this.leftGoalReached = false;
+    this.rightGoalReached = false;
 
     if (this.onStateChange) {
       this.onStateChange({ status: "playing", level: levelIndex + 1, moves: 0 });
@@ -343,6 +349,20 @@ export class MirrorWorldGame {
       right: { ...this.rightPlayer },
     };
 
+    // Emit wall block events
+    if (!leftCanMove && (dx !== 0 || dy !== 0)) {
+      const blockX = this.leftPlayer.x + dx * 0.5;
+      const blockY = this.leftPlayer.y + dy * 0.5;
+      const coords = this.getPixelCoords(blockX, blockY, 'left');
+      this.notifyChange({ event: 'wallBlock', x: coords.x, y: coords.y, moves: this.moves });
+    }
+    if (!rightCanMove && (dx !== 0 || dy !== 0)) {
+      const blockX = this.rightPlayer.x - dx * 0.5;
+      const blockY = this.rightPlayer.y + dy * 0.5;
+      const coords = this.getPixelCoords(blockX, blockY, 'right');
+      this.notifyChange({ event: 'wallBlock', x: coords.x, y: coords.y, moves: this.moves });
+    }
+
     // Move if possible (each player can be blocked independently)
     if (leftCanMove) {
       this.leftPlayer.x = leftNewX;
@@ -358,8 +378,21 @@ export class MirrorWorldGame {
       this.animating = true;
       this.animProgress = 0;
 
+      // Emit player move event with both positions
+      const leftCoords = this.getPixelCoords(this.leftPlayer.x, this.leftPlayer.y, 'left');
+      const rightCoords = this.getPixelCoords(this.rightPlayer.x, this.rightPlayer.y, 'right');
+
       if (this.onStateChange) {
-        this.onStateChange({ status: "playing", level: this.currentLevel + 1, moves: this.moves });
+        this.onStateChange({
+          status: "playing",
+          level: this.currentLevel + 1,
+          moves: this.moves,
+          event: 'playerMove',
+          leftX: leftCoords.x,
+          leftY: leftCoords.y,
+          rightX: rightCoords.x,
+          rightY: rightCoords.y,
+        });
       }
     }
   }
@@ -372,6 +405,18 @@ export class MirrorWorldGame {
   private checkWin() {
     const leftOnGoal = this.leftPlayer.x === this.leftGoal.x && this.leftPlayer.y === this.leftGoal.y;
     const rightOnGoal = this.rightPlayer.x === this.rightGoal.x && this.rightPlayer.y === this.rightGoal.y;
+
+    // Emit goal reached events
+    if (leftOnGoal && !this.leftGoalReached) {
+      this.leftGoalReached = true;
+      const coords = this.getPixelCoords(this.leftGoal.x, this.leftGoal.y, 'left');
+      this.notifyChange({ event: 'goalReached', x: coords.x, y: coords.y, moves: this.moves });
+    }
+    if (rightOnGoal && !this.rightGoalReached) {
+      this.rightGoalReached = true;
+      const coords = this.getPixelCoords(this.rightGoal.x, this.rightGoal.y, 'right');
+      this.notifyChange({ event: 'goalReached', x: coords.x, y: coords.y, moves: this.moves });
+    }
 
     if (leftOnGoal && rightOnGoal) {
       this.status = "won";
@@ -410,5 +455,33 @@ export class MirrorWorldGame {
 
   public getTotalLevels(): number {
     return LEVELS.length;
+  }
+
+  private notifyChange(extra: { event?: string; x?: number; y?: number; moves?: number }) {
+    if (this.onStateChange) {
+      this.onStateChange({
+        level: this.currentLevel + 1,
+        moves: this.moves,
+        status: this.status,
+        ...extra,
+      });
+    }
+  }
+
+  private getPixelCoords(gx: number, gy: number, side: 'left' | 'right'): { x: number; y: number } {
+    const totalWidth = this.canvas.width;
+    const halfWidth = totalWidth / 2;
+    const gridPixelSize = this.gridSize * this.cellSize;
+
+    const leftOffsetX = (halfWidth - gridPixelSize) / 2;
+    const rightOffsetX = halfWidth + (halfWidth - gridPixelSize) / 2;
+    const offsetY = (this.canvas.height - gridPixelSize) / 2;
+
+    const offsetX = side === 'left' ? leftOffsetX : rightOffsetX;
+
+    return {
+      x: offsetX + gx * this.cellSize + this.cellSize / 2,
+      y: offsetY + gy * this.cellSize + this.cellSize / 2,
+    };
   }
 }

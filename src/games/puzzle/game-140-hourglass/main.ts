@@ -5,8 +5,10 @@
 import { HourglassGame } from "./game";
 import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
+import { WebGPURenderer } from "./webgpu";
 
 const canvas = document.getElementById("game-canvas") as HTMLCanvasElement;
+const webgpuCanvas = document.getElementById("webgpu-canvas") as HTMLCanvasElement;
 const languageSelect = document.getElementById("language-select") as HTMLSelectElement;
 const levelDisplay = document.getElementById("level-display")!;
 const timeDisplay = document.getElementById("time-display")!;
@@ -22,6 +24,126 @@ const nextBtn = document.getElementById("next-btn")!;
 const flipBtn = document.getElementById("flip-btn")!;
 
 let game: HourglassGame;
+let renderer: WebGPURenderer | null = null;
+let ambientInterval: number | null = null;
+
+// Audio System
+class AudioSystem {
+  private ctx: AudioContext | null = null;
+  private initialized = false;
+
+  private init() {
+    if (this.initialized) return;
+    this.ctx = new AudioContext();
+    this.initialized = true;
+  }
+
+  private playTone(
+    frequency: number,
+    duration: number,
+    type: OscillatorType = "sine",
+    volume: number = 0.3,
+    delay: number = 0
+  ) {
+    this.init();
+    if (!this.ctx) return;
+
+    const oscillator = this.ctx.createOscillator();
+    const gainNode = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, this.ctx.currentTime);
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(2000, this.ctx.currentTime);
+
+    gainNode.gain.setValueAtTime(0, this.ctx.currentTime + delay);
+    gainNode.gain.linearRampToValueAtTime(volume, this.ctx.currentTime + delay + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + duration);
+
+    oscillator.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(this.ctx.destination);
+
+    oscillator.start(this.ctx.currentTime + delay);
+    oscillator.stop(this.ctx.currentTime + delay + duration);
+  }
+
+  playSandFlow() {
+    // Soft sand flowing sound
+    this.playTone(150, 0.1, "sine", 0.04);
+    this.playTone(100, 0.08, "triangle", 0.03, 0.02);
+  }
+
+  playFlip() {
+    // Whoosh flip sound
+    this.playTone(200, 0.2, "sine", 0.1);
+    this.playTone(400, 0.15, "triangle", 0.08, 0.05);
+    this.playTone(300, 0.1, "sine", 0.06, 0.1);
+    this.playTone(150, 0.15, "sine", 0.05, 0.15);
+  }
+
+  playStarAppear() {
+    // Magical appearance
+    this.playTone(600, 0.15, "sine", 0.08);
+    this.playTone(800, 0.1, "triangle", 0.06, 0.05);
+  }
+
+  playStarCollect() {
+    // Bright collect sound
+    this.playTone(880, 0.15, "sine", 0.12);
+    this.playTone(1100, 0.12, "triangle", 0.1, 0.05);
+    this.playTone(1320, 0.1, "sine", 0.08, 0.1);
+  }
+
+  playTimeWarning() {
+    // Urgent ticking
+    this.playTone(400, 0.08, "square", 0.06);
+    this.playTone(300, 0.06, "square", 0.04, 0.1);
+  }
+
+  playWin() {
+    // Victory melody
+    const melody = [523, 659, 784, 1047, 1319];
+    melody.forEach((freq, i) => {
+      this.playTone(freq, 0.25, "sine", 0.12, i * 0.1);
+      this.playTone(freq * 0.5, 0.2, "triangle", 0.06, i * 0.1);
+    });
+  }
+
+  playComplete() {
+    // Grand completion fanfare
+    const melody = [392, 523, 659, 784, 880, 1047, 1175, 1319];
+    melody.forEach((freq, i) => {
+      this.playTone(freq, 0.3, "sine", 0.14, i * 0.1);
+      this.playTone(freq * 0.75, 0.25, "triangle", 0.07, i * 0.1);
+    });
+  }
+
+  playLevelStart() {
+    // Hourglass start
+    this.playTone(300, 0.2, "sine", 0.08);
+    this.playTone(400, 0.15, "sine", 0.07, 0.1);
+    this.playTone(500, 0.1, "triangle", 0.06, 0.2);
+  }
+
+  playReset() {
+    // Reset sound
+    this.playTone(400, 0.1, "sine", 0.06);
+    this.playTone(300, 0.1, "sine", 0.05, 0.05);
+    this.playTone(200, 0.1, "sine", 0.04, 0.1);
+  }
+
+  playFailed() {
+    // Time up sound
+    this.playTone(200, 0.3, "sine", 0.08);
+    this.playTone(150, 0.25, "sine", 0.06, 0.1);
+    this.playTone(100, 0.2, "triangle", 0.05, 0.2);
+  }
+}
+
+const audio = new AudioSystem();
 
 function initI18n() {
   Object.entries(translations).forEach(([locale, trans]) => {
@@ -55,6 +177,20 @@ function updateTexts() {
     const key = el.getAttribute("data-i18n");
     if (key) el.textContent = i18n.t(key);
   });
+}
+
+async function initWebGPU() {
+  if (webgpuCanvas) {
+    renderer = new WebGPURenderer(webgpuCanvas);
+    const success = await renderer.init();
+    if (success) {
+      ambientInterval = window.setInterval(() => {
+        renderer?.emitAmbient();
+      }, 100);
+    } else {
+      renderer = null;
+    }
+  }
 }
 
 function initGame() {
@@ -100,17 +236,66 @@ function initGame() {
       flipBtn.disabled = state.flipsRemaining <= 0;
     }
 
+    // WebGPU events
+    if (renderer) {
+      if (state.flip) {
+        const nx = state.flip.x / canvas.clientWidth;
+        const ny = state.flip.y / canvas.clientHeight;
+        renderer.emitFlip(nx, ny);
+        audio.playFlip();
+      }
+
+      if (state.starAppear) {
+        const nx = state.starAppear.x / canvas.clientWidth;
+        const ny = state.starAppear.y / canvas.clientHeight;
+        renderer.emitStarAppear(nx, ny);
+        audio.playStarAppear();
+      }
+
+      if (state.starCollect) {
+        const nx = state.starCollect.x / canvas.clientWidth;
+        const ny = state.starCollect.y / canvas.clientHeight;
+        renderer.emitStarCollect(nx, ny);
+        audio.playStarCollect();
+      }
+
+      if (state.sandFlow) {
+        const nx = state.sandFlow.x / canvas.clientWidth;
+        const ny = state.sandFlow.y / canvas.clientHeight;
+        renderer.emitSandFlow(nx, ny);
+      }
+
+      if (state.timeWarning) {
+        audio.playTimeWarning();
+      }
+
+      if (state.reset) {
+        renderer.emitReset();
+        audio.playReset();
+      }
+    }
+
     if (state.status === "won") {
+      renderer?.emitLevelComplete();
+      audio.playWin();
       showWin();
     } else if (state.status === "complete") {
+      renderer?.emitVictory();
+      audio.playComplete();
       showComplete();
     } else if (state.status === "failed") {
+      audio.playFailed();
       overlayTitle.textContent = i18n.t("game.timeUp");
       overlayMsg.textContent = "";
     }
   });
 
-  window.addEventListener("resize", () => game.resize());
+  window.addEventListener("resize", () => {
+    game.resize();
+    if (renderer && webgpuCanvas) {
+      renderer.resize(webgpuCanvas.clientWidth, webgpuCanvas.clientHeight);
+    }
+  });
 }
 
 function showWin() {
@@ -143,6 +328,8 @@ function startGame() {
   startBtn.style.display = "inline-block";
   nextBtn.style.display = "none";
   game.start();
+  renderer?.emitLevelStart();
+  audio.playLevelStart();
 }
 
 startBtn.addEventListener("click", startGame);
@@ -150,8 +337,11 @@ resetBtn.addEventListener("click", () => game.reset());
 nextBtn.addEventListener("click", () => {
   overlay.style.display = "none";
   game.nextLevel();
+  renderer?.emitLevelStart();
+  audio.playLevelStart();
 });
 flipBtn.addEventListener("click", () => game.flip());
 
 initI18n();
+initWebGPU();
 initGame();

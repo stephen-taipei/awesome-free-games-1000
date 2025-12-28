@@ -54,6 +54,13 @@ const CANDY_COLORS: Record<CandyColor, string> = {
   yellow: "#f1c40f",
 };
 
+const COLOR_INDEX: Record<CandyColor, number> = {
+  red: 0,
+  blue: 1,
+  green: 2,
+  yellow: 3,
+};
+
 const LEVELS: Level[] = [
   // Level 1: Simple - one spawner, one exit
   {
@@ -266,6 +273,7 @@ export class CandyFactoryGame {
           status: "complete",
           level: levelIndex + 1,
           score: this.score,
+          event: "gameComplete",
         });
       }
       return;
@@ -296,6 +304,7 @@ export class CandyFactoryGame {
         score: this.score,
         exits: this.exits,
         isRunning: false,
+        event: "levelStart",
       });
     }
   }
@@ -306,6 +315,16 @@ export class CandyFactoryGame {
     }
     this.render();
     this.animationId = requestAnimationFrame(() => this.gameLoop());
+  }
+
+  private getScreenCoords(gridX: number, gridY: number): { x: number; y: number } {
+    const level = LEVELS[this.currentLevel];
+    const offsetX = (this.width - level.gridWidth * this.cellSize) / 2;
+    const offsetY = (this.height - level.gridHeight * this.cellSize) / 2;
+    return {
+      x: offsetX + gridX * this.cellSize + this.cellSize / 2,
+      y: offsetY + gridY * this.cellSize + this.cellSize / 2,
+    };
   }
 
   private update() {
@@ -324,6 +343,17 @@ export class CandyFactoryGame {
             delivered: false,
           });
           this.spawnCounters[index]++;
+
+          // Emit candy spawn event
+          const pos = this.getScreenCoords(spawner.x, spawner.y);
+          if (this.onStateChange) {
+            this.onStateChange({
+              event: "candySpawn",
+              x: pos.x,
+              y: pos.y,
+              colorIndex: COLOR_INDEX[spawner.color],
+            });
+          }
         }
       }
     });
@@ -363,11 +393,29 @@ export class CandyFactoryGame {
         );
         if (exitAtPos) {
           candy.delivered = true;
+          const pos = this.getScreenCoords(candy.x, candy.y);
           if (exitAtPos.color === candy.color) {
             exitAtPos.count++;
             this.score += 10;
+            // Emit correct delivery event
+            if (this.onStateChange) {
+              this.onStateChange({
+                event: "candyDelivered",
+                x: pos.x,
+                y: pos.y,
+                colorIndex: COLOR_INDEX[candy.color],
+              });
+            }
           } else {
             this.score -= 5;
+            // Emit wrong delivery event
+            if (this.onStateChange) {
+              this.onStateChange({
+                event: "candyWrong",
+                x: pos.x,
+                y: pos.y,
+              });
+            }
           }
         }
 
@@ -411,6 +459,7 @@ export class CandyFactoryGame {
               level: this.currentLevel + 1,
               score: this.score,
               exits: this.exits,
+              event: "victory",
             });
           }
         } else {
@@ -448,6 +497,16 @@ export class CandyFactoryGame {
     if (switchClicked) {
       switchClicked.currentIndex =
         (switchClicked.currentIndex + 1) % switchClicked.directions.length;
+
+      // Emit switch toggle event
+      const pos = this.getScreenCoords(gridX, gridY);
+      if (this.onStateChange) {
+        this.onStateChange({
+          event: "switchToggle",
+          x: pos.x,
+          y: pos.y,
+        });
+      }
     }
   }
 
@@ -462,6 +521,7 @@ export class CandyFactoryGame {
         score: this.score,
         exits: this.exits,
         isRunning: this.isRunning,
+        event: "factoryToggle",
       });
     }
   }
@@ -721,6 +781,12 @@ export class CandyFactoryGame {
   }
 
   public reset() {
+    // Emit reset event before loading level
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "reset",
+      });
+    }
     this.loadLevel(this.currentLevel);
   }
 

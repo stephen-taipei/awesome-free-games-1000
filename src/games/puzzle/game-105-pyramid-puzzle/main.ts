@@ -1,10 +1,252 @@
 /**
  * Pyramid Puzzle Main Entry
+ * Ancient Egypt / Desert Mystique Theme with WebGPU
  * Game #105
  */
 import { PyramidGame, GameState, Triangle } from "./game";
 import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
+import { WebGPURenderer } from "./webgpu";
+
+// Audio System - Ancient Egyptian themed
+class AudioSystem {
+  private ctx: AudioContext | null = null;
+  private initialized = false;
+
+  private init(): void {
+    if (this.initialized) return;
+    this.ctx = new AudioContext();
+    this.initialized = true;
+  }
+
+  private playTone(
+    frequency: number,
+    duration: number,
+    type: OscillatorType = "sine",
+    options: {
+      volume?: number;
+      attack?: number;
+      decay?: number;
+      filterFreq?: number;
+      vibrato?: number;
+    } = {}
+  ): void {
+    this.init();
+    if (!this.ctx) return;
+
+    const {
+      volume = 0.15,
+      attack = 0.01,
+      decay = 0.3,
+      filterFreq = 2000,
+      vibrato = 0,
+    } = options;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    filter.type = "lowpass";
+    filter.frequency.value = filterFreq;
+
+    osc.type = type;
+    osc.frequency.value = frequency;
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    const now = this.ctx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(volume, now + attack);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration - 0.01);
+
+    // Vibrato for mystical sound
+    if (vibrato > 0) {
+      const lfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      lfo.frequency.value = vibrato;
+      lfoGain.gain.value = frequency * 0.02;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+      lfo.start(now);
+      lfo.stop(now + duration);
+    }
+
+    osc.start(now);
+    osc.stop(now + duration);
+  }
+
+  // Triangle flip - mystical stone shift
+  playFlip(): void {
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+
+    // Stone scrape
+    const noise = this.ctx.createBufferSource();
+    const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.15, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / data.length * 5);
+    }
+    noise.buffer = buffer;
+
+    const noiseGain = this.ctx.createGain();
+    const noiseFilter = this.ctx.createBiquadFilter();
+    noiseFilter.type = "bandpass";
+    noiseFilter.frequency.value = 400;
+    noiseFilter.Q.value = 3;
+
+    noiseGain.gain.setValueAtTime(0.12, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    noise.start(now);
+
+    // Mystical chime
+    this.playTone(440, 0.25, "sine", { volume: 0.12, vibrato: 6 });
+    setTimeout(() => {
+      this.playTone(554.37, 0.2, "sine", { volume: 0.08, vibrato: 6 });
+    }, 50);
+  }
+
+  // Reset - sandstorm whoosh
+  playReset(): void {
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+
+    // Sandstorm sweep
+    const noise = this.ctx.createBufferSource();
+    const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.8, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const env = Math.sin((i / data.length) * Math.PI);
+      data[i] = (Math.random() * 2 - 1) * env;
+    }
+    noise.buffer = buffer;
+
+    const noiseGain = this.ctx.createGain();
+    const noiseFilter = this.ctx.createBiquadFilter();
+    noiseFilter.type = "bandpass";
+    noiseFilter.frequency.value = 800;
+    noiseFilter.Q.value = 1;
+
+    noiseGain.gain.setValueAtTime(0.2, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    noise.start(now);
+
+    // Descending tones
+    [300, 250, 200, 160].forEach((freq, i) => {
+      this.playTone(freq, 0.15, "triangle", { volume: 0.08, attack: 0.01 });
+    });
+  }
+
+  // Victory - Pharaoh's fanfare
+  playWin(): void {
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    // Egyptian-style pentatonic scale
+    const notes = [293.66, 329.63, 392, 440, 523.25, 587.33, 659.25]; // D4-E5 pentatonic-ish
+
+    notes.forEach((freq, i) => {
+      const t = now + i * 0.12;
+
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      const filter = this.ctx!.createBiquadFilter();
+
+      osc.type = "sine";
+      osc.frequency.value = freq;
+
+      filter.type = "lowpass";
+      filter.frequency.value = 3000;
+
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.2, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(t);
+      osc.stop(t + 0.3);
+
+      // Add harmony
+      const osc2 = this.ctx!.createOscillator();
+      const gain2 = this.ctx!.createGain();
+      osc2.type = "sine";
+      osc2.frequency.value = freq * 1.5;
+      gain2.gain.setValueAtTime(0.06, t);
+      gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc2.connect(gain2);
+      gain2.connect(this.ctx!.destination);
+      osc2.start(t);
+      osc2.stop(t + 0.25);
+    });
+
+    // Pyramid power hum
+    const hum = this.ctx.createOscillator();
+    const humGain = this.ctx.createGain();
+    hum.type = "sine";
+    hum.frequency.value = 110;
+    humGain.gain.setValueAtTime(0, now);
+    humGain.gain.linearRampToValueAtTime(0.15, now + 0.3);
+    humGain.gain.setValueAtTime(0.15, now + 0.8);
+    humGain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+    hum.connect(humGain);
+    humGain.connect(this.ctx.destination);
+    hum.start(now);
+    hum.stop(now + 1.5);
+  }
+
+  // Level start - ancient awakening
+  playLevelStart(): void {
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+
+    // Deep resonant tone (pyramid chamber)
+    const drone = this.ctx.createOscillator();
+    const droneGain = this.ctx.createGain();
+    const droneFilter = this.ctx.createBiquadFilter();
+
+    drone.type = "triangle";
+    drone.frequency.value = 82.41;
+
+    droneFilter.type = "lowpass";
+    droneFilter.frequency.value = 400;
+
+    droneGain.gain.setValueAtTime(0, now);
+    droneGain.gain.linearRampToValueAtTime(0.2, now + 0.2);
+    droneGain.gain.exponentialRampToValueAtTime(0.001, now + 1);
+
+    drone.connect(droneFilter);
+    droneFilter.connect(droneGain);
+    droneGain.connect(this.ctx.destination);
+    drone.start(now);
+    drone.stop(now + 1);
+
+    // Rising mystical tones
+    [220, 277.18, 329.63].forEach((freq, i) => {
+      setTimeout(() => {
+        this.playTone(freq, 0.4, "sine", { volume: 0.1, vibrato: 4 });
+      }, 200 + i * 150);
+    });
+  }
+}
 
 // Elements
 const languageSelect = document.getElementById("language-select") as HTMLSelectElement;
@@ -18,9 +260,33 @@ const overlayTitle = document.getElementById("overlay-title")!;
 const overlayMsg = document.getElementById("overlay-msg")!;
 const startBtn = document.getElementById("start-btn")!;
 const resetBtn = document.getElementById("reset-btn")!;
+const webgpuCanvas = document.getElementById("webgpu-canvas") as HTMLCanvasElement;
 
 let game: PyramidGame;
 let trianglePositions: { row: number; col: number; points: [number, number][] }[] = [];
+let renderer: WebGPURenderer | null = null;
+const audio = new AudioSystem();
+
+async function initWebGPU(): Promise<void> {
+  if (!webgpuCanvas) return;
+
+  webgpuCanvas.width = window.innerWidth;
+  webgpuCanvas.height = window.innerHeight;
+
+  renderer = new WebGPURenderer(webgpuCanvas);
+  const success = await renderer.init();
+
+  if (!success) {
+    console.log("WebGPU not available, continuing without effects");
+    renderer = null;
+  }
+
+  window.addEventListener("resize", () => {
+    if (renderer) {
+      renderer.resize(window.innerWidth, window.innerHeight);
+    }
+  });
+}
 
 function initI18n(): void {
   Object.entries(translations).forEach(([locale, trans]) => {
@@ -58,7 +324,11 @@ function initGame(): void {
     updateUI(state);
 
     if (state.status === "won") {
-      setTimeout(() => showWinOverlay(), 500);
+      setTimeout(() => {
+        audio.playWin();
+        renderer?.emitVictory();
+        showWinOverlay();
+      }, 500);
     }
   };
 
@@ -102,10 +372,12 @@ function pointInTriangle(
   return s > 0 && t > 0 && s + t < 2 * area * sign;
 }
 
-function findTriangleAt(x: number, y: number): { row: number; col: number } | null {
+function findTriangleAt(x: number, y: number): { row: number; col: number; centerX: number; centerY: number } | null {
   for (const tri of trianglePositions) {
     if (pointInTriangle(x, y, tri.points)) {
-      return { row: tri.row, col: tri.col };
+      const centerX = (tri.points[0][0] + tri.points[1][0] + tri.points[2][0]) / 3;
+      const centerY = (tri.points[0][1] + tri.points[1][1] + tri.points[2][1]) / 3;
+      return { row: tri.row, col: tri.col, centerX, centerY };
     }
   }
   return null;
@@ -118,6 +390,12 @@ function handleClick(e: MouseEvent): void {
   const triangle = findTriangleAt(x, y);
 
   if (triangle) {
+    audio.playFlip();
+    // Map to screen coordinates for effect
+    const rect = canvas.getBoundingClientRect();
+    const screenX = rect.left + triangle.centerX * (rect.width / canvas.width);
+    const screenY = rect.top + triangle.centerY * (rect.height / canvas.height);
+    renderer?.emitFlip(screenX, screenY, Math.random());
     game.clickTriangle(triangle.row, triangle.col);
   }
 }
@@ -131,6 +409,11 @@ function handleTouch(e: TouchEvent): void {
   const triangle = findTriangleAt(x, y);
 
   if (triangle) {
+    audio.playFlip();
+    const rect = canvas.getBoundingClientRect();
+    const screenX = rect.left + triangle.centerX * (rect.width / canvas.width);
+    const screenY = rect.top + triangle.centerY * (rect.height / canvas.height);
+    renderer?.emitFlip(screenX, screenY, Math.random());
     game.clickTriangle(triangle.row, triangle.col);
   }
 }
@@ -154,7 +437,7 @@ function render(state: GameState): void {
   const rows = state.rows;
   const pyramidHeight = Math.min(height - 120, 300);
   const triangleHeight = pyramidHeight / rows;
-  const baseWidth = triangleHeight * 1.15; // Equilateral-ish triangle
+  const baseWidth = triangleHeight * 1.15;
   const pyramidWidth = baseWidth * rows;
 
   const startX = (width - pyramidWidth) / 2;
@@ -175,14 +458,12 @@ function render(state: GameState): void {
       const triX = rowStartX + (col * baseWidth) / 2;
 
       if (pointUp) {
-        // Pointing up triangle
         points = [
           [triX + baseWidth / 2, rowY - triangleHeight],
           [triX, rowY],
           [triX + baseWidth, rowY],
         ];
       } else {
-        // Pointing down triangle
         points = [
           [triX, rowY - triangleHeight],
           [triX + baseWidth, rowY - triangleHeight],
@@ -190,10 +471,8 @@ function render(state: GameState): void {
         ];
       }
 
-      // Store for hit detection
       trianglePositions.push({ row, col, points });
 
-      // Draw triangle
       const color = game.getColor(triangle.color);
 
       ctx.beginPath();
@@ -202,7 +481,6 @@ function render(state: GameState): void {
       ctx.lineTo(points[2][0], points[2][1]);
       ctx.closePath();
 
-      // Fill with gradient
       const centerY = (points[0][1] + points[1][1] + points[2][1]) / 3;
       const gradient = ctx.createLinearGradient(0, centerY - triangleHeight / 2, 0, centerY + triangleHeight / 2);
       gradient.addColorStop(0, color);
@@ -210,12 +488,10 @@ function render(state: GameState): void {
       ctx.fillStyle = gradient;
       ctx.fill();
 
-      // Border
       ctx.strokeStyle = "#2c2c4e";
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Highlight
       ctx.beginPath();
       ctx.moveTo(points[0][0], points[0][1]);
       ctx.lineTo(points[1][0], points[1][1]);
@@ -275,6 +551,8 @@ function showWinOverlay(): void {
     startBtn.textContent = i18n.t("game.nextLevel");
     startBtn.onclick = () => {
       overlay.style.display = "none";
+      audio.playLevelStart();
+      renderer?.emitLevelStart();
       game.nextLevel();
     };
   }
@@ -282,13 +560,20 @@ function showWinOverlay(): void {
 
 function startGame(level: number = 1): void {
   overlay.style.display = "none";
+  audio.playLevelStart();
+  renderer?.emitLevelStart();
   game.start(level);
 }
 
 // Event listeners
 startBtn.addEventListener("click", () => startGame());
-resetBtn.addEventListener("click", () => game.reset());
+resetBtn.addEventListener("click", () => {
+  audio.playReset();
+  renderer?.emitReset();
+  game.reset();
+});
 
 // Initialize
 initI18n();
 initGame();
+initWebGPU();

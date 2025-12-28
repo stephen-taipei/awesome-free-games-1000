@@ -124,6 +124,28 @@ export class WormholeGame {
     this.ctx = canvas.getContext('2d')!;
   }
 
+  // Convert grid position to normalized 0-1 coordinates for WebGPU
+  private getNormalizedPos(row: number, col: number): { x: number; y: number } {
+    const x = this.offsetX + col * this.cellSize + this.cellSize / 2;
+    const y = this.offsetY + row * this.cellSize + this.cellSize / 2;
+    return {
+      x: x / this.canvas.width,
+      y: y / this.canvas.height,
+    };
+  }
+
+  // Convert hex color to RGB array for WebGPU
+  private hexToRgb(hex: string): number[] {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? [
+          parseInt(result[1], 16) / 255,
+          parseInt(result[2], 16) / 255,
+          parseInt(result[3], 16) / 255,
+        ]
+      : [1, 0, 0];
+  }
+
   start() {
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
@@ -224,6 +246,20 @@ export class WormholeGame {
     if (newRow < 0 || newRow >= this.gridRows || newCol < 0 || newCol >= this.gridCols) return;
     if (this.grid[newRow][newCol] === '#') return;
 
+    // Emit player move event for WebGPU
+    if (this.onStateChange) {
+      const fromPos = this.getNormalizedPos(this.playerPos.row, this.playerPos.col);
+      const toPos = this.getNormalizedPos(newRow, newCol);
+      this.onStateChange({
+        playerMove: {
+          fromX: fromPos.x,
+          fromY: fromPos.y,
+          toX: toPos.x,
+          toY: toPos.y,
+        },
+      });
+    }
+
     this.animationFrom = { ...this.playerPos };
     this.animationTo = { row: newRow, col: newCol };
     this.animating = true;
@@ -260,7 +296,7 @@ export class WormholeGame {
         e => e.row !== this.playerPos.row || e.col !== this.playerPos.col
       );
       if (otherEntry) {
-        this.teleport(otherEntry);
+        this.teleport(otherEntry, wormhole.color);
         return;
       }
     }
@@ -268,13 +304,35 @@ export class WormholeGame {
     // Check win
     if (this.playerPos.row === this.goalPos.row && this.playerPos.col === this.goalPos.col) {
       this.status = 'won';
+      // Emit goal reached event for WebGPU
+      if (this.onStateChange) {
+        const goalPos = this.getNormalizedPos(this.goalPos.row, this.goalPos.col);
+        this.onStateChange({
+          goalReached: { x: goalPos.x, y: goalPos.y },
+        });
+      }
     }
 
     this.notifyState();
     this.draw();
   }
 
-  private teleport(to: Position) {
+  private teleport(to: Position, color: string) {
+    // Emit teleport event for WebGPU
+    if (this.onStateChange) {
+      const fromPos = this.getNormalizedPos(this.playerPos.row, this.playerPos.col);
+      const toPos = this.getNormalizedPos(to.row, to.col);
+      this.onStateChange({
+        teleport: {
+          fromX: fromPos.x,
+          fromY: fromPos.y,
+          toX: toPos.x,
+          toY: toPos.y,
+          color: this.hexToRgb(color),
+        },
+      });
+    }
+
     this.animationFrom = { ...this.playerPos };
     this.animationTo = to;
     this.animating = true;
@@ -307,6 +365,13 @@ export class WormholeGame {
     // Check win
     if (this.playerPos.row === this.goalPos.row && this.playerPos.col === this.goalPos.col) {
       this.status = 'won';
+      // Emit goal reached event for WebGPU
+      if (this.onStateChange) {
+        const goalPos = this.getNormalizedPos(this.goalPos.row, this.goalPos.col);
+        this.onStateChange({
+          goalReached: { x: goalPos.x, y: goalPos.y },
+        });
+      }
     }
 
     this.notifyState();
@@ -535,6 +600,10 @@ export class WormholeGame {
   }
 
   reset() {
+    // Emit reset event for WebGPU
+    if (this.onStateChange) {
+      this.onStateChange({ reset: true });
+    }
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
     this.draw();
@@ -553,11 +622,24 @@ export class WormholeGame {
 
   private notifyState() {
     if (this.onStateChange) {
+      // Get player position for WebGPU
+      const playerNormPos = this.getNormalizedPos(this.playerPos.row, this.playerPos.col);
+
+      // Get wormhole positions for ambient effects
+      const wormholeData = this.wormholes.flatMap(wh =>
+        wh.entries.map(entry => ({
+          ...this.getNormalizedPos(entry.row, entry.col),
+          color: this.hexToRgb(wh.color),
+        }))
+      );
+
       this.onStateChange({
         status: this.status,
         level: this.currentLevel + 1,
         totalLevels: LEVELS.length,
-        moves: this.moveCount
+        moves: this.moveCount,
+        playerPos: playerNormPos,
+        wormholeIdle: wormholeData,
       });
     }
   }

@@ -1,3 +1,25 @@
+/**
+ * Chemistry Puzzle Styles
+ * Science Lab / Chemistry Laboratory Theme
+ * Game #058
+ */
+
+:root {
+  --lab-dark: #0a0d15;
+  --lab-base: #101828;
+  --lab-panel: #1a2438;
+  --lab-border: #2a3a55;
+  --acid-green: #27ae60;
+  --base-blue: #3498db;
+  --noble-purple: #9b59b6;
+  --reactive-orange: #e67e22;
+  --warning-red: #e74c3c;
+  --gold-result: #f1c40f;
+  --glass-tint: rgba(255, 255, 255, 0.1);
+  --liquid-blue: rgba(52, 152, 219, 0.7);
+  --bubble-glow: rgba(52, 152, 219, 0.3);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,8 +27,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(145deg, var(--lab-dark) 0%, var(--lab-base) 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -15,12 +37,47 @@ body {
 }
 
 .game-container {
-  max-width: 600px;
+  max-width: 640px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  background: linear-gradient(180deg, var(--lab-panel) 0%, var(--lab-base) 100%);
+  border-radius: 12px;
   padding: 1.5rem;
-  backdrop-filter: blur(10px);
+  border: 2px solid var(--lab-border);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 60px rgba(52, 152, 219, 0.1);
+  position: relative;
+}
+
+/* Lab indicator lights */
+.game-container::before,
+.game-container::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  top: 16px;
+  animation: indicator-pulse 2s ease-in-out infinite;
+}
+
+.game-container::before {
+  left: 16px;
+  background: var(--acid-green);
+  box-shadow: 0 0 10px var(--acid-green);
+}
+
+.game-container::after {
+  right: 16px;
+  background: var(--base-blue);
+  box-shadow: 0 0 10px var(--base-blue);
+  animation-delay: 1s;
+}
+
+@keyframes indicator-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 .game-header {
@@ -28,20 +85,26 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--lab-border);
 }
 
 .game-header h1 {
-  color: #9b59b6;
+  color: var(--noble-purple);
   font-size: 1.5rem;
+  font-weight: 700;
+  text-shadow: 0 0 20px rgba(155, 89, 182, 0.4);
+  letter-spacing: 1px;
 }
 
 #language-select {
   padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  border: none;
-  background: #2c3e50;
-  color: white;
+  border-radius: 4px;
+  border: 1px solid var(--lab-border);
+  background: var(--lab-dark);
+  color: #bdc3c7;
   cursor: pointer;
+  font-family: inherit;
 }
 
 .game-controls {
@@ -53,65 +116,97 @@ body {
 }
 
 .stats-card {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  background: linear-gradient(135deg, var(--lab-panel) 0%, var(--lab-base) 100%);
+  padding: 0.5rem 1.25rem;
+  border-radius: 6px;
   color: white;
   display: flex;
   gap: 0.5rem;
-  font-weight: bold;
+  font-weight: 600;
+  border: 1px solid var(--lab-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .stats-card.target-card {
-  background: rgba(155, 89, 182, 0.3);
-  border: 1px solid #9b59b6;
+  background: linear-gradient(135deg, rgba(155, 89, 182, 0.3) 0%, rgba(142, 68, 173, 0.2) 100%);
+  border: 1px solid var(--noble-purple);
+  box-shadow: 0 0 15px rgba(155, 89, 182, 0.2);
+}
+
+.stats-card .label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stats-card .value {
+  color: white;
 }
 
 #target-display {
-  font-family: "Courier New", monospace;
-  color: #f1c40f;
+  font-family: 'Courier New', monospace;
+  color: var(--gold-result);
+  font-weight: bold;
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  min-height: 400px;
-  background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
-  border-radius: 12px;
+  min-height: 420px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   margin-bottom: 1rem;
   overflow: hidden;
+  border: 2px solid var(--lab-border);
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.4),
+    0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#bg-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 6px;
 }
 
 .elements-zone {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.8rem;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.3);
   min-height: 120px;
+  border-bottom: 1px solid var(--lab-border);
+  backdrop-filter: blur(5px);
 }
 
 .element {
   width: 60px;
   height: 60px;
-  background: linear-gradient(145deg, #34495e, #2c3e50);
+  background: linear-gradient(145deg, var(--lab-panel), var(--lab-base));
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   cursor: grab;
-  border: 2px solid #7f8c8d;
-  transition: transform 0.2s, box-shadow 0.2s;
+  border: 2px solid var(--lab-border);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
   user-select: none;
 }
 
 .element:hover {
   transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(155, 89, 182, 0.5);
+  box-shadow: 0 0 20px var(--bubble-glow);
 }
 
 .element:active {
@@ -125,29 +220,45 @@ body {
 }
 
 .element-name {
-  font-size: 0.6rem;
-  color: #bdc3c7;
+  font-size: 0.55rem;
+  color: #95a5a6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .element[data-type="nonmetal"] {
-  border-color: #27ae60;
+  border-color: var(--acid-green);
+}
+
+.element[data-type="nonmetal"]:hover {
+  box-shadow: 0 0 20px rgba(39, 174, 96, 0.4);
 }
 
 .element[data-type="metal"] {
-  border-color: #3498db;
+  border-color: var(--base-blue);
+}
+
+.element[data-type="metal"]:hover {
+  box-shadow: 0 0 20px rgba(52, 152, 219, 0.4);
 }
 
 .element[data-type="noble"] {
-  border-color: #9b59b6;
+  border-color: var(--noble-purple);
+}
+
+.element[data-type="noble"]:hover {
+  box-shadow: 0 0 20px rgba(155, 89, 182, 0.4);
 }
 
 .reaction-zone {
+  position: relative;
+  z-index: 1;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 1.5rem;
 }
 
 .flask {
@@ -155,8 +266,14 @@ body {
   height: 160px;
   position: relative;
   margin-bottom: 1rem;
+  transition: transform 0.3s;
 }
 
+.flask:hover {
+  transform: scale(1.02);
+}
+
+/* Flask neck */
 .flask::before {
   content: "";
   position: absolute;
@@ -164,10 +281,16 @@ body {
   left: 35%;
   width: 30%;
   height: 30px;
-  background: linear-gradient(180deg, #7f8c8d, #95a5a6);
+  background: linear-gradient(180deg, #5a6a7a, #7f8c9a);
   border-radius: 4px 4px 0 0;
+  border: 2px solid #8a9aaa;
+  border-bottom: none;
+  box-shadow:
+    inset 3px 0 5px rgba(255, 255, 255, 0.2),
+    inset -3px 0 5px rgba(0, 0, 0, 0.2);
 }
 
+/* Flask body */
 .flask::after {
   content: "";
   position: absolute;
@@ -175,9 +298,13 @@ body {
   left: 10%;
   width: 80%;
   height: 130px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 3px solid #7f8c8d;
+  background: rgba(255, 255, 255, 0.08);
+  border: 3px solid rgba(127, 140, 154, 0.8);
   border-radius: 0 0 40% 40%;
+  box-shadow:
+    inset 5px 0 10px rgba(255, 255, 255, 0.1),
+    inset -5px 0 10px rgba(0, 0, 0, 0.1),
+    0 5px 20px rgba(0, 0, 0, 0.3);
 }
 
 .flask-liquid {
@@ -186,15 +313,34 @@ body {
   left: 10%;
   width: 80%;
   height: 0%;
-  background: linear-gradient(180deg, rgba(52, 152, 219, 0.6), rgba(41, 128, 185, 0.8));
+  background: linear-gradient(180deg, rgba(52, 152, 219, 0.6), rgba(41, 128, 185, 0.85));
   border-radius: 0 0 40% 40%;
-  transition: height 0.3s, background 0.3s;
+  transition: height 0.3s ease-out, background 0.3s;
   z-index: 1;
+  overflow: hidden;
+}
+
+/* Bubbles in liquid */
+.flask-liquid::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(circle at 30% 80%, rgba(255, 255, 255, 0.3) 2px, transparent 2px),
+    radial-gradient(circle at 60% 60%, rgba(255, 255, 255, 0.2) 3px, transparent 3px),
+    radial-gradient(circle at 80% 90%, rgba(255, 255, 255, 0.25) 2px, transparent 2px);
+  animation: bubbles-rise 2s ease-in-out infinite;
+}
+
+@keyframes bubbles-rise {
+  0%, 100% { transform: translateY(0); opacity: 0.8; }
+  50% { transform: translateY(-10px); opacity: 1; }
 }
 
 .flask-content {
   position: absolute;
-  bottom: 40px;
+  bottom: 45px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -206,23 +352,27 @@ body {
 }
 
 .flask-element {
-  width: 30px;
-  height: 30px;
-  background: rgba(255, 255, 255, 0.9);
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  font-size: 0.8rem;
-  color: #2c3e50;
-  animation: bubble 0.5s ease-out;
+  font-size: 0.75rem;
+  color: var(--lab-dark);
+  animation: element-drop 0.4s ease-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-@keyframes bubble {
+@keyframes element-drop {
   0% {
-    transform: scale(0) translateY(20px);
+    transform: scale(0) translateY(-30px);
     opacity: 0;
+  }
+  60% {
+    transform: scale(1.2) translateY(5px);
   }
   100% {
     transform: scale(1) translateY(0);
@@ -231,11 +381,12 @@ body {
 }
 
 #result-display {
-  font-size: 1.5rem;
-  color: #f1c40f;
+  font-size: 1.6rem;
+  color: var(--gold-result);
   font-weight: bold;
   min-height: 2rem;
-  font-family: "Courier New", monospace;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 15px rgba(241, 196, 15, 0.5);
 }
 
 .overlay {
@@ -244,12 +395,13 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.9);
+  background: radial-gradient(ellipse at center, rgba(10, 13, 21, 0.95) 0%, rgba(16, 24, 40, 0.98) 100%);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 100;
-  border-radius: 12px;
+  border-radius: 6px;
+  backdrop-filter: blur(5px);
 }
 
 .overlay-content {
@@ -261,26 +413,37 @@ body {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #9b59b6;
+  color: var(--noble-purple);
+  text-shadow: 0 0 20px rgba(155, 89, 182, 0.5);
+  letter-spacing: 2px;
+  font-weight: 700;
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
   color: #bdc3c7;
+  font-size: 1rem;
+  font-family: 'Courier New', monospace;
 }
 
 .controls-hint {
   margin-top: 1rem;
   color: #7f8c8d;
+  font-style: italic;
+  font-size: 0.9rem;
 }
 
 .btn {
-  padding: 0.75rem 2rem;
+  padding: 0.85rem 2rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 1rem;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.3s;
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .btn:hover {
@@ -288,19 +451,44 @@ body {
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+  background: linear-gradient(135deg, var(--noble-purple) 0%, #8e44ad 100%);
   color: white;
-  font-weight: bold;
+  border: 2px solid #a569bd;
+  box-shadow:
+    0 4px 15px rgba(155, 89, 182, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 6px 25px rgba(155, 89, 182, 0.5),
+    0 0 20px rgba(155, 89, 182, 0.3);
 }
 
 .btn.success {
-  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  background: linear-gradient(135deg, var(--acid-green) 0%, #219a52 100%);
   color: white;
+  border: 2px solid #2ecc71;
+  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+}
+
+.btn.success:hover {
+  box-shadow:
+    0 6px 25px rgba(39, 174, 96, 0.4),
+    0 0 20px rgba(46, 204, 113, 0.3);
 }
 
 .btn.warning {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  background: linear-gradient(135deg, var(--warning-red) 0%, #c0392b 100%);
   color: white;
+  border: 2px solid #e74c3c;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+.btn.warning:hover {
+  box-shadow:
+    0 6px 25px rgba(231, 76, 60, 0.4),
+    0 0 20px rgba(231, 76, 60, 0.3);
 }
 
 .footer-controls {
@@ -310,20 +498,25 @@ body {
 }
 
 .reaction-animation {
-  animation: react 0.5s ease-in-out;
+  animation: react-shake 0.5s ease-in-out;
 }
 
-@keyframes react {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+@keyframes react-shake {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.05) rotate(-2deg); }
+  50% { transform: scale(1.1) rotate(0deg); }
+  75% { transform: scale(1.05) rotate(2deg); }
 }
 
 @media (max-width: 500px) {
+  .game-container {
+    padding: 1rem;
+  }
+
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
   .element {
     width: 50px;
     height: 50px;
@@ -331,5 +524,32 @@ body {
 
   .element-symbol {
     font-size: 1.2rem;
+  }
+
+  .element-name {
+    font-size: 0.5rem;
+  }
+
+  .flask {
+    width: 100px;
+    height: 140px;
+  }
+
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .overlay-title {
+    font-size: 1.6rem;
+  }
+
+  .btn {
+    padding: 0.7rem 1.5rem;
+    font-size: 0.9rem;
   }
 }

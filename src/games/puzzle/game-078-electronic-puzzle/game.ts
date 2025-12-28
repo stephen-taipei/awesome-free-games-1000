@@ -1,6 +1,7 @@
 /**
  * Electronic Puzzle Game Engine
  * Game #078 - Connect circuit components to power the LED
+ * WebGPU Enhanced
  */
 
 type Direction = "up" | "right" | "down" | "left";
@@ -18,6 +19,16 @@ interface Level {
   grid: string[][];
   batteryPos: { x: number; y: number };
   ledPos: { x: number; y: number };
+}
+
+interface GameState {
+  level: number;
+  maxLevel: number;
+  powered: boolean;
+  status: string;
+  event?: string;
+  x?: number;
+  y?: number;
 }
 
 // Component connection definitions (which sides connect when rotation=0)
@@ -97,9 +108,10 @@ export class ElectronicGame {
 
   currentLevel: number = 0;
   isPowered: boolean = false;
+  wasPowered: boolean = false;
   status: "playing" | "won" = "playing";
 
-  onStateChange: ((state: any) => void) | null = null;
+  onStateChange: ((state: GameState) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -133,8 +145,10 @@ export class ElectronicGame {
     }
 
     this.status = "playing";
+    this.isPowered = false;
+    this.wasPowered = false;
     this.checkCircuit();
-    this.notifyState();
+    this.notifyState({ event: "levelStart" });
   }
 
   private getRandomRotation(type: ComponentType): number {
@@ -151,6 +165,13 @@ export class ElectronicGame {
     }
   };
 
+  private getScreenCoords(gridX: number, gridY: number): { x: number; y: number } {
+    return {
+      x: gridX * this.cellSize + this.cellSize / 2,
+      y: gridY * this.cellSize + this.cellSize / 2,
+    };
+  }
+
   public handleClick(x: number, y: number) {
     if (this.status !== "playing") return;
 
@@ -164,8 +185,35 @@ export class ElectronicGame {
     const component = this.grid[cellY][cellX];
     if (component.type !== "battery" && component.type !== "led" && component.type !== "empty") {
       component.rotation = (component.rotation + 90) % 360;
+
+      const coords = this.getScreenCoords(cellX, cellY);
+      this.notifyState({ event: "rotate", x: coords.x, y: coords.y });
+
       this.checkCircuit();
-      this.notifyState();
+
+      // Check for new connections
+      const connections = this.getRotatedConnections(component);
+      let hasNewConnection = false;
+      for (const dir of connections) {
+        const neighbor = this.getNeighbor(cellX, cellY, dir);
+        if (neighbor) {
+          const neighborComp = this.grid[neighbor.y][neighbor.x];
+          if (neighborComp.type !== "empty") {
+            const oppositeDir = this.getOppositeDirection(dir);
+            const neighborConnections = this.getRotatedConnections(neighborComp);
+            if (neighborConnections.includes(oppositeDir)) {
+              hasNewConnection = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (hasNewConnection && component.powered) {
+        this.notifyState({ event: "connection", x: coords.x, y: coords.y });
+      }
+
+      this.notifyState({});
     }
   }
 
@@ -229,12 +277,26 @@ export class ElectronicGame {
     }
 
     // Check if LED is powered
+    this.wasPowered = this.isPowered;
     this.isPowered = false;
+
     for (let y = 0; y < this.gridHeight; y++) {
       for (let x = 0; x < this.gridWidth; x++) {
         if (this.grid[y][x].type === "led" && this.grid[y][x].powered) {
           this.isPowered = true;
+
+          // Emit power on event when LED just got powered
+          if (!this.wasPowered) {
+            const coords = this.getScreenCoords(x, y);
+            this.notifyState({ event: "powerOn", x: coords.x, y: coords.y });
+          }
+
           this.status = "won";
+
+          // Emit circuit complete / victory
+          const coords = this.getScreenCoords(x, y);
+          this.notifyState({ event: "circuitComplete", x: coords.x, y: coords.y });
+          this.notifyState({ event: "victory" });
         }
       }
     }
@@ -452,21 +514,23 @@ export class ElectronicGame {
   }
 
   public reset() {
+    this.notifyState({ event: "reset" });
     this.loadLevel(this.currentLevel);
     this.loop();
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 
-  private notifyState() {
+  private notifyState(extra: Partial<GameState>) {
     if (this.onStateChange) {
       this.onStateChange({
         level: this.currentLevel + 1,
         maxLevel: LEVELS.length,
         powered: this.isPowered,
         status: this.status,
+        ...extra,
       });
     }
   }

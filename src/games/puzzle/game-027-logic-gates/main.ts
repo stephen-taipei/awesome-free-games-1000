@@ -1,10 +1,98 @@
 /**
  * Logic Gates Main Entry
+ * Digital Circuit Theme
  * Game #027
  */
 import { LogicGame, type Gate, type Wire } from "./game";
 import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
+import { WebGPURenderer } from "./webgpu";
+
+// Audio System - Synthesized sounds
+class AudioSystem {
+  private ctx: AudioContext | null = null;
+  private initialized = false;
+
+  private init() {
+    if (this.initialized) return;
+    this.ctx = new AudioContext();
+    this.initialized = true;
+  }
+
+  private playTone(freq: number, duration: number, type: OscillatorType = 'sine', volume = 0.3) {
+    this.init();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  }
+
+  playConnect() {
+    this.init();
+    if (!this.ctx) return;
+    // Connection click
+    this.playTone(800, 0.05, 'sine', 0.15);
+    setTimeout(() => this.playTone(1000, 0.05, 'sine', 0.1), 30);
+  }
+
+  playSignalHigh() {
+    this.init();
+    if (!this.ctx) return;
+    // Signal goes high
+    this.playTone(600, 0.08, 'sine', 0.12);
+    setTimeout(() => this.playTone(800, 0.06, 'triangle', 0.1), 40);
+  }
+
+  playSignalLow() {
+    this.init();
+    if (!this.ctx) return;
+    // Signal goes low
+    this.playTone(400, 0.06, 'sine', 0.08);
+  }
+
+  playWin() {
+    this.init();
+    if (!this.ctx) return;
+    // Circuit complete
+    const notes = [500, 600, 700, 800, 1000, 1200];
+    notes.forEach((f, i) => {
+      setTimeout(() => this.playTone(f, 0.2, 'sine', 0.15), i * 80);
+    });
+    setTimeout(() => {
+      this.playTone(800, 0.4, 'triangle', 0.12);
+      this.playTone(1000, 0.4, 'triangle', 0.12);
+    }, 500);
+  }
+
+  playStart() {
+    this.init();
+    if (!this.ctx) return;
+    // Circuit boot
+    this.playTone(300, 0.1, 'sine', 0.1);
+    setTimeout(() => this.playTone(400, 0.1, 'sine', 0.12), 80);
+    setTimeout(() => this.playTone(600, 0.15, 'triangle', 0.15), 160);
+  }
+
+  playDrag() {
+    this.init();
+    if (!this.ctx) return;
+    this.playTone(200, 0.03, 'sine', 0.05);
+  }
+}
+
+const audio = new AudioSystem();
 
 // Elements
 const svgContainer = document.getElementById("svg-container")!;
@@ -21,6 +109,52 @@ const checkBtn = document.getElementById("check-btn")!;
 // Namespaces
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+// WebGPU Setup
+let webgpuRenderer: WebGPURenderer | null = null;
+let webgpuCanvas: HTMLCanvasElement | null = null;
+let useWebGPU = false;
+
+async function initWebGPU() {
+  webgpuCanvas = document.createElement('canvas');
+  webgpuCanvas.className = 'webgpu-overlay';
+  webgpuCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;border-radius:8px 8px 0 0;';
+  svgContainer.insertBefore(webgpuCanvas, svgContainer.firstChild);
+
+  const rect = svgContainer.getBoundingClientRect();
+  webgpuCanvas.width = rect.width * window.devicePixelRatio;
+  webgpuCanvas.height = rect.height * window.devicePixelRatio;
+
+  webgpuRenderer = new WebGPURenderer(webgpuCanvas);
+  useWebGPU = await webgpuRenderer.init();
+
+  if (useWebGPU) {
+    startWebGPULoop();
+  }
+}
+
+function startWebGPULoop() {
+  if (!webgpuRenderer || !useWebGPU) return;
+
+  let lastTime = 0;
+  function loop(time: number) {
+    if (!webgpuRenderer || !useWebGPU) return;
+
+    const deltaTime = lastTime ? time - lastTime : 16;
+    lastTime = time;
+
+    webgpuRenderer.render(deltaTime);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+function resizeWebGPU() {
+  if (!webgpuCanvas) return;
+  const rect = svgContainer.getBoundingClientRect();
+  webgpuCanvas.width = rect.width * window.devicePixelRatio;
+  webgpuCanvas.height = rect.height * window.devicePixelRatio;
+}
+
 let game: LogicGame;
 let svg: SVGSVGElement;
 let dragGateId: number | null = null;
@@ -33,6 +167,9 @@ let wiringStart: {
   portIdx: number;
 } | null = null;
 let tempWire: SVGPathElement | null = null;
+
+// Track previous gate states for effects
+let previousGateValues: Map<number, boolean> = new Map();
 
 function initI18n() {
   Object.entries(translations).forEach(([locale, trans]) => {
@@ -86,15 +223,46 @@ function initGame() {
     const rect = svgContainer.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    if (type) game.addGate(type, x, y);
+    if (type) {
+      game.addGate(type, x, y);
+      audio.playDrag();
+    }
   });
 
   game.setOnStateChange((state: any) => {
     render(state);
+    updateWebGPUEffects(state);
 
     if (state.status === "won") {
       showWin();
     }
+  });
+
+  window.addEventListener("resize", resizeWebGPU);
+}
+
+function updateWebGPUEffects(state: any) {
+  if (!webgpuRenderer || !useWebGPU) return;
+
+  const containerRect = svgContainer.getBoundingClientRect();
+
+  // Check for gate value changes
+  state.gates.forEach((g: Gate) => {
+    const prevValue = previousGateValues.get(g.id);
+    if (prevValue !== undefined && prevValue !== g.value) {
+      // Gate value changed
+      const normalizedX = g.x / containerRect.width;
+      const normalizedY = g.y / containerRect.height;
+
+      webgpuRenderer.emitGateActivation(normalizedX, normalizedY, g.value);
+
+      if (g.value) {
+        audio.playSignalHigh();
+      } else {
+        audio.playSignalLow();
+      }
+    }
+    previousGateValues.set(g.id, g.value);
   });
 }
 
@@ -141,7 +309,7 @@ function render(state: any) {
       e.stopPropagation(); // prevent wire cancel
       dragGateId = g.id;
       dragOffset = { x: 0, y: 0 }; // relative?
-      // Actually offset from mouse logic usually needed
+      audio.playDrag();
     });
 
     // Draw Body based on Type
@@ -162,7 +330,9 @@ function renderGateBody(group: SVGGElement, g: Gate) {
     rect.setAttribute("rx", "5");
 
     // Click to toggle
-    rect.addEventListener("click", () => game.toggleInput(g.id));
+    rect.addEventListener("click", () => {
+      game.toggleInput(g.id);
+    });
 
     group.appendChild(rect);
 
@@ -193,7 +363,6 @@ function renderGateBody(group: SVGGElement, g: Gate) {
     // Logic Gates
     const path = document.createElementNS(SVG_NS, "path");
     let d = "";
-    let fill = "#ecf0f1";
 
     if (g.type === "AND") {
       // D-shape
@@ -204,8 +373,6 @@ function renderGateBody(group: SVGGElement, g: Gate) {
     } else if (g.type === "NOT") {
       // Triangle
       d = "M-20,-15 L10,0 L-20,15 Z";
-      // Circle tip handled separately or included
-      // Let's add circle at tip
     }
 
     path.setAttribute("d", d);
@@ -231,7 +398,7 @@ function renderGateBody(group: SVGGElement, g: Gate) {
     // Ports
     if (g.type === "NOT") {
       createPort(group, g.id, -20, 0, "input", 0);
-      createPort(group, g.id, 20, 0, "output", 0); // Tip of triangle + circle
+      createPort(group, g.id, 20, 0, "output", 0);
     } else {
       createPort(group, g.id, -20, -10, "input", 0);
       createPort(group, g.id, -20, 10, "input", 1);
@@ -259,13 +426,6 @@ function createPort(
     wiringStart = { gateId: gId, type, portIdx: idx };
     tempWire = document.createElementNS(SVG_NS, "path");
     tempWire.setAttribute("class", "wire");
-    // Start pos
-    const p = getPortPos(
-      { x: 0, y: 0, type: "AND", id: 0, inputs: [], outputs: [], value: false },
-      type,
-      0
-    ); // dummy for offset
-    // Wait, better to store start coords
   });
 
   // Handle Drop (MouseUp)
@@ -275,8 +435,31 @@ function createPort(
       // Validate Connection: Output -> Input
       if (wiringStart.type === "output" && type === "input") {
         game.addWire(wiringStart.gateId, gId, idx);
+        audio.playConnect();
+
+        // Emit connection effect
+        if (webgpuRenderer && useWebGPU) {
+          const containerRect = svgContainer.getBoundingClientRect();
+          const gate = (game as any).gates.find((g: Gate) => g.id === gId);
+          if (gate) {
+            const normalizedX = gate.x / containerRect.width;
+            const normalizedY = gate.y / containerRect.height;
+            webgpuRenderer.emitConnection(normalizedX, normalizedY);
+          }
+        }
       } else if (wiringStart.type === "input" && type === "output") {
         game.addWire(gId, wiringStart.gateId, wiringStart.portIdx);
+        audio.playConnect();
+
+        if (webgpuRenderer && useWebGPU) {
+          const containerRect = svgContainer.getBoundingClientRect();
+          const gate = (game as any).gates.find((g: Gate) => g.id === wiringStart!.gateId);
+          if (gate) {
+            const normalizedX = gate.x / containerRect.width;
+            const normalizedY = gate.y / containerRect.height;
+            webgpuRenderer.emitConnection(normalizedX, normalizedY);
+          }
+        }
       }
       wiringStart = null;
       if (tempWire) tempWire.remove();
@@ -288,8 +471,6 @@ function createPort(
 }
 
 function getPortPos(g: Gate, type: "input" | "output", idx: number) {
-  // Basic offsets from gate center (x,y)
-  // Matches renderGateBody
   let dx = 0,
     dy = 0;
 
@@ -312,7 +493,6 @@ function getPortPos(g: Gate, type: "input" | "output", idx: number) {
 }
 
 function getWirePath(x1: number, y1: number, x2: number, y2: number) {
-  // Benzier
   const cx1 = x1 + 50;
   const cx2 = x2 - 50;
   return `M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}`;
@@ -324,13 +504,10 @@ function onSvgMouseMove(e: MouseEvent) {
   const my = e.clientY - rect.top;
 
   if (dragGateId) {
-    // Update gate pos
-    // Snap?
     game.moveGate(dragGateId, mx, my);
   }
 
   if (wiringStart && tempWire) {
-    // Draw from start to mouse
     const startG = (game as any).gates.find(
       (g: Gate) => g.id === wiringStart!.gateId
     );
@@ -356,6 +533,13 @@ function onSvgMouseUp(e: MouseEvent) {
 }
 
 function showWin() {
+  audio.playWin();
+
+  if (webgpuRenderer && useWebGPU) {
+    webgpuRenderer.emitComplete(0.5, 0.5);
+    webgpuRenderer.setVictory(1.0);
+  }
+
   setTimeout(() => {
     overlay.style.display = "flex";
     overlayTitle.textContent = i18n.t("game.win");
@@ -370,7 +554,15 @@ function showWin() {
 
 function startGame() {
   overlay.style.display = "none";
+  previousGateValues.clear();
+
+  if (webgpuRenderer) {
+    webgpuRenderer.clearParticles();
+    webgpuRenderer.setVictory(0);
+  }
+
   game.start();
+  audio.playStart();
 }
 
 startBtn.addEventListener("click", startGame);
@@ -380,3 +572,4 @@ checkBtn.addEventListener("click", () => game.check());
 // Init
 initI18n();
 initGame();
+initWebGPU();

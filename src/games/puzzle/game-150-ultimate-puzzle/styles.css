@@ -1,3 +1,25 @@
+/**
+ * Ultimate Puzzle Styles
+ * Ultimate / Prismatic / Rainbow Theme
+ * Game #150 (Milestone!)
+ */
+
+:root {
+  --cosmic-dark: #1a1f2e;
+  --cosmic-deep: #0d1117;
+  --prismatic-gold: #ffd700;
+  --prismatic-silver: #c0c0c8;
+  --rainbow-red: #ff4757;
+  --rainbow-orange: #ffa502;
+  --rainbow-yellow: #ffd93d;
+  --rainbow-green: #2ecc71;
+  --rainbow-cyan: #00d2d3;
+  --rainbow-blue: #3498db;
+  --rainbow-purple: #9b59b6;
+  --rainbow-pink: #ff6b81;
+  --glow-white: rgba(255, 255, 255, 0.9);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,19 +27,79 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, sans-serif;
-  background: linear-gradient(135deg, #2d3436 0%, #636e72 50%, #b2bec3 100%);
+  font-family: 'Orbitron', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, var(--cosmic-deep) 0%, var(--cosmic-dark) 50%, #2d1f3d 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated rainbow gradient background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(45deg,
+      rgba(255, 71, 87, 0.03) 0%,
+      rgba(255, 165, 2, 0.03) 16%,
+      rgba(255, 217, 61, 0.03) 32%,
+      rgba(46, 204, 113, 0.03) 48%,
+      rgba(0, 210, 211, 0.03) 64%,
+      rgba(52, 152, 219, 0.03) 80%,
+      rgba(155, 89, 182, 0.03) 100%
+    );
+  background-size: 400% 400%;
+  animation: rainbowShift 15s ease infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes rainbowShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Prismatic light rays */
+body::after {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.02) 10deg,
+    transparent 20deg,
+    rgba(255, 215, 0, 0.02) 30deg,
+    transparent 40deg,
+    rgba(255, 255, 255, 0.02) 50deg,
+    transparent 60deg
+  );
+  animation: prismaticSpin 30s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes prismaticSpin {
+  from { transform: translateX(-50%) rotate(0deg); }
+  to { transform: translateX(-50%) rotate(360deg); }
 }
 
 .game-container {
   max-width: 600px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .game-header {
@@ -30,65 +112,197 @@ body {
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: bold;
+  background: linear-gradient(
+    90deg,
+    var(--rainbow-red) 0%,
+    var(--rainbow-orange) 14%,
+    var(--rainbow-yellow) 28%,
+    var(--rainbow-green) 42%,
+    var(--rainbow-cyan) 56%,
+    var(--rainbow-blue) 70%,
+    var(--rainbow-purple) 84%,
+    var(--rainbow-pink) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textRainbow 5s linear infinite;
+  text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+
+@keyframes textRainbow {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
 }
 
 .header-controls select {
   padding: 0.5rem;
-  border-radius: 4px;
-  border: none;
-  background: white;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  background: rgba(26, 31, 46, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: white;
   cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  background: rgba(45, 31, 61, 0.9);
+  border-color: var(--prismatic-gold);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
 }
 
 .game-controls {
   display: flex;
   justify-content: center;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
 }
 
 .stats-card {
-  background: white;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(26, 31, 46, 0.9) 0%, rgba(45, 31, 61, 0.9) 100%);
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 215, 0, 0.1),
+    0 0 20px rgba(255, 215, 0, 0.05);
+  color: white;
   display: flex;
   gap: 0.5rem;
-  color: #2d3436;
+  align-items: center;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 215, 0, 0.2),
+    0 0 25px rgba(255, 215, 0, 0.1);
+}
+
+.stats-card span:first-child {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+}
+
+.stats-card span:last-child {
+  background: linear-gradient(135deg, var(--prismatic-gold) 0%, var(--rainbow-orange) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 1rem;
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 400px;
-  background: linear-gradient(180deg, #1e272e 0%, #2d3436 100%);
+  background: linear-gradient(180deg, var(--cosmic-dark) 0%, var(--cosmic-deep) 100%);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 50px rgba(0, 0, 0, 0.5),
+    inset 0 0 30px rgba(255, 215, 0, 0.02),
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 1px 1px rgba(255, 215, 0, 0.1);
+  border: 2px solid transparent;
+  background-clip: padding-box;
   margin-bottom: 1rem;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
 }
 
-canvas {
+/* Rainbow border animation */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    90deg,
+    var(--rainbow-red),
+    var(--rainbow-orange),
+    var(--rainbow-yellow),
+    var(--rainbow-green),
+    var(--rainbow-cyan),
+    var(--rainbow-blue),
+    var(--rainbow-purple),
+    var(--rainbow-pink),
+    var(--rainbow-red)
+  );
+  background-size: 300% 100%;
+  border-radius: 18px;
+  z-index: -1;
+  animation: borderRainbow 8s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes borderRainbow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 14px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
   width: 100%;
   height: 100%;
   cursor: pointer;
+  border-radius: 14px;
 }
 
 .overlay {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(108, 92, 231, 0.95) 0%, rgba(0, 206, 201, 0.95) 100%);
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(13, 17, 23, 0.95) 0%,
+    rgba(26, 31, 46, 0.98) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
-  border-radius: 16px;
+  border-radius: 14px;
 }
 
 .overlay-content {
@@ -100,46 +314,144 @@ canvas {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(
+    90deg,
+    var(--rainbow-red),
+    var(--rainbow-orange),
+    var(--rainbow-yellow),
+    var(--rainbow-green),
+    var(--rainbow-cyan),
+    var(--rainbow-blue),
+    var(--rainbow-purple)
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textRainbow 3s linear infinite;
+  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.4));
 }
 
 .overlay-msg {
+  font-size: 1rem;
   margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: var(--prismatic-gold);
+  font-size: 0.85rem;
   opacity: 0.9;
 }
 
 .btn {
   padding: 0.75rem 2rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
-  font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  font-family: inherit;
+  margin: 0.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #fdcb6e 0%, #f39c12 100%);
-  color: #2d3436;
+  background: linear-gradient(
+    90deg,
+    var(--rainbow-orange),
+    var(--rainbow-yellow),
+    var(--rainbow-green)
+  );
+  background-size: 200% auto;
+  color: var(--cosmic-dark);
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+  animation: btnRainbow 3s linear infinite;
+}
+
+@keyframes btnRainbow {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 6px 30px rgba(255, 215, 0, 0.6),
+    0 0 20px rgba(255, 165, 2, 0.3);
 }
 
 .btn.warning {
-  background: #d63031;
-  color: white;
+  background: linear-gradient(135deg, var(--cosmic-dark) 0%, #2d1f3d 100%);
+  color: var(--prismatic-silver);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 215, 0, 0.2);
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  opacity: 0.7;
+.btn.warning:hover {
+  box-shadow: 0 6px 25px rgba(255, 215, 0, 0.2);
+  border-color: var(--prismatic-gold);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+/* Star particles animation */
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    gap: 0.3rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .game-controls {
+    gap: 0.4rem;
+  }
 }
