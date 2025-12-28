@@ -22,6 +22,15 @@ interface GameState {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  shoot: { x: number; y: number }[];
+  bubblePop: { x: number; y: number; points: number }[];
+  enemyReach: { x: number; y: number }[];
+  waveComplete: { wave: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; score: number }[];
+}
+
 const COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD"];
 
 export class BubbleBattleGame {
@@ -47,9 +56,29 @@ export class BubbleBattleGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  public pendingEvents: PendingEvents = {
+    shoot: [],
+    bubblePop: [],
+    enemyReach: [],
+    waveComplete: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      shoot: [],
+      bubblePop: [],
+      enemyReach: [],
+      waveComplete: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(callback: StateChangeCallback) {
@@ -119,6 +148,7 @@ export class BubbleBattleGame {
 
   start() {
     this.isPlaying = true;
+    this.pendingEvents.start = true;
     this.init();
     this.gameLoop();
   }
@@ -160,6 +190,7 @@ export class BubbleBattleGame {
       color: "#00CED1",
       isEnemy: false,
     });
+    this.pendingEvents.shoot.push({ x: this.playerX, y: this.playerY });
   }
 
   private gameLoop() {
@@ -199,9 +230,11 @@ export class BubbleBattleGame {
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < bubble.radius + enemy.radius) {
+          const points = Math.floor(enemy.radius);
           this.playerBubbles.splice(i, 1);
           this.enemyBubbles.splice(j, 1);
-          this.score += Math.floor(enemy.radius);
+          this.score += points;
+          this.pendingEvents.bubblePop.push({ x: enemy.x, y: enemy.y, points });
           this.emitState();
           break;
         }
@@ -228,10 +261,12 @@ export class BubbleBattleGame {
         bubble.vy *= -1;
         bubble.y = this.height - 60 - bubble.radius;
         this.lives--;
+        this.pendingEvents.enemyReach.push({ x: bubble.x, y: bubble.y });
         this.emitState();
 
         if (this.lives <= 0) {
           this.isPlaying = false;
+          this.pendingEvents.gameOver.push({ x: this.width / 2, y: this.height / 2, score: this.score });
           return;
         }
       }
@@ -239,6 +274,7 @@ export class BubbleBattleGame {
 
     // Check wave complete
     if (this.enemyBubbles.length === 0 && this.isPlaying) {
+      this.pendingEvents.waveComplete.push({ wave: this.wave });
       this.wave++;
       this.spawnWave();
       this.emitState();
