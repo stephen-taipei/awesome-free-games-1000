@@ -36,6 +36,14 @@ export interface GameState {
   falls: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  jump: { power: number }[];
+  land: { platformType: string }[];
+  fall: { falls: number }[];
+  victory: { falls: number; maxHeight: number }[];
+}
+
 const GRAVITY = 0.5;
 const MAX_CHARGE = 60;
 const MAX_JUMP_POWER = 18;
@@ -46,6 +54,24 @@ export class JumpKingGame {
   onStateChange: ((state: GameState) => void) | null = null;
   private canvasWidth: number = 400;
   private canvasHeight: number = 500;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    jump: [],
+    land: [],
+    fall: [],
+    victory: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      jump: [],
+      land: [],
+      fall: [],
+      victory: [],
+    };
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -85,6 +111,7 @@ export class JumpKingGame {
     this.state.phase = "playing";
     this.generatePlatforms();
     this.state.player.y = this.canvasHeight - 100;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -159,6 +186,7 @@ export class JumpKingGame {
     player.isCharging = false;
     player.isGrounded = false;
     player.chargeTime = 0;
+    this.pendingEvents.jump.push({ power: jumpPower });
 
     this.emitState();
   }
@@ -206,6 +234,7 @@ export class JumpKingGame {
           player.y = platformScreenY - player.height;
           player.vy = 0;
           player.isGrounded = true;
+          this.pendingEvents.land.push({ platformType: platform.type });
 
           if (platform.type === "ice") {
             player.vx *= 0.98;
@@ -265,12 +294,14 @@ export class JumpKingGame {
     // Check fall
     if (player.y > this.canvasHeight + 100) {
       this.state.falls++;
+      this.pendingEvents.fall.push({ falls: this.state.falls });
       this.resetToLastPlatform();
     }
 
     // Check victory
     if (this.state.currentHeight >= this.state.targetHeight) {
       this.state.phase = "victory";
+      this.pendingEvents.victory.push({ falls: this.state.falls, maxHeight: this.state.maxHeight });
     }
 
     this.emitState();

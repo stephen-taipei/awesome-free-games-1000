@@ -27,6 +27,13 @@ export interface GameState {
   colors: string[];
 }
 
+export interface PendingEvents {
+  start: boolean;
+  colorChange: { color: number }[];
+  gatePassed: { score: number }[];
+  gameOver: { score: number; highScore: number }[];
+}
+
 const COLORS = ["#ff6b6b", "#4ecdc4", "#ffe66d", "#a55eea"];
 const INITIAL_SPEED = 3;
 const MAX_SPEED = 8;
@@ -37,6 +44,22 @@ export class ColorDashGame {
   private canvasWidth: number = 400;
   private canvasHeight: number = 500;
   private gateTimer: number = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    colorChange: [],
+    gatePassed: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      colorChange: [],
+      gatePassed: [],
+      gameOver: [],
+    };
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -76,12 +99,14 @@ export class ColorDashGame {
     this.state.player.x = this.canvasWidth / 2 - 20;
     this.state.player.y = this.canvasHeight - 100;
     this.gateTimer = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
   public changeColor(): void {
     if (this.state.phase !== "playing") return;
     this.state.player.color = (this.state.player.color + 1) % COLORS.length;
+    this.pendingEvents.colorChange.push({ color: this.state.player.color });
     this.emitState();
   }
 
@@ -135,6 +160,7 @@ export class ColorDashGame {
 
         gate.passed = true;
         this.state.score++;
+        this.pendingEvents.gatePassed.push({ score: this.state.score });
       }
     }
 
@@ -182,6 +208,7 @@ export class ColorDashGame {
       localStorage.setItem("colorDashHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, highScore: this.state.highScore });
     this.emitState();
   }
 

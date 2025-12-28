@@ -40,6 +40,15 @@ export interface GameState {
   lives: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  shoot: boolean;
+  enemyKilled: { type: string; points: number }[];
+  playerHit: { livesRemaining: number }[];
+  waveUp: { wave: number }[];
+  gameOver: { score: number; highScore: number; wave: number; kills: number }[];
+}
+
 const ARROW_SPEED = 15;
 const MAX_ARROWS = 20;
 
@@ -49,6 +58,26 @@ export class ArrowStormGame {
   private canvasWidth: number = 400;
   private canvasHeight: number = 500;
   private spawnTimer: number = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    shoot: false,
+    enemyKilled: [],
+    playerHit: [],
+    waveUp: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      shoot: false,
+      enemyKilled: [],
+      playerHit: [],
+      waveUp: [],
+      gameOver: [],
+    };
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -90,6 +119,7 @@ export class ArrowStormGame {
     this.state.player.x = this.canvasWidth / 2;
     this.state.player.y = this.canvasHeight - 60;
     this.spawnTimer = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -125,6 +155,7 @@ export class ArrowStormGame {
     this.state.arrows.push(arrow);
     player.arrows--;
     player.cooldown = 10;
+    this.pendingEvents.shoot = true;
 
     this.emitState();
   }
@@ -177,6 +208,7 @@ export class ArrowStormGame {
       if (dist < enemy.radius + 30) {
         this.state.lives--;
         enemy.health = 0;
+        this.pendingEvents.playerHit.push({ livesRemaining: this.state.lives });
 
         if (this.state.lives <= 0) {
           this.gameOver();
@@ -202,7 +234,9 @@ export class ArrowStormGame {
 
           if (enemy.health <= 0) {
             this.state.kills++;
-            this.state.score += enemy.type === "tank" ? 30 : enemy.type === "fast" ? 20 : 10;
+            const points = enemy.type === "tank" ? 30 : enemy.type === "fast" ? 20 : 10;
+            this.state.score += points;
+            this.pendingEvents.enemyKilled.push({ type: enemy.type, points });
           }
 
           break;
@@ -226,6 +260,7 @@ export class ArrowStormGame {
     // Update wave
     if (this.state.kills >= this.state.wave * 10) {
       this.state.wave++;
+      this.pendingEvents.waveUp.push({ wave: this.state.wave });
     }
 
     this.emitState();
@@ -287,6 +322,7 @@ export class ArrowStormGame {
       localStorage.setItem("arrowStormHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, highScore: this.state.highScore, wave: this.state.wave, kills: this.state.kills });
     this.emitState();
   }
 
