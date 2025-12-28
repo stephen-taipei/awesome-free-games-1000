@@ -38,6 +38,16 @@ interface Particle {
   color: string;
 }
 
+export interface PendingEvents {
+  brickHit: { x: number; y: number; color: string }[];
+  brickBreak: { x: number; y: number; color: string }[];
+  paddleHit: { x: number; y: number }[];
+  ballLost: { x: number; y: number; livesLeft: number }[];
+  levelUp: { level: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; won: boolean; score: number }[];
+}
+
 export class BouncingBallGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -56,11 +66,33 @@ export class BouncingBallGame {
   private launched: boolean = false;
   onStateChange: ((state: any) => void) | null = null;
 
+  public pendingEvents: PendingEvents = {
+    brickHit: [],
+    brickBreak: [],
+    paddleHit: [],
+    ballLost: [],
+    levelUp: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.paddle = { x: 0, y: 0, width: 100, height: 15 };
     this.ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 10, speed: 6 };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      brickHit: [],
+      brickBreak: [],
+      paddleHit: [],
+      ballLost: [],
+      levelUp: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   public resize() {
@@ -90,6 +122,7 @@ export class BouncingBallGame {
     this.setupBricks();
     this.resetBall();
 
+    this.pendingEvents.start = true;
     this.emitState();
     this.loop();
   }
@@ -184,6 +217,11 @@ export class BouncingBallGame {
     // Bottom - lose life
     if (this.ball.y > this.height + 20) {
       this.lives--;
+      this.pendingEvents.ballLost.push({
+        x: this.ball.x,
+        y: this.height,
+        livesLeft: this.lives,
+      });
       this.emitState();
       if (this.lives <= 0) {
         this.endGame(false);
@@ -208,6 +246,7 @@ export class BouncingBallGame {
       this.ball.vy = -Math.abs(Math.cos(angle) * speed);
       this.ball.y = this.paddle.y - this.ball.radius;
 
+      this.pendingEvents.paddleHit.push({ x: this.ball.x, y: this.ball.y });
       this.addParticles(this.ball.x, this.ball.y, "#00d4ff", 5);
     }
 
@@ -216,11 +255,16 @@ export class BouncingBallGame {
       const brick = this.bricks[i];
       if (this.checkBrickCollision(brick)) {
         brick.hits++;
+        const brickCenterX = brick.x + brick.width / 2;
+        const brickCenterY = brick.y + brick.height / 2;
+
         if (brick.hits >= brick.maxHits) {
-          this.addParticles(brick.x + brick.width / 2, brick.y + brick.height / 2, brick.color, 10);
+          this.pendingEvents.brickBreak.push({ x: brickCenterX, y: brickCenterY, color: brick.color });
+          this.addParticles(brickCenterX, brickCenterY, brick.color, 10);
           this.bricks.splice(i, 1);
           this.score += 10 * brick.maxHits;
         } else {
+          this.pendingEvents.brickHit.push({ x: brickCenterX, y: brickCenterY, color: brick.color });
           this.score += 5;
         }
         this.emitState();
@@ -233,6 +277,7 @@ export class BouncingBallGame {
       if (this.level > 3) {
         this.endGame(true);
       } else {
+        this.pendingEvents.levelUp.push({ level: this.level });
         this.ball.speed += 0.5;
         this.setupBricks();
         this.resetBall();
@@ -295,6 +340,14 @@ export class BouncingBallGame {
   private endGame(won: boolean) {
     this.status = won ? "won" : "over";
     if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    this.pendingEvents.gameOver.push({
+      x: this.width / 2,
+      y: this.height / 2,
+      won,
+      score: this.score,
+    });
+
     this.emitState();
   }
 
