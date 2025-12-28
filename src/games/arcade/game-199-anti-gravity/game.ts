@@ -11,6 +11,15 @@ export interface LevelConfig {
   playerStart: { x: number; y: number };
 }
 
+export interface PendingEvents {
+  gravityFlip: { direction: number }[];
+  coinCollect: { x: number; y: number }[];
+  death: { x: number; y: number; cause: string }[];
+  start: boolean;
+  won: { level: number; coins: number }[];
+  lost: { level: number; coins: number }[];
+}
+
 export class AntiGravityGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -42,6 +51,15 @@ export class AntiGravityGame {
   private onStateChange: ((state: any) => void) | null = null;
   private animationId: number | null = null;
   private frameCount = 0;
+
+  public pendingEvents: PendingEvents = {
+    gravityFlip: [],
+    coinCollect: [],
+    death: [],
+    start: false,
+    won: [],
+    lost: [],
+  };
 
   private levels: LevelConfig[] = [
     // Level 1 - Simple intro
@@ -195,6 +213,17 @@ export class AntiGravityGame {
     this.setupInput();
   }
 
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      gravityFlip: [],
+      coinCollect: [],
+      death: [],
+      start: false,
+      won: [],
+      lost: [],
+    };
+  }
+
   private setupInput() {
     window.addEventListener("keydown", (e) => {
       if (e.key === " " && this.status === "playing") {
@@ -212,12 +241,14 @@ export class AntiGravityGame {
 
   private flipGravity() {
     this.gravityDir *= -1;
+    this.pendingEvents.gravityFlip.push({ direction: this.gravityDir });
   }
 
   public start(level?: number) {
     this.currentLevel = level ?? this.currentLevel;
     this.loadLevel(this.currentLevel);
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -323,6 +354,7 @@ export class AntiGravityGame {
       )) {
         coin.collected = true;
         this.collectedCoins++;
+        this.pendingEvents.coinCollect.push({ x: coin.x, y: coin.y });
         this.updateState();
       }
     }
@@ -351,6 +383,15 @@ export class AntiGravityGame {
   private die() {
     this.status = "lost";
     this.stopAnimation();
+    this.pendingEvents.death.push({
+      x: this.player.x,
+      y: this.player.y,
+      cause: "obstacle",
+    });
+    this.pendingEvents.lost.push({
+      level: this.currentLevel + 1,
+      coins: this.collectedCoins,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "lost" });
     }
@@ -359,6 +400,10 @@ export class AntiGravityGame {
   private win() {
     this.status = "won";
     this.stopAnimation();
+    this.pendingEvents.won.push({
+      level: this.currentLevel + 1,
+      coins: this.collectedCoins,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "won" });
     }

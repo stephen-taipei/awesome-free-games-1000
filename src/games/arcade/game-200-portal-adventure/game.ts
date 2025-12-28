@@ -19,6 +19,16 @@ export interface LevelConfig {
   playerStart: { x: number; y: number };
 }
 
+export interface PendingEvents {
+  jump: { x: number; y: number }[];
+  teleport: { fromX: number; fromY: number; toX: number; toY: number; color: string }[];
+  keyCollect: { x: number; y: number }[];
+  death: { x: number; y: number; cause: string }[];
+  start: boolean;
+  won: { level: number; keys: number }[];
+  lost: { level: number; keys: number }[];
+}
+
 export class PortalAdventureGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -54,6 +64,16 @@ export class PortalAdventureGame {
   private onStateChange: ((state: any) => void) | null = null;
   private animationId: number | null = null;
   private frameCount = 0;
+
+  public pendingEvents: PendingEvents = {
+    jump: [],
+    teleport: [],
+    keyCollect: [],
+    death: [],
+    start: false,
+    won: [],
+    lost: [],
+  };
 
   private levels: LevelConfig[] = [
     // Level 1 - Simple portal intro
@@ -201,6 +221,18 @@ export class PortalAdventureGame {
     this.setupInput();
   }
 
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      jump: [],
+      teleport: [],
+      keyCollect: [],
+      death: [],
+      start: false,
+      won: [],
+      lost: [],
+    };
+  }
+
   private setupInput() {
     window.addEventListener("keydown", (e) => {
       this.inputKeys[e.key.toLowerCase()] = true;
@@ -218,6 +250,7 @@ export class PortalAdventureGame {
     this.currentLevel = level ?? this.currentLevel;
     this.loadLevel(this.currentLevel);
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -265,6 +298,7 @@ export class PortalAdventureGame {
     if ((this.inputKeys["w"] || this.inputKeys["arrowup"] || this.inputKeys[" "]) && this.player.grounded) {
       this.player.vy = this.jumpForce;
       this.player.grounded = false;
+      this.pendingEvents.jump.push({ x: this.player.x, y: this.player.y });
     }
 
     // Apply gravity
@@ -335,9 +369,18 @@ export class PortalAdventureGame {
             (p) => p.pairId === portal.pairId && p !== portal
           );
           if (pair) {
+            const fromX = this.player.x;
+            const fromY = this.player.y;
             this.player.x = pair.x - this.player.width / 2;
             this.player.y = pair.y - this.player.height / 2;
             this.teleportCooldown = 30;
+            this.pendingEvents.teleport.push({
+              fromX,
+              fromY,
+              toX: this.player.x,
+              toY: this.player.y,
+              color: portal.color,
+            });
             break;
           }
         }
@@ -352,6 +395,7 @@ export class PortalAdventureGame {
       )) {
         key.collected = true;
         this.collectedKeys++;
+        this.pendingEvents.keyCollect.push({ x: key.x, y: key.y });
         this.updateState();
       }
     }
@@ -375,6 +419,15 @@ export class PortalAdventureGame {
   private die() {
     this.status = "lost";
     this.stopAnimation();
+    this.pendingEvents.death.push({
+      x: this.player.x,
+      y: this.player.y,
+      cause: "spike",
+    });
+    this.pendingEvents.lost.push({
+      level: this.currentLevel + 1,
+      keys: this.collectedKeys,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "lost" });
     }
@@ -383,6 +436,10 @@ export class PortalAdventureGame {
   private win() {
     this.status = "won";
     this.stopAnimation();
+    this.pendingEvents.won.push({
+      level: this.currentLevel + 1,
+      keys: this.collectedKeys,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "won" });
     }
