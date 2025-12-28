@@ -28,6 +28,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  hit: { livesLeft: number }[];
+  graze: { points: number }[];
+  patternChange: { pattern: string }[];
+  gameOver: { score: number; time: number }[];
+}
+
 const PLAYER_RADIUS = 5;
 const PLAYER_HITBOX = 3;
 const PLAYER_SPEED = 5;
@@ -56,6 +64,24 @@ export class BulletHellGame {
   private patterns: Pattern[] = [];
   private currentPattern = 0;
   private patternTimer = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    hit: [],
+    graze: [],
+    patternChange: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      hit: [],
+      graze: [],
+      patternChange: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -250,6 +276,7 @@ export class BulletHellGame {
     this.targetX = this.playerX;
     this.targetY = this.playerY;
 
+    this.pendingEvents.start = true;
     this.startTimer();
     this.emitState();
     this.gameLoop();
@@ -267,6 +294,7 @@ export class BulletHellGame {
       // Switch pattern every 10 seconds
       if (this.time % 10 === 0) {
         this.currentPattern = (this.currentPattern + 1) % this.patterns.length;
+        this.pendingEvents.patternChange.push({ pattern: this.patterns[this.currentPattern].name });
       }
 
       this.emitState();
@@ -348,6 +376,7 @@ export class BulletHellGame {
           this.invincible = true;
           this.invincibleTimer = 120; // 2 seconds at 60fps
           this.bullets = []; // Clear bullets on hit
+          this.pendingEvents.hit.push({ livesLeft: this.lives });
           this.emitState();
 
           if (this.lives <= 0) {
@@ -359,6 +388,7 @@ export class BulletHellGame {
     }
 
     // Award points for grazing (close calls)
+    let grazePoints = 0;
     this.bullets.forEach((bullet) => {
       const dx = bullet.x - this.playerX;
       const dy = bullet.y - this.playerY;
@@ -366,8 +396,12 @@ export class BulletHellGame {
 
       if (dist < bullet.radius + PLAYER_RADIUS + 10 && dist > bullet.radius + PLAYER_HITBOX) {
         this.score += 1;
+        grazePoints++;
       }
     });
+    if (grazePoints > 0) {
+      this.pendingEvents.graze.push({ points: grazePoints });
+    }
   }
 
   private gameOver() {
@@ -380,6 +414,7 @@ export class BulletHellGame {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
     }
+    this.pendingEvents.gameOver.push({ score: this.score, time: this.time });
     this.emitState();
   }
 
