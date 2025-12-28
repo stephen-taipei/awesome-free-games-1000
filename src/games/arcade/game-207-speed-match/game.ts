@@ -22,6 +22,15 @@ export interface GameState {
   lastResult: "correct" | "wrong" | null;
 }
 
+export interface PendingEvents {
+  cardFlip: { cardId: number; symbol: string }[];
+  match: { symbol: string; score: number }[];
+  noMatch: { symbol1: string; symbol2: string }[];
+  levelUp: { level: number; timeBonus: number }[];
+  start: boolean;
+  gameOver: { score: number; matches: number }[];
+}
+
 const SYMBOLS = ["★", "♦", "♠", "♣", "♥", "●", "▲", "■", "◆", "✦", "☀", "☽"];
 const COLORS = ["#e74c3c", "#3498db", "#27ae60", "#f1c40f", "#9b59b6", "#e67e22", "#1abc9c", "#fd79a8"];
 
@@ -39,8 +48,28 @@ export class SpeedMatchGame {
   onStateChange: ((state: GameState) => void) | null = null;
   private timerInterval: number | null = null;
 
+  public pendingEvents: PendingEvents = {
+    cardFlip: [],
+    match: [],
+    noMatch: [],
+    levelUp: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      cardFlip: [],
+      match: [],
+      noMatch: [],
+      levelUp: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -108,6 +137,7 @@ export class SpeedMatchGame {
       lastResult: null,
     };
 
+    this.pendingEvents.start = true;
     this.startTimer();
     this.emitState();
   }
@@ -132,6 +162,10 @@ export class SpeedMatchGame {
 
   private endGame(): void {
     this.state.status = "gameOver";
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      matches: this.state.matches,
+    });
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
@@ -154,6 +188,7 @@ export class SpeedMatchGame {
     card.isFlipped = true;
     this.state.selectedCards.push(cardId);
     this.state.lastResult = null;
+    this.pendingEvents.cardFlip.push({ cardId, symbol: card.symbol });
 
     if (this.state.selectedCards.length === 2) {
       const [id1, id2] = this.state.selectedCards;
@@ -165,9 +200,11 @@ export class SpeedMatchGame {
         card1.isMatched = true;
         card2.isMatched = true;
         this.state.matches++;
-        this.state.score += 100 + Math.floor(this.state.timeLeft * 2);
+        const matchScore = 100 + Math.floor(this.state.timeLeft * 2);
+        this.state.score += matchScore;
         this.state.lastResult = "correct";
         this.state.selectedCards = [];
+        this.pendingEvents.match.push({ symbol: card1.symbol, score: matchScore });
 
         // Check if level complete
         if (this.state.cards.every((c) => c.isMatched)) {
@@ -177,6 +214,7 @@ export class SpeedMatchGame {
         // No match
         this.state.lastResult = "wrong";
         this.state.score = Math.max(0, this.state.score - 10);
+        this.pendingEvents.noMatch.push({ symbol1: card1.symbol, symbol2: card2.symbol });
 
         // Flip cards back after delay
         setTimeout(() => {
@@ -194,15 +232,19 @@ export class SpeedMatchGame {
   }
 
   private nextLevel(): void {
+    let timeBonus: number;
     if (this.state.level >= GRID_SIZES.length) {
       // Restart with bonus time
       this.state.level = 1;
-      this.state.timeLeft += 30;
+      timeBonus = 30;
+      this.state.timeLeft += timeBonus;
     } else {
       this.state.level++;
-      this.state.timeLeft += 15;
+      timeBonus = 15;
+      this.state.timeLeft += timeBonus;
     }
 
+    this.pendingEvents.levelUp.push({ level: this.state.level, timeBonus });
     this.state.cards = this.createCards(this.state.level);
     this.state.selectedCards = [];
     this.state.lastResult = null;
