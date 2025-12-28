@@ -47,6 +47,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  orbCollected: { polarity: Polarity; points: number }[];
+  polaritySwitch: { newPolarity: Polarity }[];
+  gameOver: { score: number; timeLeft: number }[];
+}
+
 const GAME_DURATION = 60;
 const MAGNETIC_FORCE = 800;
 const MAX_VELOCITY = 8;
@@ -66,6 +73,22 @@ export class MagnetArenaGame {
   private lastTime = 0;
   private mouseX = 0;
   private mouseY = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    orbCollected: [],
+    polaritySwitch: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      orbCollected: [],
+      polaritySwitch: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -96,6 +119,7 @@ export class MagnetArenaGame {
     const togglePolarity = () => {
       if (this.status !== "playing") return;
       this.player.polarity = this.player.polarity === "N" ? "S" : "N";
+      this.pendingEvents.polaritySwitch.push({ newPolarity: this.player.polarity });
       this.emitState();
       // Create polarity switch effect
       for (let i = 0; i < 8; i++) {
@@ -161,6 +185,7 @@ export class MagnetArenaGame {
 
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -306,6 +331,7 @@ export class MagnetArenaGame {
     const orb = this.orbs[index];
     orb.collected = true;
     this.score += 10;
+    this.pendingEvents.orbCollected.push({ polarity: orb.polarity, points: 10 });
 
     // Create collection particles
     for (let i = 0; i < 6; i++) {
@@ -332,6 +358,7 @@ export class MagnetArenaGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, timeLeft: Math.ceil(this.timeLeft) });
     this.emitState();
   }
 
