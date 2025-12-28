@@ -29,6 +29,13 @@ interface Particle {
   color: string;
 }
 
+export interface PendingEvents {
+  coinCatch: { x: number; y: number; value: number; type: "gold" | "silver" }[];
+  bombCatch: { x: number; y: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; score: number }[];
+}
+
 export class CoinCatchGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -47,10 +54,26 @@ export class CoinCatchGame {
   private lastTime: number = 0;
   onStateChange: ((state: any) => void) | null = null;
 
+  public pendingEvents: PendingEvents = {
+    coinCatch: [],
+    bombCatch: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.basket = { x: 0, y: 0, width: 80, height: 50 };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      coinCatch: [],
+      bombCatch: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   public resize() {
@@ -88,6 +111,7 @@ export class CoinCatchGame {
       }
     }, 1000);
 
+    this.pendingEvents.start = true;
     this.emitState();
     this.lastTime = performance.now();
     this.loop();
@@ -162,6 +186,19 @@ export class CoinCatchGame {
       ) {
         this.score = Math.max(0, this.score + coin.value);
         this.addCatchParticles(coin);
+
+        // Track catch events
+        if (coin.type === "bomb") {
+          this.pendingEvents.bombCatch.push({ x: coin.x, y: coin.y });
+        } else {
+          this.pendingEvents.coinCatch.push({
+            x: coin.x,
+            y: coin.y,
+            value: coin.value,
+            type: coin.type,
+          });
+        }
+
         this.coins.splice(i, 1);
         this.emitState();
         continue;
@@ -203,6 +240,13 @@ export class CoinCatchGame {
     this.status = "over";
     if (this.timerInterval) clearInterval(this.timerInterval);
     if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    this.pendingEvents.gameOver.push({
+      x: this.width / 2,
+      y: this.height / 2,
+      score: this.score,
+    });
+
     this.emitState();
   }
 
