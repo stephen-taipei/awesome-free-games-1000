@@ -38,6 +38,15 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  planeLanded: { runway: string; points: number }[];
+  wrongRunway: boolean;
+  collision: boolean;
+  outOfBounds: boolean;
+  gameOver: { score: number; landed: number; highScore: number }[];
+}
+
 const RUNWAY_COLORS = ["#e74c3c", "#3498db", "#2ecc71"];
 
 export class AirportControlGame {
@@ -58,6 +67,26 @@ export class AirportControlGame {
   private lastTime = 0;
   private spawnTimer = 0;
   private planeIdCounter = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    planeLanded: [],
+    wrongRunway: false,
+    collision: false,
+    outOfBounds: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      planeLanded: [],
+      wrongRunway: false,
+      collision: false,
+      outOfBounds: false,
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -183,6 +212,7 @@ export class AirportControlGame {
     this.initRunways();
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -240,6 +270,7 @@ export class AirportControlGame {
             plane.landed = true;
             this.landed++;
             this.score += 100;
+            this.pendingEvents.planeLanded.push({ runway: runway.label, points: 100 });
 
             if (this.score > this.highScore) {
               this.highScore = this.score;
@@ -249,6 +280,7 @@ export class AirportControlGame {
           } else {
             // Wrong runway
             plane.crashed = true;
+            this.pendingEvents.wrongRunway = true;
             this.gameOver();
             return;
           }
@@ -263,6 +295,7 @@ export class AirportControlGame {
         if (Math.sqrt(dx * dx + dy * dy) < 30) {
           plane.crashed = true;
           other.crashed = true;
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -271,6 +304,7 @@ export class AirportControlGame {
       // Check out of bounds
       if (plane.x < -50 || plane.x > this.width + 50 || plane.y < -50 || plane.y > this.height + 50) {
         plane.crashed = true;
+        this.pendingEvents.outOfBounds = true;
         this.gameOver();
         return;
       }
@@ -340,6 +374,7 @@ export class AirportControlGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, landed: this.landed, highScore: this.highScore });
     this.emitState();
   }
 
