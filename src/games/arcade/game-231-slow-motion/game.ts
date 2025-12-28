@@ -49,6 +49,14 @@ export interface GameConfig {
   energyRechargeRate: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  slowMotionStart: boolean;
+  slowMotionEnd: boolean;
+  nearMiss: { distance: number }[];
+  gameOver: { score: number; bestScore: number; isNewBest: boolean; survivalTime: number }[];
+}
+
 const BULLET_COLORS = ['#ff6b6b', '#ff9ff3', '#feca57', '#48dbfb', '#1dd1a1'];
 
 export class SlowMotionGame {
@@ -58,6 +66,24 @@ export class SlowMotionGame {
   private lastTime: number = 0;
   private spawnTimer: number = 0;
   private onStateChange?: (state: GameState) => void;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    slowMotionStart: false,
+    slowMotionEnd: false,
+    nearMiss: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      slowMotionStart: false,
+      slowMotionEnd: false,
+      nearMiss: [],
+      gameOver: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -123,6 +149,7 @@ export class SlowMotionGame {
     this.state.isPlaying = true;
     this.lastTime = performance.now();
     this.spawnTimer = 0;
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -271,9 +298,15 @@ export class SlowMotionGame {
     if (!this.state.isPlaying || this.state.gameOver) return;
 
     if (active && this.state.slowMotionEnergy > 0) {
+      if (!this.state.isSlowMotion) {
+        this.pendingEvents.slowMotionStart = true;
+      }
       this.state.isSlowMotion = true;
       this.state.timeScale = this.config.slowTimeScale;
     } else {
+      if (this.state.isSlowMotion) {
+        this.pendingEvents.slowMotionEnd = true;
+      }
       this.state.isSlowMotion = false;
       this.state.timeScale = this.config.normalTimeScale;
     }
@@ -288,10 +321,18 @@ export class SlowMotionGame {
       this.animationId = null;
     }
 
-    if (this.state.score > this.state.bestScore) {
+    const isNewBest = this.state.score > this.state.bestScore;
+    if (isNewBest) {
       this.state.bestScore = this.state.score;
       this.saveBestScore(this.state.bestScore);
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bestScore: this.state.bestScore,
+      isNewBest,
+      survivalTime: this.state.survivalTime,
+    });
 
     this.notifyStateChange();
   }

@@ -66,12 +66,38 @@ export interface GameConfig {
   playerSize: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  goalReached: { mirrored: boolean }[];
+  levelComplete: { level: number; score: number }[];
+  gameOver: { score: number; bestScore: number; isNewBest: boolean; level: number }[];
+}
+
 export class MirrorControlGame {
   private config: GameConfig;
   private state: GameState;
   private animationId: number | null = null;
   private keys: Set<string> = new Set();
   private onStateChange?: (state: GameState) => void;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    jump: false,
+    goalReached: [],
+    levelComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      jump: false,
+      goalReached: [],
+      levelComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -148,6 +174,7 @@ export class MirrorControlGame {
   newGame(): void {
     this.state = this.createInitialState();
     this.state.isPlaying = true;
+    this.pendingEvents.start = true;
     this.generateLevel();
     this.gameLoop();
     this.notifyStateChange();
@@ -303,6 +330,7 @@ export class MirrorControlGame {
     if (this.state.goals.every(g => g.reached)) {
       this.state.levelComplete = true;
       this.state.score += 100 * this.state.level;
+      this.pendingEvents.levelComplete.push({ level: this.state.level, score: this.state.score });
     }
 
     // 檢查掉落
@@ -354,6 +382,7 @@ export class MirrorControlGame {
 
       if (dist < goal.radius + player.width / 2) {
         goal.reached = true;
+        this.pendingEvents.goalReached.push({ mirrored: goal.mirrored });
       }
     }
   }
@@ -368,6 +397,10 @@ export class MirrorControlGame {
 
   jump(): void {
     if (!this.state.isPlaying || this.state.gameOver) return;
+
+    if (!this.state.isJumping1 || !this.state.isJumping2) {
+      this.pendingEvents.jump = true;
+    }
 
     if (!this.state.isJumping1) {
       this.state.velocityY1 = -this.config.jumpForce;
@@ -406,10 +439,18 @@ export class MirrorControlGame {
       this.animationId = null;
     }
 
-    if (this.state.score > this.state.bestScore) {
+    const isNewBest = this.state.score > this.state.bestScore;
+    if (isNewBest) {
       this.state.bestScore = this.state.score;
       this.saveBestScore(this.state.bestScore);
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bestScore: this.state.bestScore,
+      isNewBest,
+      level: this.state.level,
+    });
 
     this.notifyStateChange();
   }

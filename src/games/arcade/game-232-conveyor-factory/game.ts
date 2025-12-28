@@ -58,6 +58,14 @@ export interface GameConfig {
   maxLives: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  sort: { correct: boolean; combo: number; points: number }[];
+  miss: { livesLeft: number }[];
+  levelUp: { level: number }[];
+  gameOver: { score: number; highScore: number; isNewBest: boolean; itemsSorted: number }[];
+}
+
 // 計分規則
 const SCORE_TABLE = {
   correct: 10,
@@ -77,6 +85,24 @@ export class ConveyorFactoryGame {
   private onLevelUp?: (level: number) => void;
   private combo: number = 0;
   private lastUpdateTime: number = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    sort: [],
+    miss: [],
+    levelUp: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      sort: [],
+      miss: [],
+      levelUp: [],
+      gameOver: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -164,6 +190,7 @@ export class ConveyorFactoryGame {
     this.state = this.createInitialState();
     this.combo = 0;
     this.lastUpdateTime = Date.now();
+    this.pendingEvents.start = true;
     this.startIntervals();
     this.notifyStateChange();
   }
@@ -232,6 +259,7 @@ export class ConveyorFactoryGame {
       // 檢查是否超出螢幕底部
       if (item.y > 600) {
         this.loseLife();
+        this.pendingEvents.miss.push({ livesLeft: this.state.lives });
         return false;
       }
 
@@ -305,6 +333,8 @@ export class ConveyorFactoryGame {
     // 移除已分類的物品
     this.state.items = this.state.items.filter((item) => item !== targetItem);
 
+    this.pendingEvents.sort.push({ correct, combo: this.combo, points: correct ? SCORE_TABLE.correct : 0 });
+
     this.onItemSorted?.(correct);
     this.notifyStateChange();
   }
@@ -374,6 +404,7 @@ export class ConveyorFactoryGame {
       }, this.config.spawnInterval / this.state.speed);
     }
 
+    this.pendingEvents.levelUp.push({ level: this.state.level });
     this.onLevelUp?.(this.state.level);
   }
 
@@ -383,6 +414,16 @@ export class ConveyorFactoryGame {
   private gameOver(): void {
     this.state.gameOver = true;
     this.stopIntervals();
+
+    const isNewBest = this.state.score > this.state.highScore;
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      isNewBest,
+      itemsSorted: this.state.itemsSorted,
+    });
+
     this.notifyStateChange();
   }
 
