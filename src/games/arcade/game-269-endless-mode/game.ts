@@ -57,6 +57,15 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  shoot: boolean;
+  enemyKilled: { type: string; points: number }[];
+  waveComplete: { wave: number; points: number }[];
+  playerHit: { livesRemaining: number }[];
+  gameOver: { score: number; wave: number }[];
+}
+
 export class EndlessGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -75,6 +84,26 @@ export class EndlessGame {
   private shotCooldown = 150;
   private enemiesRemaining = 0;
   private waveDelay = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    shoot: false,
+    enemyKilled: [],
+    waveComplete: [],
+    playerHit: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      shoot: false,
+      enemyKilled: [],
+      waveComplete: [],
+      playerHit: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -130,6 +159,7 @@ export class EndlessGame {
     this.player.y = this.canvas.height / 2;
     this.status = "playing";
     this.spawnWave();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -273,8 +303,10 @@ export class EndlessGame {
     if (this.enemies.length === 0 && this.enemiesRemaining <= 0) {
       if (this.waveDelay <= 0) {
         this.wave++;
-        this.score += this.wave * 100;
+        const wavePoints = this.wave * 100;
+        this.score += wavePoints;
         this.waveDelay = 60;
+        this.pendingEvents.waveComplete.push({ wave: this.wave - 1, points: wavePoints });
         this.emitState();
       } else {
         this.waveDelay--;
@@ -317,6 +349,7 @@ export class EndlessGame {
       radius: 5,
       isEnemy: false,
     });
+    this.pendingEvents.shoot = true;
   }
 
   private updateBullets() {
@@ -435,6 +468,7 @@ export class EndlessGame {
     this.player.invincible = true;
     this.player.invincibleTimer = 90;
     this.spawnParticles(this.player.x, this.player.y, "#ff6464", 20);
+    this.pendingEvents.playerHit.push({ livesRemaining: this.lives });
     this.emitState();
 
     if (this.lives <= 0) {
@@ -444,7 +478,9 @@ export class EndlessGame {
 
   private killEnemy(index: number) {
     const enemy = this.enemies[index];
-    this.score += (this.getEnemyStats(enemy.type).hp + 1) * 10;
+    const points = (this.getEnemyStats(enemy.type).hp + 1) * 10;
+    this.score += points;
+    this.pendingEvents.enemyKilled.push({ type: enemy.type, points });
     this.spawnParticles(enemy.x, enemy.y, this.getEnemyStats(enemy.type).color, 15);
     this.enemies.splice(index, 1);
     this.enemiesRemaining--;
@@ -489,6 +525,7 @@ export class EndlessGame {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+    this.pendingEvents.gameOver.push({ score: this.score, wave: this.wave });
     this.emitState();
   }
 

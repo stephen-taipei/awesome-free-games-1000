@@ -27,6 +27,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  targetHit: { points: number }[];
+  roundComplete: { round: number; bonusPoints: number }[];
+  gameOver: { score: number; round: number }[];
+}
+
 export class ArcadeMixGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -44,6 +51,22 @@ export class ArcadeMixGame {
   private playerAnswer = 0;
   private gameComplete = false;
   private transitionTimer = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    targetHit: [],
+    roundComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      targetHit: [],
+      roundComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -77,6 +100,7 @@ export class ArcadeMixGame {
     this.round = 1;
     this.status = "playing";
     this.startMiniGame();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -282,6 +306,7 @@ export class ArcadeMixGame {
         if (target.isTarget) {
           this.targets.splice(i, 1);
           this.score += 10;
+          this.pendingEvents.targetHit.push({ points: 10 });
           this.emitState();
 
           // Check completion
@@ -297,7 +322,9 @@ export class ArcadeMixGame {
 
   private completeRound() {
     this.gameComplete = true;
-    this.score += this.timeLeft * 10;
+    const bonusPoints = this.timeLeft * 10;
+    this.score += bonusPoints;
+    this.pendingEvents.roundComplete.push({ round: this.round, bonusPoints });
     this.round++;
     this.transitionTimer = 60;
 
@@ -317,6 +344,7 @@ export class ArcadeMixGame {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+    this.pendingEvents.gameOver.push({ score: this.score, round: this.round });
     this.emitState();
   }
 
