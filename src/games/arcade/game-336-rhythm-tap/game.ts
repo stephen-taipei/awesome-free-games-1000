@@ -25,6 +25,13 @@ export interface GameState {
   bpm: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  noteHit: { quality: string; points: number; combo: number }[];
+  noteMissed: boolean;
+  gameOver: { score: number; highScore: number; maxCombo: number }[];
+}
+
 const LANES = 4;
 const NOTE_SPEED = 5;
 const HIT_ZONE_HEIGHT = 60;
@@ -39,6 +46,22 @@ export class RhythmTapGame {
   private noteId: number = 0;
   private spawnTimer: number = 0;
   private laneWidth: number = 100;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    noteHit: [],
+    noteMissed: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      noteHit: [],
+      noteMissed: false,
+      gameOver: [],
+    };
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -76,6 +99,7 @@ export class RhythmTapGame {
     };
     this.noteId = 0;
     this.spawnTimer = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -108,11 +132,15 @@ export class RhythmTapGame {
       this.state.maxCombo = Math.max(this.state.maxCombo, this.state.combo);
 
       if (hitQuality === "perfect") {
-        this.state.score += 100 * (1 + Math.floor(this.state.combo / 10));
+        const points = 100 * (1 + Math.floor(this.state.combo / 10));
+        this.state.score += points;
         this.state.perfect++;
+        this.pendingEvents.noteHit.push({ quality: "perfect", points, combo: this.state.combo });
       } else {
-        this.state.score += 50 * (1 + Math.floor(this.state.combo / 10));
+        const points = 50 * (1 + Math.floor(this.state.combo / 10));
+        this.state.score += points;
         this.state.good++;
+        this.pendingEvents.noteHit.push({ quality: "good", points, combo: this.state.combo });
       }
 
       this.emitState();
@@ -134,6 +162,7 @@ export class RhythmTapGame {
           note.missed = true;
           this.state.miss++;
           this.state.combo = 0;
+          this.pendingEvents.noteMissed = true;
         }
       }
     }
@@ -195,6 +224,7 @@ export class RhythmTapGame {
       localStorage.setItem("rhythmTapHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, highScore: this.state.highScore, maxCombo: this.state.maxCombo });
     this.emitState();
   }
 
