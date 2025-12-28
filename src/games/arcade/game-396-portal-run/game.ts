@@ -48,6 +48,17 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  portalPlaced: { color: string }[];
+  teleport: boolean;
+  coinCollected: { total: number }[];
+  collision: boolean;
+  gameOver: { score: number; highScore: number; distance: number; coins: number }[];
+}
+
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 400;
 const GROUND_Y = 320;
@@ -83,6 +94,17 @@ export class PortalRunGame {
   private status: "idle" | "playing" | "over" = "idle";
   private onStateChange: StateCallback | null = null;
   private animationFrame: number | null = null;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    jump: false,
+    slide: false,
+    portalPlaced: [],
+    teleport: false,
+    coinCollected: [],
+    collision: false,
+    gameOver: [],
+  };
   private lastSpawnX = 0;
   private difficulty = 1;
   private backgroundOffset = 0;
@@ -106,6 +128,19 @@ export class PortalRunGame {
 
   setOnStateChange(cb: StateCallback) {
     this.onStateChange = cb;
+  }
+
+  clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      jump: false,
+      slide: false,
+      portalPlaced: [],
+      teleport: false,
+      coinCollected: [],
+      collision: false,
+      gameOver: [],
+    };
   }
 
   private emitState() {
@@ -151,6 +186,7 @@ export class PortalRunGame {
     this.backgroundOffset = 0;
 
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -160,6 +196,7 @@ export class PortalRunGame {
     if (this.playerState === "running" && this.playerY >= GROUND_Y - PLAYER_SIZE - 2) {
       this.playerVelY = JUMP_FORCE;
       this.playerState = "jumping";
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -168,6 +205,7 @@ export class PortalRunGame {
     if (this.playerState === "running") {
       this.playerState = "sliding";
       this.slideTimer = 30;
+      this.pendingEvents.slide = true;
     }
   }
 
@@ -190,6 +228,8 @@ export class PortalRunGame {
       this.orangePortal = portal;
       this.nextPortalColor = "blue";
     }
+
+    this.pendingEvents.portalPlaced.push({ color: portal.color });
 
     // Create placement particles
     for (let i = 0; i < 10; i++) {
@@ -302,6 +342,7 @@ export class PortalRunGame {
         this.playerY = this.orangePortal.y - PLAYER_SIZE / 2;
         this.playerState = "teleporting";
         this.teleportTimer = 20;
+        this.pendingEvents.teleport = true;
 
         // Create teleport particles
         for (let i = 0; i < 20; i++) {
@@ -332,6 +373,7 @@ export class PortalRunGame {
         this.playerY = this.bluePortal.y - PLAYER_SIZE / 2;
         this.playerState = "teleporting";
         this.teleportTimer = 20;
+        this.pendingEvents.teleport = true;
 
         // Create teleport particles
         for (let i = 0; i < 20; i++) {
@@ -510,6 +552,7 @@ export class PortalRunGame {
       if (dist < 25) {
         coin.collected = true;
         this.coinCount++;
+        this.pendingEvents.coinCollected.push({ total: this.coinCount });
 
         // Create coin particles
         for (let i = 0; i < 8; i++) {
@@ -530,6 +573,13 @@ export class PortalRunGame {
 
   private gameOver() {
     this.status = "over";
+    this.pendingEvents.collision = true;
+    this.pendingEvents.gameOver.push({
+      score: this.score,
+      highScore: this.highScore,
+      distance: Math.floor(this.distance / 10),
+      coins: this.coinCount,
+    });
     if (this.animationFrame) {
       cancelAnimationFrame(this.animationFrame);
       this.animationFrame = null;
