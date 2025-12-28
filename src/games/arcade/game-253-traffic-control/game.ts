@@ -32,6 +32,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  carPassed: { points: number }[];
+  toggleLights: boolean;
+  collision: boolean;
+  gameOver: { score: number; passed: number; highScore: number }[];
+}
+
 const CAR_COLORS = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6", "#1abc9c"];
 
 export class TrafficControlGame {
@@ -50,6 +58,24 @@ export class TrafficControlGame {
   private lastTime = 0;
   private spawnTimer = 0;
   private carIdCounter = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    carPassed: [],
+    toggleLights: false,
+    collision: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      carPassed: [],
+      toggleLights: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -133,6 +159,7 @@ export class TrafficControlGame {
     for (const light of this.lights) {
       light.state = light.state === "red" ? "green" : "red";
     }
+    this.pendingEvents.toggleLights = true;
   }
 
   start() {
@@ -144,6 +171,7 @@ export class TrafficControlGame {
     this.initLights();
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -245,6 +273,7 @@ export class TrafficControlGame {
               const dx = Math.abs(car.x - other.x);
               const dy = Math.abs(car.y - other.y);
               if (dx < 25 && dy < 25) {
+                this.pendingEvents.collision = true;
                 this.gameOver();
                 return;
               }
@@ -273,6 +302,7 @@ export class TrafficControlGame {
           car.passed = true;
           this.passed++;
           this.score += 10;
+          this.pendingEvents.carPassed.push({ points: 10 });
 
           if (this.score > this.highScore) {
             this.highScore = this.score;
@@ -339,6 +369,7 @@ export class TrafficControlGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, passed: this.passed, highScore: this.highScore });
     this.emitState();
   }
 

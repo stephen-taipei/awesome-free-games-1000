@@ -37,6 +37,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  serveItem: { type: string; points: number }[];
+  orderComplete: { timeBonus: number; ordersCompleted: number }[];
+  orderExpired: boolean;
+  gameOver: { score: number; ordersCompleted: number; highScore: number }[];
+}
+
 const FOOD_TYPES = ["burger", "pizza", "salad", "sushi", "taco"];
 const FOOD_COLORS: Record<string, string> = {
   burger: "#D2691E",
@@ -74,6 +82,24 @@ export class KitchenChaosGame {
   private particles: { x: number; y: number; vx: number; vy: number; life: number; text: string }[] = [];
   private draggedItem: { type: string; x: number; y: number } | null = null;
   private dragOffset = { x: 0, y: 0 };
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    serveItem: [],
+    orderComplete: [],
+    orderExpired: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      serveItem: [],
+      orderComplete: [],
+      orderExpired: false,
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -223,6 +249,7 @@ export class KitchenChaosGame {
         });
 
         this.score += 10;
+        this.pendingEvents.serveItem.push({ type, points: 10 });
 
         if (order.items.length === 0) {
           // Order complete
@@ -232,6 +259,7 @@ export class KitchenChaosGame {
           // Time bonus
           const timeBonus = Math.floor(order.timeLeft / order.maxTime * 50);
           this.score += timeBonus;
+          this.pendingEvents.orderComplete.push({ timeBonus, ordersCompleted: this.ordersCompleted });
 
           this.particles.push({
             x: order.x + 40,
@@ -265,6 +293,7 @@ export class KitchenChaosGame {
     this.initIngredients();
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -298,6 +327,7 @@ export class KitchenChaosGame {
 
         if (order.timeLeft <= 0) {
           // Order expired
+          this.pendingEvents.orderExpired = true;
           this.gameOver();
           return;
         }
@@ -341,6 +371,7 @@ export class KitchenChaosGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, ordersCompleted: this.ordersCompleted, highScore: this.highScore });
     this.emitState();
   }
 
