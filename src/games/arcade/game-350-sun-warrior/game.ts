@@ -85,6 +85,17 @@ export interface GameConfig {
   solarEnergyRegenRate: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  solarBlast: boolean;
+  solarStorm: boolean;
+  burningField: boolean;
+  enemyKilled: { type: string; points: number }[];
+  playerHit: { healthRemaining: number }[];
+  waveStart: { wave: number }[];
+  gameOver: { score: number; bestScore: number; wave: number }[];
+}
+
 const ENEMY_TYPES = {
   normal: { health: 50, speed: 80, radius: 15, color: '#ff6b6b', score: 10 },
   fast: { health: 30, speed: 140, radius: 12, color: '#feca57', score: 15 },
@@ -104,6 +115,17 @@ export class SunWarriorGame {
   private onStateChange?: (state: GameState) => void;
   private mouseX: number = 0;
   private mouseY: number = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    solarBlast: false,
+    solarStorm: false,
+    burningField: false,
+    enemyKilled: [],
+    playerHit: [],
+    waveStart: [],
+    gameOver: [],
+  };
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -166,6 +188,19 @@ export class SunWarriorGame {
     return { ...this.state };
   }
 
+  clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      solarBlast: false,
+      solarStorm: false,
+      burningField: false,
+      enemyKilled: [],
+      playerHit: [],
+      waveStart: [],
+      gameOver: [],
+    };
+  }
+
   newGame(): void {
     nextEnemyId = 0;
     nextProjectileId = 0;
@@ -174,6 +209,7 @@ export class SunWarriorGame {
     this.lastTime = performance.now();
     this.waveTimer = 0;
     this.spawnWave();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -268,6 +304,7 @@ export class SunWarriorGame {
         const enemyType = ENEMY_TYPES[enemy.type];
         this.state.score += enemyType.score;
         this.state.enemiesKilled++;
+        this.pendingEvents.enemyKilled.push({ type: enemy.type, points: enemyType.score });
         return false;
       }
       return true;
@@ -368,6 +405,7 @@ export class SunWarriorGame {
 
       if (dist < this.state.player.radius + enemy.radius) {
         this.state.player.health -= 0.5; // 持續傷害
+        this.pendingEvents.playerHit.push({ healthRemaining: this.state.player.health });
       }
     });
 
@@ -378,6 +416,7 @@ export class SunWarriorGame {
   }
 
   private spawnWave(): void {
+    this.pendingEvents.waveStart.push({ wave: this.state.wave });
     const wave = this.state.wave;
     const enemyCount = Math.min(5 + wave * 2, 25);
 
@@ -476,6 +515,8 @@ export class SunWarriorGame {
       damage: baseDamage,
       isSolarBlast: true,
     });
+
+    this.pendingEvents.solarBlast = true;
   }
 
   useSolarStorm(): void {
@@ -492,6 +533,8 @@ export class SunWarriorGame {
       duration: 2,
       maxDuration: 2,
     });
+
+    this.pendingEvents.solarStorm = true;
   }
 
   useBurningField(): void {
@@ -508,6 +551,8 @@ export class SunWarriorGame {
       duration: 5,
       maxDuration: 5,
     });
+
+    this.pendingEvents.burningField = true;
   }
 
   private gameOver(): void {
@@ -523,6 +568,12 @@ export class SunWarriorGame {
       this.state.bestScore = this.state.score;
       this.saveBestScore(this.state.bestScore);
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bestScore: this.state.bestScore,
+      wave: this.state.wave,
+    });
 
     this.notifyStateChange();
   }

@@ -79,6 +79,16 @@ export interface GameConfig {
   captureSpeed: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  territoryConquered: { bonus: string }[];
+  enemyKilled: { type: string }[];
+  playerHit: { damage: number; healthRemaining: number }[];
+  skillUsed: { skill: string }[];
+  levelUp: { level: number }[];
+  gameOver: { score: number; bestScore: number; level: number; territories: number }[];
+}
+
 const TERRITORY_COLORS = ['#ffd700', '#ff6b6b', '#48dbfb', '#1dd1a1', '#ff9ff3'];
 const ENEMY_COLORS = {
   guard: '#ff6b6b',
@@ -95,6 +105,16 @@ export class ConquerorGame {
   private onStateChange?: (state: GameState) => void;
   private nextEnemyId: number = 0;
   private nextTerritoryId: number = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    territoryConquered: [],
+    enemyKilled: [],
+    playerHit: [],
+    skillUsed: [],
+    levelUp: [],
+    gameOver: [],
+  };
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -245,10 +265,23 @@ export class ConquerorGame {
     return { ...this.state };
   }
 
+  clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      territoryConquered: [],
+      enemyKilled: [],
+      playerHit: [],
+      skillUsed: [],
+      levelUp: [],
+      gameOver: [],
+    };
+  }
+
   newGame(): void {
     this.state = this.createInitialState();
     this.state.isPlaying = true;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -353,6 +386,7 @@ export class ConquerorGame {
           territory.conquered = true;
           this.state.player.conqueredTerritories++;
           this.applyTerritoryBonus(territory.bonus);
+          this.pendingEvents.territoryConquered.push({ bonus: territory.bonus });
         }
       }
     });
@@ -401,7 +435,13 @@ export class ConquerorGame {
     });
 
     // 移除死亡敵人
-    this.state.enemies = this.state.enemies.filter((enemy) => enemy.health > 0);
+    this.state.enemies = this.state.enemies.filter((enemy) => {
+      if (enemy.health <= 0) {
+        this.pendingEvents.enemyKilled.push({ type: enemy.type });
+        return false;
+      }
+      return true;
+    });
   }
 
   private checkCollisions(): void {
@@ -420,6 +460,11 @@ export class ConquerorGame {
         const damage = enemy.type === 'boss' ? 15 : enemy.type === 'elite' ? 10 : 5;
         this.state.player.health -= damage * 0.016;
 
+        this.pendingEvents.playerHit.push({
+          damage: damage * 0.016,
+          healthRemaining: this.state.player.health,
+        });
+
         if (this.state.player.health <= 0) {
           this.gameOver();
         }
@@ -428,6 +473,7 @@ export class ConquerorGame {
   }
 
   private levelUp(): void {
+    this.pendingEvents.levelUp.push({ level: this.state.level + 1 });
     this.state.level++;
     const newTerritories = this.generateTerritories(Math.min(8, 6 + this.state.level));
     const newEnemies = this.generateEnemies(newTerritories);
@@ -454,6 +500,8 @@ export class ConquerorGame {
     skill.active = true;
     skill.activeDuration = skill.duration;
     skill.currentCooldown = skill.cooldown;
+
+    this.pendingEvents.skillUsed.push({ skill: skillId });
 
     // 技能特殊效果
     if (skillId === 'summon') {
@@ -486,6 +534,13 @@ export class ConquerorGame {
       this.state.bestScore = this.state.score;
       this.saveBestScore(this.state.bestScore);
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bestScore: this.state.bestScore,
+      level: this.state.level,
+      territories: this.state.player.conqueredTerritories,
+    });
 
     this.notifyStateChange();
   }
