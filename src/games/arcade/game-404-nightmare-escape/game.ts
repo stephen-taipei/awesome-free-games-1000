@@ -1,5 +1,17 @@
 import { translations } from './i18n';
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  sprintStart: boolean;
+  sprintStop: boolean;
+  lightActivated: boolean;
+  lightOrbCollected: { power: number }[];
+  obstacleHit: boolean;
+  chaserNear: boolean;
+  gameEnd: { won: boolean; distance: number }[];
+}
+
 interface Obstacle {
   x: number;
   y: number;
@@ -14,6 +26,26 @@ interface LightOrb {
 }
 
 export class Game {
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      sprintStart: false,
+      sprintStop: false,
+      lightActivated: false,
+      lightOrbCollected: [],
+      obstacleHit: false,
+      chaserNear: false,
+      gameEnd: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   private playerY: number = 200;
   private playerVelocity: number = 0;
   private distance: number = 0;
@@ -73,6 +105,7 @@ export class Game {
     this.lightOrbs = [];
 
     this.showMessage(translations[this.locale].game.msgs.start, '');
+    this.pendingEvents.start = true;
     this.notifyChange();
 
     if (this.gameLoop) cancelAnimationFrame(this.gameLoop);
@@ -130,6 +163,7 @@ export class Game {
       }
     } else if (this.chaserDistance < 50 && !this.lightActive) {
       // Warning
+      this.pendingEvents.chaserNear = true;
       if (Math.floor(Date.now() / 1000) % 3 === 0) {
         this.showMessage(translations[this.locale].game.msgs.chaserNear, 'danger');
       }
@@ -153,6 +187,7 @@ export class Game {
       if (obs.x < 80 && obs.x > 20 &&
           Math.abs(this.playerY - obs.y) < 30) {
         this.health = Math.max(0, this.health - 10);
+        this.pendingEvents.obstacleHit = true;
         this.showMessage(translations[this.locale].game.msgs.hitObstacle, 'danger');
         if (this.health <= 0) {
           this.endGame(false);
@@ -214,6 +249,7 @@ export class Game {
 
   private collectLight() {
     this.lightPower = Math.min(100, this.lightPower + 25);
+    this.pendingEvents.lightOrbCollected.push({ power: this.lightPower });
     this.showMessage(translations[this.locale].game.msgs.lightCollected, 'success');
 
     if (this.lightPower >= 100 && !this.lightActive) {
@@ -338,6 +374,7 @@ export class Game {
     if (this.playerY >= this.GROUND_Y) {
       this.playerVelocity = this.JUMP_FORCE;
       this.isJumping = true;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -346,12 +383,16 @@ export class Game {
 
     if (this.stamina > 0) {
       this.isSprinting = true;
+      this.pendingEvents.sprintStart = true;
     } else {
       this.showMessage(translations[this.locale].game.msgs.noStamina, 'warning');
     }
   }
 
   stopSprint() {
+    if (this.isSprinting) {
+      this.pendingEvents.sprintStop = true;
+    }
     this.isSprinting = false;
   }
 
@@ -363,6 +404,7 @@ export class Game {
       this.lightPower = 0;
       this.lightTimer = 180; // 3 seconds at 60fps
       this.chaserDistance = Math.min(200, this.chaserDistance + 50);
+      this.pendingEvents.lightActivated = true;
       this.showMessage(translations[this.locale].game.msgs.lightActivated, 'success');
     } else {
       this.showMessage(translations[this.locale].game.msgs.noLight, 'warning');
@@ -378,6 +420,11 @@ export class Game {
 
     const t = translations[this.locale].game.msgs;
     this.showMessage(win ? t.escaped : t.caught, win ? 'success' : 'danger');
+
+    this.pendingEvents.gameEnd.push({
+      won: win,
+      distance: Math.floor(this.distance),
+    });
 
     if (this.onGameEnd) this.onGameEnd(win, Math.floor(this.distance));
     this.notifyChange();

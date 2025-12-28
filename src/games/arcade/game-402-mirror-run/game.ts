@@ -3,6 +3,14 @@
  * Game #402 - Mirror world parkour
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  coinCollected: { score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number }[];
+}
+
 interface Obstacle {
   x: number;
   lane: "top" | "bottom";
@@ -18,6 +26,22 @@ interface Coin {
 export class MirrorRunGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      coinCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   // Player states - two mirrored characters
   private topPlayer = {
@@ -92,6 +116,7 @@ export class MirrorRunGame {
       this.topPlayer.vy = this.jumpForce;
       this.topPlayer.isJumping = true;
       this.topPlayer.onGround = false;
+      this.pendingEvents.jump = true;
     }
 
     if (this.bottomPlayer.onGround) {
@@ -104,6 +129,7 @@ export class MirrorRunGame {
   public start() {
     this.reset();
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -251,6 +277,7 @@ export class MirrorRunGame {
         player.y + player.height > obsY &&
         player.y < obsY + obsHeight
       ) {
+        this.pendingEvents.collision = true;
         this.gameOver();
       }
     }
@@ -267,6 +294,7 @@ export class MirrorRunGame {
     if (checkPlayer(this.topPlayer) || checkPlayer(this.bottomPlayer)) {
       coin.collected = true;
       this.score += 10;
+      this.pendingEvents.coinCollected.push({ score: this.score });
       this.updateState();
     }
   }
@@ -274,6 +302,10 @@ export class MirrorRunGame {
   private gameOver() {
     this.status = "gameover";
     this.stopAnimation();
+    this.pendingEvents.gameOver.push({
+      score: this.score,
+      distance: Math.floor(this.distance / 10),
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "gameover" });
     }

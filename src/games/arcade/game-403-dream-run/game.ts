@@ -5,6 +5,18 @@
  * A dreamlike parkour game with floating mechanics and ethereal visuals!
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  floatStart: boolean;
+  floatStop: boolean;
+  phaseActivate: boolean;
+  stardustCollected: { total: number }[];
+  fragmentCollected: { total: number }[];
+  collision: boolean;
+  gameOver: { score: number; highScore: number; distance: number }[];
+}
+
 interface Point {
   x: number;
   y: number;
@@ -62,6 +74,27 @@ const SPAWN_DISTANCE = 250;
 export class DreamRunGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      floatStart: false,
+      floatStop: false,
+      phaseActivate: false,
+      stardustCollected: [],
+      fragmentCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   private playerX = 100;
   private playerY = GROUND_Y - PLAYER_SIZE;
   private playerVelY = 0;
@@ -173,6 +206,7 @@ export class DreamRunGame {
     this.dreamPhase = 0;
 
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -182,6 +216,7 @@ export class DreamRunGame {
     if (this.playerState === "running" && this.playerY >= GROUND_Y - PLAYER_SIZE - 2) {
       this.playerVelY = JUMP_FORCE;
       this.playerState = "jumping";
+      this.pendingEvents.jump = true;
       this.createJumpParticles();
     }
   }
@@ -190,12 +225,14 @@ export class DreamRunGame {
     if (this.status !== "playing") return;
     if (this.floatTimer < this.maxFloatTime && this.playerState !== "phasing") {
       this.playerState = "floating";
+      this.pendingEvents.floatStart = true;
     }
   }
 
   stopFloat() {
     if (this.playerState === "floating") {
       this.playerState = this.playerY >= GROUND_Y - PLAYER_SIZE - 2 ? "running" : "jumping";
+      this.pendingEvents.floatStop = true;
     }
   }
 
@@ -205,6 +242,7 @@ export class DreamRunGame {
       this.fragmentCount -= 3;
       this.playerState = "phasing";
       this.phaseTimer = 60; // 1 second of phasing
+      this.pendingEvents.phaseActivate = true;
       this.createPhaseParticles();
     }
   }
@@ -493,6 +531,7 @@ export class DreamRunGame {
         playerRect.y < obs.y + obs.height &&
         playerRect.y + playerRect.height > obs.y
       ) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -512,9 +551,11 @@ export class DreamRunGame {
 
         if (col.type === "stardust") {
           this.stardustCount++;
+          this.pendingEvents.stardustCollected.push({ total: this.stardustCount });
           this.createCollectParticles(col.x, col.y, "#ffd700");
         } else {
           this.fragmentCount++;
+          this.pendingEvents.fragmentCollected.push({ total: this.fragmentCount });
           this.colorShift = (this.colorShift + 60) % 360; // Shift color theme
           this.createCollectParticles(col.x, col.y, "#b19cd9");
         }
@@ -544,6 +585,11 @@ export class DreamRunGame {
       cancelAnimationFrame(this.animationFrame);
       this.animationFrame = null;
     }
+    this.pendingEvents.gameOver.push({
+      score: this.score,
+      highScore: this.highScore,
+      distance: Math.floor(this.distance / 10),
+    });
     this.emitState();
   }
 
