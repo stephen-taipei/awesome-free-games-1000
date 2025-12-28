@@ -48,6 +48,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  collectOrb: { points: number }[];
+  danger: boolean;
+  gameOver: { score: number; time: number }[];
+}
+
 const SHADOW_DELAY = 60; // frames of delay
 
 export class ShadowChaseGame {
@@ -65,6 +72,22 @@ export class ShadowChaseGame {
   private lastTime = 0;
   private size = 0;
   private frameCount = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    collectOrb: [],
+    danger: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      collectOrb: [],
+      danger: false,
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -152,6 +175,7 @@ export class ShadowChaseGame {
 
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -287,6 +311,7 @@ export class ShadowChaseGame {
   private collectOrb(orb: Orb) {
     orb.collected = true;
     this.score += 10;
+    this.pendingEvents.collectOrb.push({ points: 10 });
 
     // Create particles
     for (let i = 0; i < 8; i++) {
@@ -307,6 +332,7 @@ export class ShadowChaseGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, time: Math.floor(this.time) });
     this.emitState();
   }
 

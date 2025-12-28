@@ -40,6 +40,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  lightningStrike: boolean;
+  dodged: { points: number }[];
+  gameOver: { score: number; time: number }[];
+}
+
 const WARNING_DURATION = 1.0;
 const STRIKE_DURATION = 0.3;
 const STRIKE_RADIUS = 40;
@@ -60,6 +67,22 @@ export class ThunderDodgeGame {
   private difficulty = 1;
   private size = 0;
   private flashAlpha = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    lightningStrike: false,
+    dodged: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      lightningStrike: false,
+      dodged: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -139,6 +162,7 @@ export class ThunderDodgeGame {
 
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -195,12 +219,14 @@ export class ThunderDodgeGame {
           l.striking = true;
           l.segments = this.generateLightningSegments(l.x);
           this.flashAlpha = 0.5;
+          this.pendingEvents.lightningStrike = true;
         }
       } else if (l.striking) {
         l.strikeTime += dt;
         if (l.strikeTime >= STRIKE_DURATION) {
           this.lightnings.splice(i, 1);
           this.score += 10;
+          this.pendingEvents.dodged.push({ points: 10 });
           this.emitState();
         } else if (l.strikeTime < 0.1) {
           // Check collision only at start of strike
@@ -266,6 +292,7 @@ export class ThunderDodgeGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, time: Math.floor(this.time) });
 
     // Create explosion particles
     for (let i = 0; i < 20; i++) {
