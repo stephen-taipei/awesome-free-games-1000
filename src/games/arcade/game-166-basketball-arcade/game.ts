@@ -1,6 +1,7 @@
 /**
  * Basketball Arcade Game
  * Game #166 - Physics-based basketball shooting
+ * Stadium / Basketball / Orange and Purple Theme
  */
 
 interface Ball {
@@ -17,6 +18,17 @@ interface Hoop {
   y: number;
   width: number;
   rimY: number;
+}
+
+interface PendingEvents {
+  shoot: Array<{ x: number; y: number; vx: number; vy: number }>;
+  score: Array<{ x: number; y: number; points: number }>;
+  rimHit: Array<{ x: number; y: number }>;
+  swish: Array<{ x: number; y: number }>;
+  miss: Array<{ x: number; y: number }>;
+  gameOver: boolean;
+  victory: boolean;
+  start: boolean;
 }
 
 export class BasketballArcadeGame {
@@ -37,7 +49,32 @@ export class BasketballArcadeGame {
   private lastTime: number = 0;
   private timerInterval: number = 0;
   private scored: boolean = false;
+  private wasCleanShot: boolean = false;
   onStateChange: ((state: any) => void) | null = null;
+
+  public pendingEvents: PendingEvents = {
+    shoot: [],
+    score: [],
+    rimHit: [],
+    swish: [],
+    miss: [],
+    gameOver: false,
+    victory: false,
+    start: false,
+  };
+
+  public clearPendingEvents() {
+    this.pendingEvents = {
+      shoot: [],
+      score: [],
+      rimHit: [],
+      swish: [],
+      miss: [],
+      gameOver: false,
+      victory: false,
+      start: false,
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -81,6 +118,8 @@ export class BasketballArcadeGame {
     this.status = "playing";
     this.resetBall();
     this.scored = false;
+    this.wasCleanShot = true;
+    this.pendingEvents.start = true;
 
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = window.setInterval(() => {
@@ -105,12 +144,21 @@ export class BasketballArcadeGame {
     this.ball.vy = 0;
     this.ball.active = false;
     this.scored = false;
+    this.wasCleanShot = true;
   }
 
   private endGame() {
     this.status = "over";
     if (this.timerInterval) clearInterval(this.timerInterval);
     if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    // Victory if score >= 20
+    if (this.score >= 20) {
+      this.pendingEvents.victory = true;
+    } else {
+      this.pendingEvents.gameOver = true;
+    }
+
     this.emitState();
   }
 
@@ -144,7 +192,20 @@ export class BasketballArcadeGame {
       this.ball.y < rimY + 20
     ) {
       this.scored = true;
-      this.score += this.getPoints();
+      const points = this.getPoints();
+      this.score += points;
+
+      // Normalized position for effects
+      const nx = this.ball.x / this.width;
+      const ny = this.ball.y / this.height;
+
+      this.pendingEvents.score.push({ x: nx, y: ny, points });
+
+      // Swish if no rim hits
+      if (this.wasCleanShot) {
+        this.pendingEvents.swish.push({ x: nx, y: ny });
+      }
+
       this.emitState();
     }
 
@@ -176,6 +237,13 @@ export class BasketballArcadeGame {
       this.ball.x < -50 ||
       this.ball.x > this.width + 50
     ) {
+      // Emit miss if not scored
+      if (!this.scored) {
+        const nx = Math.max(0, Math.min(1, this.ball.x / this.width));
+        const ny = Math.max(0, Math.min(1, this.ball.y / this.height));
+        this.pendingEvents.miss.push({ x: nx, y: ny });
+        this.emitState();
+      }
       this.resetBall();
     }
   }
@@ -197,6 +265,12 @@ export class BasketballArcadeGame {
       const dot = this.ball.vx * nx + this.ball.vy * ny;
       this.ball.vx = (this.ball.vx - 2 * dot * nx) * 0.7;
       this.ball.vy = (this.ball.vy - 2 * dot * ny) * 0.7;
+
+      // Emit rim hit event
+      this.wasCleanShot = false;
+      const normX = rim.x / this.width;
+      const normY = rim.y / this.height;
+      this.pendingEvents.rimHit.push({ x: normX, y: normY });
     }
   }
 
@@ -334,6 +408,17 @@ export class BasketballArcadeGame {
       this.ball.vx = Math.cos(angle) * power;
       this.ball.vy = Math.sin(angle) * power;
       this.ball.active = true;
+
+      // Emit shoot event
+      const nx = this.ball.x / this.width;
+      const ny = this.ball.y / this.height;
+      this.pendingEvents.shoot.push({
+        x: nx,
+        y: ny,
+        vx: this.ball.vx,
+        vy: this.ball.vy,
+      });
+      this.emitState();
     }
 
     this.dragging = false;

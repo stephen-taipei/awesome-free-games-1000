@@ -1,3 +1,21 @@
+/**
+ * Space Invaders Styles
+ * Retro CRT / Neon Green / Space Arcade Theme
+ * Game #155
+ */
+
+:root {
+  --crt-green: #00ff00;
+  --crt-bright: #66ff66;
+  --crt-dim: #009900;
+  --crt-bg: #001100;
+  --space-black: #000000;
+  --space-dark: #0a0a0a;
+  --alien-red: #ff6b6b;
+  --alien-yellow: #feca57;
+  --alien-cyan: #48dbfb;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,19 +23,60 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, sans-serif;
-  background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+  font-family: "Courier New", Courier, monospace;
+  background: linear-gradient(135deg, var(--space-black) 0%, #0c0c0c 50%, #1a1a2e 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Scan line overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.1) 2px,
+    rgba(0, 0, 0, 0.1) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* CRT flicker effect */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+  animation: crtFlicker 0.1s infinite;
+  pointer-events: none;
+  z-index: 999;
+}
+
+@keyframes crtFlicker {
+  0%, 100% { opacity: 0.97; }
+  50% { opacity: 1; }
 }
 
 .game-container {
   max-width: 500px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .game-header {
@@ -25,22 +84,32 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  color: #00ff00;
+  color: var(--crt-green);
 }
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 0 0 10px #00ff00;
-  font-family: "Courier New", monospace;
+  text-shadow:
+    0 0 5px var(--crt-green),
+    0 0 10px var(--crt-green),
+    0 0 20px var(--crt-green);
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 .header-controls select {
   padding: 0.5rem;
   border-radius: 4px;
-  border: none;
-  background: #1a1a2e;
-  color: #00ff00;
+  border: 1px solid var(--crt-green);
+  background: var(--space-black);
+  color: var(--crt-green);
   cursor: pointer;
+  font-family: inherit;
+  text-shadow: 0 0 5px var(--crt-green);
+}
+
+.header-controls select:hover {
+  box-shadow: 0 0 10px var(--crt-green);
 }
 
 .game-controls {
@@ -51,32 +120,75 @@ body {
 }
 
 .stats-card {
-  background: rgba(0, 255, 0, 0.1);
-  border: 1px solid #00ff00;
+  background: rgba(0, 255, 0, 0.05);
+  border: 1px solid var(--crt-green);
   padding: 0.5rem 1rem;
   border-radius: 4px;
   font-weight: bold;
   display: flex;
   gap: 0.5rem;
-  color: #00ff00;
-  font-family: "Courier New", monospace;
+  color: var(--crt-green);
+  box-shadow:
+    0 0 5px rgba(0, 255, 0, 0.2),
+    inset 0 0 10px rgba(0, 255, 0, 0.05);
+  text-shadow: 0 0 5px var(--crt-green);
 }
 
 .game-area {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  background: #000;
+  background: var(--space-black);
   border-radius: 8px;
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+  box-shadow:
+    0 0 20px rgba(0, 255, 0, 0.3),
+    0 0 40px rgba(0, 255, 0, 0.1),
+    inset 0 0 50px rgba(0, 255, 0, 0.05);
   margin-bottom: 1rem;
   overflow: hidden;
-  border: 2px solid #00ff00;
+  border: 2px solid var(--crt-green);
 }
 
-canvas {
+/* CRT curvature simulation */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.4) 100%);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 6px;
+}
+
+.canvas-container {
+  position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 6px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
 }
 
 .overlay {
@@ -85,59 +197,79 @@ canvas {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.95);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .overlay-content {
   text-align: center;
-  color: #00ff00;
+  color: var(--crt-green);
   padding: 2rem;
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  text-shadow: 0 0 20px #00ff00;
-  font-family: "Courier New", monospace;
+  text-shadow:
+    0 0 10px var(--crt-green),
+    0 0 20px var(--crt-green),
+    0 0 30px var(--crt-green);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  animation: titleGlow 2s ease-in-out infinite;
+}
+
+@keyframes titleGlow {
+  0%, 100% { text-shadow: 0 0 10px var(--crt-green), 0 0 20px var(--crt-green); }
+  50% { text-shadow: 0 0 20px var(--crt-green), 0 0 40px var(--crt-green), 0 0 60px var(--crt-green); }
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
   opacity: 0.9;
-}
-
-.btn {
-  padding: 0.75rem 2rem;
-  border: 2px solid #00ff00;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: "Courier New", monospace;
-}
-
-.btn:hover {
-  box-shadow: 0 0 15px #00ff00;
-}
-
-.btn.primary {
-  background: #00ff00;
-  color: #000;
-}
-
-.btn.primary:hover {
-  background: #00cc00;
+  text-shadow: 0 0 5px var(--crt-green);
 }
 
 .controls-hint {
   margin-top: 1rem;
   opacity: 0.7;
+  text-shadow: 0 0 3px var(--crt-green);
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: 2px solid var(--crt-green);
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.btn:hover {
+  box-shadow:
+    0 0 15px var(--crt-green),
+    0 0 30px rgba(0, 255, 0, 0.3);
+}
+
+.btn.primary {
+  background: var(--crt-green);
+  color: var(--space-black);
+  text-shadow: none;
+}
+
+.btn.primary:hover {
+  background: var(--crt-bright);
+  box-shadow:
+    0 0 20px var(--crt-green),
+    0 0 40px rgba(0, 255, 0, 0.5);
 }
 
 .mobile-controls {
@@ -156,29 +288,67 @@ canvas {
 .control-btn {
   width: 60px;
   height: 60px;
-  border: 2px solid #00ff00;
+  border: 2px solid var(--crt-green);
   border-radius: 8px;
   background: rgba(0, 255, 0, 0.1);
-  color: #00ff00;
+  color: var(--crt-green);
   font-size: 1.5rem;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.1s;
-  font-family: "Courier New", monospace;
+  font-family: inherit;
+  text-shadow: 0 0 5px var(--crt-green);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+}
+
+.control-btn:hover {
+  box-shadow: 0 0 20px var(--crt-green);
 }
 
 .control-btn:active {
-  background: #00ff00;
-  color: #000;
+  background: var(--crt-green);
+  color: var(--space-black);
+  text-shadow: none;
 }
 
 .fire-btn {
   width: 80px;
   font-size: 1rem;
+  background: rgba(255, 0, 0, 0.1);
+  border-color: #ff0000;
+  color: #ff0000;
+  text-shadow: 0 0 5px #ff0000;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+}
+
+.fire-btn:hover {
+  box-shadow: 0 0 20px #ff0000;
+}
+
+.fire-btn:active {
+  background: #ff0000;
+  color: var(--space-black);
+  text-shadow: none;
 }
 
 @media (min-width: 768px) {
   .mobile-controls {
     display: none;
+  }
+}
+
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .game-controls {
+    gap: 0.5rem;
   }
 }

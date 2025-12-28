@@ -27,6 +27,14 @@ interface GameState {
   score: number;
   lives: number;
   status: "idle" | "playing" | "won" | "over";
+  frogHop?: { x: number; y: number };
+  splash?: { x: number; y: number; isDeath: boolean };
+  carHit?: { x: number; y: number };
+  goalReach?: { x: number; y: number };
+  logRide?: { x: number; y: number };
+  gameOver?: { x: number; y: number };
+  lifeLost?: { x: number; y: number; type: "water" | "car" };
+  victory?: boolean;
 }
 
 type StateCallback = (state: GameState) => void;
@@ -39,6 +47,8 @@ export class FroggerGame {
   private ctx: CanvasRenderingContext2D;
   private frogX = 0;
   private frogY = 0;
+  private prevFrogX = 0;
+  private prevFrogY = 0;
   private cellWidth = 0;
   private cellHeight = 0;
   private lanes: Lane[] = [];
@@ -49,6 +59,18 @@ export class FroggerGame {
   private animationId: number | null = null;
   private goalsReached: boolean[] = [false, false, false, false, false];
   private frogOnLog: Vehicle | null = null;
+  private frameCount = 0;
+
+  private pendingEvents: {
+    frogHop?: { x: number; y: number };
+    splash?: { x: number; y: number; isDeath: boolean };
+    carHit?: { x: number; y: number };
+    goalReach?: { x: number; y: number };
+    logRide?: { x: number; y: number };
+    gameOver?: { x: number; y: number };
+    lifeLost?: { x: number; y: number; type: "water" | "car" };
+    victory?: boolean;
+  } = {};
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -61,11 +83,17 @@ export class FroggerGame {
 
   private emitState() {
     if (this.onStateChange) {
-      this.onStateChange({
+      const state: GameState = {
         score: this.score,
         lives: this.lives,
         status: this.status,
-      });
+        ...this.pendingEvents,
+      };
+
+      this.onStateChange(state);
+
+      // Clear pending events after emission
+      this.pendingEvents = {};
     }
   }
 
@@ -167,11 +195,16 @@ export class FroggerGame {
   private resetFrog() {
     this.frogX = 5;
     this.frogY = 12;
+    this.prevFrogX = 5;
+    this.prevFrogY = 12;
     this.frogOnLog = null;
   }
 
   move(dir: "up" | "down" | "left" | "right") {
     if (this.status !== "playing") return;
+
+    this.prevFrogX = this.frogX;
+    this.prevFrogY = this.frogY;
 
     switch (dir) {
       case "up":
@@ -188,16 +221,29 @@ export class FroggerGame {
         break;
     }
 
+    // Emit hop event if moved
+    if (this.frogX !== this.prevFrogX || this.frogY !== this.prevFrogY) {
+      const nx = (this.frogX * this.cellWidth + this.cellWidth / 2) / this.canvas.width;
+      const ny = 1 - (this.frogY * this.cellHeight + this.cellHeight / 2) / this.canvas.height;
+      this.pendingEvents.frogHop = { x: nx, y: ny };
+      this.emitState();
+    }
+
     // Check if reached goal
     if (this.frogY === 0) {
       const goalIndex = Math.floor(this.frogX / 2.2);
       if (goalIndex >= 0 && goalIndex < 5 && !this.goalsReached[goalIndex]) {
         this.goalsReached[goalIndex] = true;
         this.score += 100;
+
+        // Emit goal reach
+        const gx = (goalIndex * (this.canvas.width / 5) + this.canvas.width / 10) / this.canvas.width;
+        this.pendingEvents.goalReach = { x: gx, y: 0.95 };
         this.emitState();
 
         // Check win
         if (this.goalsReached.every((g) => g)) {
+          this.pendingEvents.victory = true;
           this.status = "won";
           this.emitState();
           return;
@@ -217,6 +263,8 @@ export class FroggerGame {
   }
 
   private update() {
+    this.frameCount++;
+
     // Move vehicles
     for (const lane of this.lanes) {
       for (const vehicle of lane.vehicles) {
@@ -239,6 +287,10 @@ export class FroggerGame {
     const currentLane = this.lanes.find((l) => l.y === this.frogY);
     if (!currentLane) return;
 
+    // Normalized frog position for effects
+    const nx = frogCenterX / this.canvas.width;
+    const ny = 1 - frogCenterY / this.canvas.height;
+
     if (currentLane.type === "road") {
       // Check car collision
       for (const vehicle of currentLane.vehicles) {
@@ -248,6 +300,8 @@ export class FroggerGame {
           frogCenterY + frogRadius > vehicle.y &&
           frogCenterY - frogRadius < vehicle.y + vehicle.height
         ) {
+          this.pendingEvents.carHit = { x: nx, y: ny };
+          this.pendingEvents.lifeLost = { x: nx, y: ny, type: "car" };
           this.die();
           return;
         }
@@ -263,17 +317,27 @@ export class FroggerGame {
           onLog = true;
           // Move frog with log
           this.frogX += vehicle.speed / this.cellWidth;
+
+          // Emit log ride effect occasionally
+          if (this.frameCount % 20 === 0) {
+            this.pendingEvents.logRide = { x: nx, y: ny };
+            this.emitState();
+          }
           break;
         }
       }
 
       if (!onLog) {
+        this.pendingEvents.splash = { x: nx, y: ny, isDeath: true };
+        this.pendingEvents.lifeLost = { x: nx, y: ny, type: "water" };
         this.die();
         return;
       }
 
       // Check if frog went off screen
       if (this.frogX < -0.5 || this.frogX > 10.5) {
+        this.pendingEvents.splash = { x: nx, y: ny, isDeath: true };
+        this.pendingEvents.lifeLost = { x: nx, y: ny, type: "water" };
         this.die();
       }
     }
@@ -284,6 +348,9 @@ export class FroggerGame {
     this.emitState();
 
     if (this.lives <= 0) {
+      const nx = (this.frogX * this.cellWidth + this.cellWidth / 2) / this.canvas.width;
+      const ny = 1 - (this.frogY * this.cellHeight + this.cellHeight / 2) / this.canvas.height;
+      this.pendingEvents.gameOver = { x: nx, y: ny };
       this.status = "over";
       this.emitState();
     } else {
@@ -296,6 +363,9 @@ export class FroggerGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
+    // Clear with transparency for WebGPU background
+    ctx.clearRect(0, 0, w, h);
+
     // Draw lanes
     for (let i = 0; i < GRID_ROWS; i++) {
       const y = i * this.cellHeight;
@@ -304,20 +374,20 @@ export class FroggerGame {
       if (lane) {
         switch (lane.type) {
           case "goal":
-            ctx.fillStyle = "#27ae60";
+            ctx.fillStyle = "rgba(39, 174, 96, 0.7)";
             break;
           case "water":
-            ctx.fillStyle = "#3498db";
+            ctx.fillStyle = "rgba(52, 152, 219, 0.5)";
             break;
           case "road":
-            ctx.fillStyle = "#2d3436";
+            ctx.fillStyle = "rgba(45, 52, 54, 0.8)";
             break;
           case "safe":
-            ctx.fillStyle = "#27ae60";
+            ctx.fillStyle = "rgba(39, 174, 96, 0.6)";
             break;
         }
       } else {
-        ctx.fillStyle = "#27ae60";
+        ctx.fillStyle = "rgba(39, 174, 96, 0.6)";
       }
 
       ctx.fillRect(0, y, w, this.cellHeight);
@@ -335,13 +405,21 @@ export class FroggerGame {
       }
     }
 
-    // Draw goals
+    // Draw goals with glow
     for (let i = 0; i < 5; i++) {
       const gx = i * (w / 5) + (w / 5 - this.cellWidth) / 2;
+
+      if (this.goalsReached[i]) {
+        ctx.shadowColor = "#f39c12";
+        ctx.shadowBlur = 20;
+      }
+
       ctx.fillStyle = this.goalsReached[i] ? "#f39c12" : "#1e8449";
       ctx.beginPath();
       ctx.arc(gx + this.cellWidth / 2, this.cellHeight / 2, this.cellWidth / 2.5, 0, Math.PI * 2);
       ctx.fill();
+
+      ctx.shadowBlur = 0;
     }
 
     // Draw vehicles
@@ -359,11 +437,18 @@ export class FroggerGame {
     const ctx = this.ctx;
 
     if (vehicle.type === "log") {
-      // Log
+      // Log with shadow
+      ctx.shadowColor = "rgba(0,0,0,0.3)";
+      ctx.shadowBlur = 5;
+      ctx.shadowOffsetY = 2;
+
       ctx.fillStyle = "#8b4513";
       ctx.beginPath();
       ctx.roundRect(vehicle.x, vehicle.y + 2, vehicle.width, vehicle.height, 8);
       ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
 
       // Wood grain
       ctx.strokeStyle = "#5d3a1a";
@@ -374,14 +459,19 @@ export class FroggerGame {
         ctx.stroke();
       }
     } else {
-      // Car/truck body
+      // Car/truck body with glow
+      ctx.shadowColor = vehicle.color;
+      ctx.shadowBlur = 10;
+
       ctx.fillStyle = vehicle.color;
       ctx.beginPath();
       ctx.roundRect(vehicle.x, vehicle.y + 4, vehicle.width, vehicle.height, 4);
       ctx.fill();
 
+      ctx.shadowBlur = 0;
+
       // Windows
-      ctx.fillStyle = "#dfe6e9";
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
       const windowWidth = vehicle.width * 0.25;
       ctx.fillRect(vehicle.x + vehicle.width * 0.15, vehicle.y + 8, windowWidth, vehicle.height * 0.5);
       ctx.fillRect(vehicle.x + vehicle.width * 0.55, vehicle.y + 8, windowWidth, vehicle.height * 0.5);
@@ -401,11 +491,17 @@ export class FroggerGame {
     const y = this.frogY * this.cellHeight + this.cellHeight / 2;
     const radius = this.cellWidth * 0.35;
 
+    // Glow
+    ctx.shadowColor = "#27ae60";
+    ctx.shadowBlur = 15;
+
     // Body
     ctx.fillStyle = "#27ae60";
     ctx.beginPath();
     ctx.ellipse(x, y, radius, radius * 0.8, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.shadowBlur = 0;
 
     // Eyes
     ctx.fillStyle = "white";

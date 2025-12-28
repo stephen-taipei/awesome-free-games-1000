@@ -1,6 +1,7 @@
 /**
  * Ring Toss Game
  * Game #165 - Physics Arc
+ * Carnival / Fairground / Colorful and Festive Theme
  * Throw rings to land on pegs and score points!
  */
 
@@ -27,6 +28,17 @@ interface Peg {
   hasRing: boolean;
 }
 
+interface PendingEvents {
+  throw: Array<{ x: number; y: number; color: string }>;
+  land: Array<{ x: number; y: number; points: number }>;
+  bounce: Array<{ x: number; y: number }>;
+  score: Array<{ x: number; y: number; points: number }>;
+  miss: Array<{ x: number; y: number }>;
+  gameOver: boolean;
+  victory: boolean;
+  start: boolean;
+}
+
 export class RingTossGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -49,6 +61,17 @@ export class RingTossGame {
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
 
   onStateChange: ((state: any) => void) | null = null;
+
+  pendingEvents: PendingEvents = {
+    throw: [],
+    land: [],
+    bounce: [],
+    score: [],
+    miss: [],
+    gameOver: false,
+    victory: false,
+    start: false
+  };
 
   private animationId: number | null = null;
   private lastTime = 0;
@@ -132,8 +155,22 @@ export class RingTossGame {
     if (this.status === 'playing') return;
     this.status = 'playing';
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.emitState();
+  }
+
+  clearPendingEvents() {
+    this.pendingEvents = {
+      throw: [],
+      land: [],
+      bounce: [],
+      score: [],
+      miss: [],
+      gameOver: false,
+      victory: false,
+      start: false
+    };
   }
 
   private gameLoop() {
@@ -181,6 +218,7 @@ export class RingTossGame {
           const dx = ring.x - peg.x;
           const dy = ring.y - (peg.y - peg.height);
           const dist = Math.sqrt(dx * dx + dy * dy);
+          const w = this.canvas.width;
 
           // Ring lands on peg
           if (dist < ring.radius + peg.radius && ring.vy > 0) {
@@ -194,17 +232,28 @@ export class RingTossGame {
               ring.vy = 0;
               peg.hasRing = true;
               this.score += peg.points;
+              // Emit land event
+              const nx = ring.x / w;
+              const ny = ring.y / h;
+              this.pendingEvents.land.push({ x: nx, y: ny, points: peg.points });
               this.emitState();
             } else {
               // Bounce off
               ring.vx = dx * 0.3;
               ring.vy = -Math.abs(ring.vy) * 0.3;
+              // Emit bounce event
+              const nx = ring.x / w;
+              const ny = ring.y / h;
+              this.pendingEvents.bounce.push({ x: nx, y: ny });
             }
           }
         }
 
         // Fell off screen
         if (ring.y > h + 50) {
+          // Emit miss event
+          const nx = ring.x / this.canvas.width;
+          this.pendingEvents.miss.push({ x: nx, y: 0.95 });
           this.rings.splice(i, 1);
         }
       }
@@ -221,6 +270,7 @@ export class RingTossGame {
         this.level++;
         if (this.level > 5) {
           this.status = 'won';
+          this.pendingEvents.victory = true;
           if (this.animationId) cancelAnimationFrame(this.animationId);
         } else {
           this.setupLevel();
@@ -229,6 +279,7 @@ export class RingTossGame {
         this.lives--;
         if (this.lives <= 0) {
           this.status = 'lost';
+          this.pendingEvents.gameOver = true;
           if (this.animationId) cancelAnimationFrame(this.animationId);
         } else {
           this.setupLevel();
@@ -253,6 +304,13 @@ export class RingTossGame {
       this.currentRing.vx = Math.cos(angle) * power;
       this.currentRing.vy = Math.sin(angle) * power;
       this.currentRing.rotationSpeed = (Math.random() - 0.5) * 0.3;
+
+      // Emit throw event
+      const w = this.canvas.width;
+      const h = this.canvas.height;
+      const nx = this.currentRing.x / w;
+      const ny = this.currentRing.y / h;
+      this.pendingEvents.throw.push({ x: nx, y: ny, color: this.currentRing.color });
 
       this.rings.push(this.currentRing);
       this.currentRing = null;

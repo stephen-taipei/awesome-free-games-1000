@@ -68,6 +68,16 @@ export class GalagaGame {
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
   onStateChange: ((state: any) => void) | null = null;
 
+  private pendingEvents: {
+    playerShoot?: { x: number; y: number };
+    enemyDeath?: { x: number; y: number; type: number };
+    playerHit?: { x: number; y: number };
+    divingTrail?: { x: number; y: number }[];
+    bulletTrails?: { x: number; y: number; isEnemy: boolean }[];
+    gameOver?: { x: number; y: number };
+    levelComplete?: boolean;
+  } = {};
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
@@ -170,21 +180,45 @@ export class GalagaGame {
 
     // Shooting
     if (this.shooting && this.shootCooldown <= 0) {
+      const bulletX = this.playerX + this.playerWidth / 2 - 2;
+      const bulletY = this.playerY;
       this.bullets.push({
-        x: this.playerX + this.playerWidth / 2 - 2,
-        y: this.playerY,
+        x: bulletX,
+        y: bulletY,
         dy: -8,
         isEnemy: false
       });
       this.shootCooldown = this.shootInterval;
+
+      // Emit player shoot event
+      this.pendingEvents.playerShoot = {
+        x: bulletX / this.canvas.width,
+        y: bulletY / this.canvas.height
+      };
+      this.notifyState();
     }
     if (this.shootCooldown > 0) this.shootCooldown--;
 
     // Update bullets
+    const bulletTrails: { x: number; y: number; isEnemy: boolean }[] = [];
     this.bullets = this.bullets.filter(bullet => {
       bullet.y += bullet.dy;
+
+      // Emit bullet trail
+      if (this.frameCount % 3 === 0) {
+        bulletTrails.push({
+          x: bullet.x / this.canvas.width,
+          y: bullet.y / this.canvas.height,
+          isEnemy: bullet.isEnemy
+        });
+      }
+
       return bullet.y > -10 && bullet.y < this.canvas.height + 10;
     });
+
+    if (bulletTrails.length > 0) {
+      this.pendingEvents.bulletTrails = bulletTrails;
+    }
 
     // Enemy movement
     this.enemyMoveTimer++;
@@ -217,6 +251,7 @@ export class GalagaGame {
 
     // Check win condition
     if (this.enemies.every(e => !e.alive)) {
+      this.pendingEvents.levelComplete = true;
       this.level++;
       this.spawnEnemies();
       this.enemyMoveInterval = Math.max(10, 30 - this.level * 2);
@@ -247,11 +282,19 @@ export class GalagaGame {
   }
 
   private updateDivingEnemies() {
+    const divingTrails: { x: number; y: number }[] = [];
+
     for (const enemy of this.enemies) {
       if (enemy.diving && enemy.alive) {
         enemy.x += Math.sin(enemy.diveAngle) * 3;
         enemy.y += enemy.diveSpeed;
         enemy.diveAngle += 0.1;
+
+        // Emit diving trail
+        divingTrails.push({
+          x: (enemy.x + this.enemyWidth / 2) / this.canvas.width,
+          y: (enemy.y + this.enemyHeight / 2) / this.canvas.height
+        });
 
         // Return to formation if past screen
         if (enemy.y > this.canvas.height + 50) {
@@ -261,6 +304,10 @@ export class GalagaGame {
           enemy.y = enemy.originalY;
         }
       }
+    }
+
+    if (divingTrails.length > 0) {
+      this.pendingEvents.divingTrail = divingTrails;
     }
   }
 
@@ -300,12 +347,22 @@ export class GalagaGame {
           enemy.alive = false;
           bullet.y = -100; // Remove bullet
           this.score += enemy.type === 1 ? 100 : 50;
+
+          const expX = enemy.x + this.enemyWidth / 2;
+          const expY = enemy.y + this.enemyHeight / 2;
           this.explosions.push({
-            x: enemy.x + this.enemyWidth / 2,
-            y: enemy.y + this.enemyHeight / 2,
+            x: expX,
+            y: expY,
             frame: 0,
             maxFrames: 15
           });
+
+          // Emit enemy death event
+          this.pendingEvents.enemyDeath = {
+            x: expX / this.canvas.width,
+            y: expY / this.canvas.height,
+            type: enemy.type
+          };
           this.notifyState();
         }
       }
@@ -338,15 +395,28 @@ export class GalagaGame {
 
   private playerHit() {
     this.lives--;
+    const hitX = this.playerX + this.playerWidth / 2;
+    const hitY = this.playerY + this.playerHeight / 2;
+
     this.explosions.push({
-      x: this.playerX + this.playerWidth / 2,
-      y: this.playerY + this.playerHeight / 2,
+      x: hitX,
+      y: hitY,
       frame: 0,
       maxFrames: 20
     });
 
+    // Emit player hit event
+    this.pendingEvents.playerHit = {
+      x: hitX / this.canvas.width,
+      y: hitY / this.canvas.height
+    };
+
     if (this.lives <= 0) {
       this.status = 'lost';
+      this.pendingEvents.gameOver = {
+        x: hitX / this.canvas.width,
+        y: hitY / this.canvas.height
+      };
     } else {
       this.playerX = this.canvas.width / 2 - this.playerWidth / 2;
     }
@@ -530,8 +600,12 @@ export class GalagaGame {
         status: this.status,
         score: this.score,
         lives: this.lives,
-        level: this.level
+        level: this.level,
+        ...this.pendingEvents
       });
+
+      // Clear pending events after notification
+      this.pendingEvents = {};
     }
   }
 

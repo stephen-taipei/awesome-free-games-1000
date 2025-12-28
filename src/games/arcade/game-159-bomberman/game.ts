@@ -2,6 +2,7 @@
  * Bomberman Game
  * Game #159 - Grid Bomb
  * Classic maze bomber: place bombs to destroy walls and enemies
+ * Classic Arcade / Explosive / Orange-Red Fire Theme
  */
 
 interface Player {
@@ -43,6 +44,18 @@ interface PowerUp {
 
 type TileType = 'empty' | 'wall' | 'brick' | 'bomb' | 'explosion';
 
+interface PendingEvents {
+  bombPlace: Array<{ x: number; y: number }>;
+  explosion: Array<{ x: number; y: number; power: number }>;
+  brickDestroy: Array<{ x: number; y: number }>;
+  playerHit: Array<{ x: number; y: number }>;
+  powerUp: Array<{ x: number; y: number; type: 'bomb' | 'power' | 'speed' }>;
+  enemyDeath: Array<{ x: number; y: number; type: string }>;
+  gameOver: boolean;
+  victory: boolean;
+  start: boolean;
+}
+
 export class BombermanGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -73,6 +86,18 @@ export class BombermanGame {
   private animationId: number | null = null;
   private lastTime = 0;
   private frameCount = 0;
+
+  pendingEvents: PendingEvents = {
+    bombPlace: [],
+    explosion: [],
+    brickDestroy: [],
+    playerHit: [],
+    powerUp: [],
+    enemyDeath: [],
+    gameOver: false,
+    victory: false,
+    start: false
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -153,6 +178,7 @@ export class BombermanGame {
   start() {
     if (this.status === 'playing') return;
     this.status = 'playing';
+    this.pendingEvents.start = true;
     this.lastTime = performance.now();
     this.gameLoop();
     this.emitState();
@@ -218,6 +244,11 @@ export class BombermanGame {
       if (!this.bombs.some(b => b.x === bx && b.y === by)) {
         this.bombs.push({ x: bx, y: by, timer: 180, power: p.bombPower });
         p.bombCount++;
+        // Emit bomb place event
+        this.pendingEvents.bombPlace.push({
+          x: (bx + 0.5) / this.gridWidth,
+          y: (by + 0.5) / this.gridHeight
+        });
         this.keys[' '] = false;
         this.keys['Enter'] = false;
       }
@@ -232,6 +263,12 @@ export class BombermanGame {
           case 'power': p.bombPower++; break;
           case 'speed': p.speed = Math.min(0.15, p.speed + 0.02); break;
         }
+        // Emit power-up event
+        this.pendingEvents.powerUp.push({
+          x: (pu.x + 0.5) / this.gridWidth,
+          y: (pu.y + 0.5) / this.gridHeight,
+          type: pu.type
+        });
         this.powerUps.splice(i, 1);
         this.score += 50;
         this.emitState();
@@ -370,6 +407,13 @@ export class BombermanGame {
       { dx: 1, dy: 0, length: 0 }
     ];
 
+    // Emit explosion event for center
+    this.pendingEvents.explosion.push({
+      x: (bomb.x + 0.5) / this.gridWidth,
+      y: (bomb.y + 0.5) / this.gridHeight,
+      power: bomb.power
+    });
+
     // Calculate explosion reach in each direction
     for (const dir of directions) {
       for (let i = 1; i <= bomb.power; i++) {
@@ -385,6 +429,11 @@ export class BombermanGame {
 
         if (tile === 'brick') {
           this.map[ty][tx] = 'empty';
+          // Emit brick destroy event
+          this.pendingEvents.brickDestroy.push({
+            x: (tx + 0.5) / this.gridWidth,
+            y: (ty + 0.5) / this.gridHeight
+          });
           // Chance to spawn power-up
           if (Math.random() < 0.3) {
             const types: PowerUp['type'][] = ['bomb', 'power', 'speed'];
@@ -426,6 +475,11 @@ export class BombermanGame {
     // Check player vs explosion
     for (const exp of this.explosions) {
       if (this.isInExplosion(this.player.x, this.player.y, exp)) {
+        // Emit player hit event
+        this.pendingEvents.playerHit.push({
+          x: (this.player.x + 0.5) / this.gridWidth,
+          y: (this.player.y + 0.5) / this.gridHeight
+        });
         this.loseLife();
         return;
       }
@@ -434,6 +488,11 @@ export class BombermanGame {
     // Check player vs enemy
     for (const e of this.enemies) {
       if (Math.abs(this.player.x - e.x) < 0.6 && Math.abs(this.player.y - e.y) < 0.6) {
+        // Emit player hit event
+        this.pendingEvents.playerHit.push({
+          x: (this.player.x + 0.5) / this.gridWidth,
+          y: (this.player.y + 0.5) / this.gridHeight
+        });
         this.loseLife();
         return;
       }
@@ -444,6 +503,12 @@ export class BombermanGame {
       const e = this.enemies[i];
       for (const exp of this.explosions) {
         if (this.isInExplosion(e.x, e.y, exp)) {
+          // Emit enemy death event
+          this.pendingEvents.enemyDeath.push({
+            x: (e.x + 0.5) / this.gridWidth,
+            y: (e.y + 0.5) / this.gridHeight,
+            type: e.type
+          });
           this.enemies.splice(i, 1);
           const points = { basic: 100, fast: 200, smart: 300 };
           this.score += points[e.type];
@@ -475,6 +540,7 @@ export class BombermanGame {
       this.level++;
       if (this.level > 10) {
         this.status = 'won';
+        this.pendingEvents.victory = true;
         if (this.animationId) cancelAnimationFrame(this.animationId);
       } else {
         this.setupLevel();
@@ -489,6 +555,7 @@ export class BombermanGame {
 
     if (this.lives <= 0) {
       this.status = 'lost';
+      this.pendingEvents.gameOver = true;
       if (this.animationId) cancelAnimationFrame(this.animationId);
     } else {
       this.player.x = 1;
@@ -751,9 +818,24 @@ export class BombermanGame {
     this.player.maxBombs = 1;
     this.player.bombPower = 1;
     this.player.speed = 0.08;
+    this.clearPendingEvents();
     this.setupLevel();
     this.draw();
     this.emitState();
+  }
+
+  clearPendingEvents() {
+    this.pendingEvents = {
+      bombPlace: [],
+      explosion: [],
+      brickDestroy: [],
+      playerHit: [],
+      powerUp: [],
+      enemyDeath: [],
+      gameOver: false,
+      victory: false,
+      start: false
+    };
   }
 
   setOnStateChange(cb: (state: any) => void) {

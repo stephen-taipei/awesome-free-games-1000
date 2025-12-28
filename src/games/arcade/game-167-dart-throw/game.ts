@@ -1,12 +1,24 @@
 /**
  * Dart Throw Game
  * Game #167 - Canvas aim and throw darts
+ * Pub / Darts / Red and Green Theme
  */
 
 interface Dart {
   x: number;
   y: number;
   score: number;
+}
+
+interface PendingEvents {
+  throw: Array<{ x: number; y: number }>;
+  land: Array<{ x: number; y: number; score: number }>;
+  bullseye: Array<{ x: number; y: number }>;
+  miss: Array<{ x: number; y: number }>;
+  roundEnd: boolean;
+  gameOver: boolean;
+  victory: boolean;
+  start: boolean;
 }
 
 export class DartThrowGame {
@@ -29,6 +41,30 @@ export class DartThrowGame {
   private animationId: number = 0;
   private wobbleTime: number = 0;
   onStateChange: ((state: any) => void) | null = null;
+
+  public pendingEvents: PendingEvents = {
+    throw: [],
+    land: [],
+    bullseye: [],
+    miss: [],
+    roundEnd: false,
+    gameOver: false,
+    victory: false,
+    start: false,
+  };
+
+  public clearPendingEvents() {
+    this.pendingEvents = {
+      throw: [],
+      land: [],
+      bullseye: [],
+      miss: [],
+      roundEnd: false,
+      gameOver: false,
+      victory: false,
+      start: false,
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -61,6 +97,7 @@ export class DartThrowGame {
     this.throwingDart = null;
     this.wobbleTime = 0;
 
+    this.pendingEvents.start = true;
     this.emitState();
     this.loop();
   }
@@ -109,6 +146,20 @@ export class DartThrowGame {
     else if (dist < this.targetRadius * 0.85) dartScore = 10;
     else if (dist < this.targetRadius) dartScore = 5;
 
+    // Normalized position for effects
+    const nx = this.throwingDart.x / this.width;
+    const ny = this.throwingDart.y / this.height;
+
+    // Emit appropriate event
+    if (dartScore >= 50) {
+      this.pendingEvents.bullseye.push({ x: nx, y: ny });
+      this.pendingEvents.land.push({ x: nx, y: ny, score: dartScore });
+    } else if (dartScore > 0) {
+      this.pendingEvents.land.push({ x: nx, y: ny, score: dartScore });
+    } else {
+      this.pendingEvents.miss.push({ x: nx, y: ny });
+    }
+
     this.darts.push({
       x: this.throwingDart.x,
       y: this.throwingDart.y,
@@ -124,6 +175,7 @@ export class DartThrowGame {
         this.round++;
         this.dartsLeft = 3;
         this.darts = [];
+        this.pendingEvents.roundEnd = true;
       } else {
         this.endGame();
         return;
@@ -137,6 +189,14 @@ export class DartThrowGame {
   private endGame() {
     this.status = "over";
     if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    // Victory if score >= 100
+    if (this.score >= 100) {
+      this.pendingEvents.victory = true;
+    } else {
+      this.pendingEvents.gameOver = true;
+    }
+
     this.emitState();
   }
 
@@ -283,6 +343,12 @@ export class DartThrowGame {
       z: 50,
       vz: 5,
     };
+
+    // Emit throw event
+    const nx = this.aimX / this.width;
+    const ny = this.aimY / this.height;
+    this.pendingEvents.throw.push({ x: nx, y: ny });
+    this.emitState();
   }
 
   public handleMouseMove(x: number, y: number) {

@@ -33,6 +33,16 @@ interface PopEffect {
   particles: { x: number; y: number; vx: number; vy: number; }[];
 }
 
+interface PendingEvents {
+  pop: Array<{ x: number; y: number; type: 'normal' | 'small' | 'fast' | 'bonus' }>;
+  shoot: Array<{ x: number; y: number }>;
+  escaped: Array<{ x: number; y: number }>;
+  confetti: Array<{ x: number; y: number }>;
+  gameOver: boolean;
+  victory: boolean;
+  start: boolean;
+}
+
 export class BalloonPopGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -63,6 +73,16 @@ export class BalloonPopGame {
 
   private colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#e91e63'];
 
+  pendingEvents: PendingEvents = {
+    pop: [],
+    shoot: [],
+    escaped: [],
+    confetti: [],
+    gameOver: false,
+    victory: false,
+    start: false,
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
@@ -76,6 +96,7 @@ export class BalloonPopGame {
     this.popEffects = [];
     this.spawnInterval = Math.max(30, 60 - this.level * 5);
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.emitState();
   }
@@ -167,12 +188,16 @@ export class BalloonPopGame {
 
       // Escaped
       if (b.y + b.radius < 0) {
+        const nx = b.x / this.canvas.width;
+        const ny = 0;
+        this.pendingEvents.escaped.push({ x: nx, y: ny });
         this.balloons.splice(i, 1);
         if (b.type !== 'bonus') {
           this.lives--;
           this.emitState();
           if (this.lives <= 0) {
             this.status = 'lost';
+            this.pendingEvents.gameOver = true;
             if (this.animationId) cancelAnimationFrame(this.animationId);
           }
         }
@@ -229,6 +254,17 @@ export class BalloonPopGame {
           // Pop!
           this.score += b.points;
           this.createPopEffect(b);
+
+          // Emit pop event
+          const nx = b.x / this.canvas.width;
+          const ny = b.y / this.canvas.height;
+          this.pendingEvents.pop.push({ x: nx, y: ny, type: b.type });
+
+          // Bonus balloons also emit confetti
+          if (b.type === 'bonus') {
+            this.pendingEvents.confetti.push({ x: nx, y: ny });
+          }
+
           this.balloons.splice(j, 1);
           this.darts.splice(i, 1);
           this.emitState();
@@ -266,6 +302,7 @@ export class BalloonPopGame {
       this.level++;
       if (this.level > 10) {
         this.status = 'won';
+        this.pendingEvents.victory = true;
         if (this.animationId) cancelAnimationFrame(this.animationId);
       } else {
         this.spawnInterval = Math.max(25, 60 - this.level * 5);
@@ -300,6 +337,11 @@ export class BalloonPopGame {
       vy,
       active: true
     });
+
+    // Emit shoot event
+    const nx = startX / this.canvas.width;
+    const ny = startY / this.canvas.height;
+    this.pendingEvents.shoot.push({ x: nx, y: ny });
 
     this.dartCooldown = 15;
   }
@@ -585,5 +627,17 @@ export class BalloonPopGame {
       level: this.level,
       status: this.status
     });
+  }
+
+  clearPendingEvents() {
+    this.pendingEvents = {
+      pop: [],
+      shoot: [],
+      escaped: [],
+      confetti: [],
+      gameOver: false,
+      victory: false,
+      start: false,
+    };
   }
 }

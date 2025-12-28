@@ -23,6 +23,16 @@ interface Pin {
   angle: number;
 }
 
+export interface PendingEvents {
+  ballRoll: { x: number; y: number }[];
+  pinHit: { x: number; y: number }[];
+  pinFall: { x: number; y: number }[];
+  strike: { x: number; y: number }[];
+  spare: { x: number; y: number }[];
+  gameOver: { x: number; y: number; victory: boolean }[];
+  start: boolean;
+}
+
 export class BowlingGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -43,12 +53,35 @@ export class BowlingGame {
   private animationId: number = 0;
   private message: string = "";
   private messageTimeout: number = 0;
+  private rollTrailTimer: number = 0;
   onStateChange: ((state: any) => void) | null = null;
+
+  public pendingEvents: PendingEvents = {
+    ballRoll: [],
+    pinHit: [],
+    pinFall: [],
+    strike: [],
+    spare: [],
+    gameOver: [],
+    start: false,
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 18, active: false, spin: 0 };
+  }
+
+  public clearPendingEvents() {
+    this.pendingEvents = {
+      ballRoll: [],
+      pinHit: [],
+      pinFall: [],
+      strike: [],
+      spare: [],
+      gameOver: [],
+      start: false,
+    };
   }
 
   public resize() {
@@ -72,9 +105,11 @@ export class BowlingGame {
     this.pinsKnockedFirst = 0;
     this.status = "playing";
     this.message = "";
+    this.rollTrailTimer = 0;
     this.resetBall();
     this.setupPins();
 
+    this.pendingEvents.start = true;
     this.emitState();
     this.loop();
   }
@@ -135,6 +170,16 @@ export class BowlingGame {
     this.ball.x += this.ball.vx;
     this.ball.y += this.ball.vy;
 
+    // Ball roll trail
+    this.rollTrailTimer += 1 / 60;
+    if (this.rollTrailTimer > 0.05) {
+      this.rollTrailTimer = 0;
+      this.pendingEvents.ballRoll.push({
+        x: this.ball.x / this.width,
+        y: this.ball.y / this.height,
+      });
+    }
+
     // Lane boundaries
     const laneLeft = (this.width - this.laneWidth) / 2;
     const laneRight = (this.width + this.laneWidth) / 2;
@@ -165,6 +210,12 @@ export class BowlingGame {
 
         this.ball.vx *= 0.8;
         this.ball.vy *= 0.9;
+
+        // Emit pin hit event
+        this.pendingEvents.pinHit.push({
+          x: pin.x / this.width,
+          y: pin.y / this.height,
+        });
       }
     }
 
@@ -193,6 +244,12 @@ export class BowlingGame {
               other.fallen = true;
               other.vx = pin.vx * 0.5 + nx * 2;
               other.vy = pin.vy * 0.5 + ny * 2;
+
+              // Emit pin fall event
+              this.pendingEvents.pinFall.push({
+                x: other.x / this.width,
+                y: other.y / this.height,
+              });
             }
           }
         }
@@ -215,6 +272,11 @@ export class BowlingGame {
 
       if (knockedDown === 10) {
         this.showMessage("game.strike");
+        // Emit strike event
+        this.pendingEvents.strike.push({
+          x: 0.5,
+          y: 0.3,
+        });
         this.nextFrame();
       } else {
         this.throwsInFrame = 1;
@@ -226,6 +288,11 @@ export class BowlingGame {
 
       if (knockedDown === 10) {
         this.showMessage("game.spare");
+        // Emit spare event
+        this.pendingEvents.spare.push({
+          x: 0.5,
+          y: 0.3,
+        });
       }
       this.nextFrame();
     }
@@ -259,6 +326,15 @@ export class BowlingGame {
   private endGame() {
     this.status = "over";
     if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    // Emit game over event (victory if score >= 30)
+    const victory = this.score >= 30;
+    this.pendingEvents.gameOver.push({
+      x: 0.5,
+      y: 0.5,
+      victory,
+    });
+
     this.emitState();
   }
 

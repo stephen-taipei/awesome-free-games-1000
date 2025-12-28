@@ -1,6 +1,7 @@
 /**
  * Claw Machine Game
  * Game #164 - Physics Claw
+ * Arcade / UFO Catcher / Purple and Neon Theme
  * Control the claw to grab prizes!
  */
 
@@ -22,6 +23,17 @@ interface Claw {
   openAngle: number;
   state: 'idle' | 'moving' | 'dropping' | 'grabbing' | 'rising' | 'returning';
   grabbedPrize: Prize | null;
+}
+
+interface PendingEvents {
+  clawDrop: Array<{ x: number; y: number }>;
+  grab: Array<{ x: number; y: number; success: boolean }>;
+  sparkle: Array<{ x: number; y: number; prizeType: string }>;
+  success: Array<{ x: number; y: number; points: number }>;
+  fail: Array<{ x: number; y: number }>;
+  gameOver: boolean;
+  victory: boolean;
+  start: boolean;
 }
 
 export class ClawMachineGame {
@@ -51,6 +63,17 @@ export class ClawMachineGame {
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
 
   onStateChange: ((state: any) => void) | null = null;
+
+  pendingEvents: PendingEvents = {
+    clawDrop: [],
+    grab: [],
+    sparkle: [],
+    success: [],
+    fail: [],
+    gameOver: false,
+    victory: false,
+    start: false
+  };
 
   private animationId: number | null = null;
   private lastTime = 0;
@@ -108,8 +131,22 @@ export class ClawMachineGame {
     if (this.status === 'playing') return;
     this.status = 'playing';
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.emitState();
+  }
+
+  clearPendingEvents() {
+    this.pendingEvents = {
+      clawDrop: [],
+      grab: [],
+      sparkle: [],
+      success: [],
+      fail: [],
+      gameOver: false,
+      victory: false,
+      start: false
+    };
   }
 
   private gameLoop() {
@@ -150,15 +187,27 @@ export class ClawMachineGame {
         c.y += this.dropSpeed;
         c.openAngle = Math.min(0.8, c.openAngle + 0.02);
 
+        // Emit sparks while dropping
+        if (this.frameCount % 5 === 0) {
+          const nx = c.x / w;
+          const ny = c.y / h;
+          this.pendingEvents.clawDrop.push({ x: nx, y: ny });
+        }
+
         // Check for prize to grab
         if (c.y > h - 150) {
           for (const prize of this.prizes) {
             if (!prize.grabbed && Math.abs(c.x - prize.x) < 30 && Math.abs(c.y - prize.y + 30) < 40) {
               // Probability of successful grab
               const grabChance = 0.6 + (0.05 * this.level);
+              const nx = c.x / w;
+              const ny = c.y / h;
               if (Math.random() < grabChance) {
                 prize.grabbed = true;
                 c.grabbedPrize = prize;
+                this.pendingEvents.grab.push({ x: nx, y: ny, success: true });
+              } else {
+                this.pendingEvents.grab.push({ x: nx, y: ny, success: false });
               }
               break;
             }
@@ -186,8 +235,18 @@ export class ClawMachineGame {
           c.grabbedPrize.x = c.x;
           c.grabbedPrize.y = c.y + 40;
 
+          // Sparkle effect on grabbed prize
+          if (this.frameCount % 8 === 0) {
+            const nx = c.grabbedPrize.x / w;
+            const ny = c.grabbedPrize.y / h;
+            this.pendingEvents.sparkle.push({ x: nx, y: ny, prizeType: c.grabbedPrize.type });
+          }
+
           // Random chance to drop
           if (Math.random() < 0.002) {
+            const nx = c.x / w;
+            const ny = c.y / h;
+            this.pendingEvents.fail.push({ x: nx, y: ny });
             c.grabbedPrize.grabbed = false;
             c.grabbedPrize = null;
           }
@@ -195,6 +254,12 @@ export class ClawMachineGame {
 
         if (c.y <= 60) {
           c.y = 60;
+          // If no prize was grabbed, emit fail
+          if (!c.grabbedPrize) {
+            const nx = c.x / w;
+            const ny = c.y / h;
+            this.pendingEvents.fail.push({ x: nx, y: ny });
+          }
           c.state = 'returning';
         }
         break;
@@ -206,11 +271,22 @@ export class ClawMachineGame {
           c.x += Math.sign(toDrop) * this.clawSpeed;
           if (c.grabbedPrize) {
             c.grabbedPrize.x = c.x;
+            // Sparkle effect while moving
+            if (this.frameCount % 10 === 0) {
+              const nx = c.grabbedPrize.x / w;
+              const ny = c.grabbedPrize.y / h;
+              this.pendingEvents.sparkle.push({ x: nx, y: ny, prizeType: c.grabbedPrize.type });
+            }
           }
         } else {
           // Drop the prize
           if (c.grabbedPrize) {
-            this.score += c.grabbedPrize.points;
+            const points = c.grabbedPrize.points;
+            this.score += points;
+            // Emit success event
+            const nx = c.x / w;
+            const ny = (c.y + 40) / h;
+            this.pendingEvents.success.push({ x: nx, y: ny, points });
             // Remove prize from array
             const idx = this.prizes.indexOf(c.grabbedPrize);
             if (idx > -1) this.prizes.splice(idx, 1);
@@ -220,7 +296,7 @@ export class ClawMachineGame {
 
           c.openAngle = 0.5;
           c.state = 'idle';
-          c.targetX = this.canvas.width / 2;
+          c.targetX = w / 2;
         }
         break;
     }
@@ -232,6 +308,7 @@ export class ClawMachineGame {
         this.level++;
         if (this.level > 5) {
           this.status = 'won';
+          this.pendingEvents.victory = true;
           if (this.animationId) cancelAnimationFrame(this.animationId);
         } else {
           this.lives = 5;
@@ -239,6 +316,7 @@ export class ClawMachineGame {
         }
       } else {
         this.status = 'lost';
+        this.pendingEvents.gameOver = true;
         if (this.animationId) cancelAnimationFrame(this.animationId);
       }
       this.emitState();

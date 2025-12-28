@@ -1,3 +1,21 @@
+/**
+ * Snake Styles
+ * Reptile / Jungle / Neon Green Theme
+ * Game #151
+ */
+
+:root {
+  --jungle-dark: #0a1a0a;
+  --jungle-mid: #1a3a1a;
+  --snake-green: #00b894;
+  --snake-bright: #00e6b8;
+  --snake-glow: #55efc4;
+  --apple-red: #e74c3c;
+  --leaf-green: #27ae60;
+  --neon-green: #39ff14;
+  --moss: #6b8e23;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,19 +23,60 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, sans-serif;
-  background: linear-gradient(135deg, #00b894 0%, #00cec9 50%, #0984e3 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, var(--jungle-dark) 0%, var(--jungle-mid) 50%, #0d2818 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Jungle canopy effect */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 184, 148, 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 20% 20%, rgba(39, 174, 96, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 30%, rgba(39, 174, 96, 0.08) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Animated vine pattern */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(90deg, transparent 49%, rgba(39, 174, 96, 0.03) 50%, transparent 51%),
+    linear-gradient(0deg, transparent 49%, rgba(39, 174, 96, 0.03) 50%, transparent 51%);
+  background-size: 30px 30px;
+  animation: vineGrow 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes vineGrow {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-30px); }
 }
 
 .game-container {
   max-width: 500px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .game-header {
@@ -30,15 +89,31 @@ body {
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: bold;
+  background: linear-gradient(135deg, var(--snake-green) 0%, var(--snake-bright) 50%, var(--snake-glow) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(0, 184, 148, 0.5);
 }
 
 .header-controls select {
   padding: 0.5rem;
-  border-radius: 4px;
-  border: none;
-  background: white;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 184, 148, 0.4);
+  background: rgba(10, 26, 10, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--snake-glow);
   cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  background: rgba(26, 58, 26, 0.9);
+  border-color: var(--snake-green);
+  box-shadow: 0 0 15px rgba(0, 184, 148, 0.3);
 }
 
 .game-controls {
@@ -49,30 +124,103 @@ body {
 }
 
 .stats-card {
-  background: white;
+  background: linear-gradient(135deg, rgba(10, 26, 10, 0.9) 0%, rgba(26, 58, 26, 0.9) 100%);
   padding: 0.5rem 1.5rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(0, 184, 148, 0.1),
+    0 0 20px rgba(0, 184, 148, 0.1);
+  color: white;
   display: flex;
   gap: 0.5rem;
-  color: #00b894;
+  align-items: center;
+  border: 1px solid rgba(0, 184, 148, 0.3);
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.5),
+    0 0 25px rgba(0, 184, 148, 0.2);
+}
+
+.stats-card span:first-child {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.stats-card span:last-child {
+  color: var(--snake-glow);
+  font-size: 1.1rem;
+  text-shadow: 0 0 10px rgba(0, 184, 148, 0.5);
 }
 
 .game-area {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  background: #1e272e;
+  background: linear-gradient(180deg, var(--jungle-dark) 0%, #0d1f0d 100%);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 50px rgba(0, 0, 0, 0.5),
+    inset 0 0 30px rgba(0, 184, 148, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(0, 184, 148, 0.3);
   margin-bottom: 1rem;
   overflow: hidden;
 }
 
-canvas {
+/* Neon border glow */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--snake-green), var(--leaf-green), var(--snake-green));
+  border-radius: 18px;
+  z-index: -1;
+  opacity: 0.4;
+  animation: borderPulse 3s ease-in-out infinite;
+}
+
+@keyframes borderPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+.canvas-container {
+  position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 14px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
 }
 
 .overlay {
@@ -81,12 +229,18 @@ canvas {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 184, 148, 0.95);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(10, 26, 10, 0.95) 0%,
+    rgba(0, 184, 148, 0.9) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
-  border-radius: 16px;
+  border-radius: 14px;
 }
 
 .overlay-content {
@@ -98,37 +252,68 @@ canvas {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, var(--snake-glow) 0%, white 50%, var(--snake-bright) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(0, 184, 148, 0.5));
 }
 
 .overlay-msg {
+  font-size: 1rem;
   margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: var(--snake-glow);
+  font-size: 0.85rem;
   opacity: 0.9;
 }
 
 .btn {
   padding: 0.75rem 2rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
-  font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .btn.primary {
-  background: white;
-  color: #00b894;
+  background: linear-gradient(135deg, var(--snake-green) 0%, var(--snake-bright) 100%);
+  color: var(--jungle-dark);
+  box-shadow: 0 4px 20px rgba(0, 184, 148, 0.4);
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  opacity: 0.7;
+.btn.primary:hover {
+  box-shadow:
+    0 6px 30px rgba(0, 184, 148, 0.6),
+    0 0 20px rgba(0, 230, 184, 0.3);
 }
 
 .mobile-controls {
@@ -148,21 +333,39 @@ canvas {
   height: 50px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  color: #00b894;
+  background: linear-gradient(135deg, rgba(0, 184, 148, 0.9) 0%, rgba(0, 230, 184, 0.9) 100%);
+  color: var(--jungle-dark);
   font-size: 1.5rem;
   font-weight: bold;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: transform 0.1s;
+  box-shadow:
+    0 4px 15px rgba(0, 184, 148, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
 }
 
 .control-btn:active {
   transform: scale(0.95);
+  box-shadow: 0 2px 10px rgba(0, 184, 148, 0.3);
 }
 
 @media (min-width: 768px) {
   .mobile-controls {
     display: none;
+  }
+}
+
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .game-controls {
+    gap: 1rem;
   }
 }

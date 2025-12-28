@@ -1,26 +1,123 @@
-.game-container {
-  max-width: 550px;
+/**
+ * Fruit Ninja Styles
+ * Ninja / Dojo / Dark Red and Black Theme
+ * Game #163
+ */
+
+:root {
+  --dojo-black: #1a1a2e;
+  --dojo-deep: #16213e;
+  --dojo-wood: #2d1810;
+  --ninja-red: #e74c3c;
+  --ninja-dark-red: #c0392b;
+  --blade-silver: #d4d8dc;
+  --blade-glow: #ffffff;
+  --fruit-orange: #f39c12;
+  --fruit-green: #27ae60;
+  --combo-gold: #ffd700;
+  --bg-dark: #0f0f1a;
+  --bg-darker: #080810;
 }
 
-.game-area {
-  position: relative;
-  width: 100%;
-  height: 450px;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Hiragino Kaku Gothic Pro', sans-serif;
+  background: linear-gradient(180deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+  min-height: 100vh;
   display: flex;
   justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
   overflow: hidden;
-  cursor: none;
-  touch-action: none;
 }
 
-canvas {
+/* Japanese pattern overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(231, 76, 60, 0.08) 0%, transparent 30%),
+    radial-gradient(circle at 80% 70%, rgba(231, 76, 60, 0.06) 0%, transparent 25%);
+  pointer-events: none;
+  z-index: 0;
+  animation: dojoGlow 5s ease-in-out infinite;
+}
+
+@keyframes dojoGlow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Bamboo texture lines */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 80px,
+    rgba(45, 80, 45, 0.03) 80px,
+    rgba(45, 80, 45, 0.03) 82px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.game-container {
+  max-width: 550px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(90deg, rgba(231, 76, 60, 0.15) 0%, rgba(192, 57, 43, 0.2) 100%);
+  border-radius: 8px;
+  border: 3px solid var(--ninja-red);
+  box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  color: var(--ninja-red);
+  text-shadow:
+    2px 2px 0 var(--dojo-black),
+    0 0 10px rgba(231, 76, 60, 0.6);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 2px solid var(--ninja-dark-red);
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--ninja-red);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.header-controls select:hover {
+  box-shadow: 0 0 10px var(--ninja-red);
 }
 
 .game-controls {
@@ -32,23 +129,195 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+  background: linear-gradient(135deg, rgba(45, 24, 16, 0.9) 0%, rgba(26, 26, 46, 0.95) 100%);
+  border: 2px solid var(--blade-silver);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 8px rgba(212, 216, 220, 0.2),
+    inset 0 0 10px rgba(231, 76, 60, 0.05);
   display: flex;
   gap: 0.5rem;
-  transition: background 0.3s ease;
 }
 
 .stats-card span:first-child {
   opacity: 0.8;
+  color: var(--blade-silver);
 }
 
 .stats-card.lives-card {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.9) 0%, rgba(192, 57, 43, 0.95) 100%);
+  border-color: #ff8080;
+}
+
+.stats-card.lives-card span:first-child {
+  color: #ffcccc;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 450px;
+  background: linear-gradient(180deg, var(--dojo-black) 0%, var(--dojo-deep) 100%);
+  border-radius: 8px;
+  box-shadow:
+    0 0 20px rgba(231, 76, 60, 0.2),
+    0 0 40px rgba(22, 33, 62, 0.4),
+    inset 0 0 30px rgba(0, 0, 0, 0.5);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border: 4px solid var(--ninja-red);
+  cursor: none;
+  touch-action: none;
+}
+
+/* Blade slash effect on edges */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(135deg, transparent 40%, rgba(231, 76, 60, 0.05) 50%, transparent 60%);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 4px;
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 4px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: 4px;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--ninja-red);
+  text-shadow:
+    0 0 15px var(--ninja-red),
+    3px 3px 0 var(--dojo-black);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  animation: ninjaSlash 1.5s ease-in-out infinite;
+}
+
+@keyframes ninjaSlash {
+  0%, 100% {
+    transform: translateX(0) skewX(0deg);
+    text-shadow: 0 0 15px var(--ninja-red), 3px 3px 0 var(--dojo-black);
+  }
+  50% {
+    transform: translateX(3px) skewX(-2deg);
+    text-shadow: 0 0 25px var(--ninja-red), 5px 3px 0 var(--dojo-black);
+  }
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  color: var(--blade-silver);
+  text-shadow: 0 0 5px var(--blade-silver);
+  font-size: 1.1rem;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: 3px solid var(--ninja-red);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: transparent;
+  color: var(--ninja-red);
+}
+
+.btn:hover {
+  box-shadow:
+    0 0 15px var(--ninja-red),
+    0 0 30px rgba(231, 76, 60, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--ninja-red) 0%, var(--ninja-dark-red) 100%);
+  border-color: var(--blade-silver);
+  color: white;
+  text-shadow: 1px 1px 0 var(--dojo-black);
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, var(--combo-gold) 0%, var(--fruit-orange) 100%);
+  border-color: var(--combo-gold);
+  color: var(--dojo-black);
+  box-shadow:
+    0 0 20px var(--combo-gold),
+    0 0 40px rgba(255, 215, 0, 0.5);
+}
+
+.btn.warning {
+  border-color: var(--fruit-orange);
+  color: var(--fruit-orange);
+  text-shadow: 0 0 5px var(--fruit-orange);
+}
+
+.btn.warning:hover {
+  box-shadow:
+    0 0 15px var(--fruit-orange),
+    0 0 30px rgba(243, 156, 18, 0.3);
 }
 
 .footer-controls {
@@ -57,16 +326,23 @@ canvas {
   gap: 1rem;
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  color: rgba(255, 255, 255, 0.7);
-}
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+  }
 
-.overlay {
-  background: rgba(0, 0, 0, 0.9);
-}
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
 
-.overlay-title {
-  color: #e74c3c;
-  text-shadow: 0 0 10px #e74c3c;
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+  }
 }

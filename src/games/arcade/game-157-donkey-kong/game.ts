@@ -72,6 +72,16 @@ export class DonkeyKongGame {
 
   onStateChange: ((state: any) => void) | null = null;
 
+  private pendingEvents: {
+    playerJump?: { x: number; y: number };
+    barrelSpawn?: { x: number; y: number };
+    barrelSparks?: { x: number; y: number }[];
+    playerHit?: { x: number; y: number };
+    princessSparkle?: { x: number; y: number };
+    victory?: { x: number; y: number };
+    gameOver?: { x: number; y: number };
+  } = {};
+
   private animationId: number | null = null;
   private lastTime = 0;
   private frameCount = 0;
@@ -178,19 +188,41 @@ export class DonkeyKongGame {
       this.spawnBarrel();
     }
 
+    // Princess sparkle (periodic)
+    if (this.frameCount % 45 === 0) {
+      this.pendingEvents.princessSparkle = {
+        x: this.princessX / this.canvas.width,
+        y: this.princessY / this.canvas.height
+      };
+    }
+
     this.updatePlayer();
     this.updateBarrels();
     this.checkCollisions();
+
+    // Emit state every few frames for continuous effects
+    if (this.frameCount % 6 === 0) {
+      this.emitState();
+    }
   }
 
   private spawnBarrel() {
+    const barrelX = this.kongX + 40;
+    const barrelY = this.kongY + 40;
+
     this.barrels.push({
-      x: this.kongX + 40,
-      y: this.kongY + 40,
+      x: barrelX,
+      y: barrelY,
       vx: 2,
       vy: 0,
       rolling: true
     });
+
+    // Emit barrel spawn event
+    this.pendingEvents.barrelSpawn = {
+      x: barrelX / this.canvas.width,
+      y: barrelY / this.canvas.height
+    };
   }
 
   private updatePlayer() {
@@ -238,6 +270,12 @@ export class DonkeyKongGame {
       if ((this.keys[' '] || this.keys['ArrowUp'] || this.keys['w']) && p.onGround) {
         p.vy = this.jumpPower;
         p.onGround = false;
+
+        // Emit jump event
+        this.pendingEvents.playerJump = {
+          x: (p.x + p.width / 2) / this.canvas.width,
+          y: (p.y + p.height) / this.canvas.height
+        };
       }
 
       // Apply gravity
@@ -292,6 +330,7 @@ export class DonkeyKongGame {
 
   private updateBarrels() {
     const h = this.canvas.height;
+    const barrelSparks: { x: number; y: number }[] = [];
 
     for (let i = this.barrels.length - 1; i >= 0; i--) {
       const b = this.barrels[i];
@@ -299,6 +338,14 @@ export class DonkeyKongGame {
       b.vy += this.gravity * 0.5;
       b.x += b.vx;
       b.y += b.vy;
+
+      // Emit barrel sparks while rolling
+      if (b.rolling && this.frameCount % 8 === 0) {
+        barrelSparks.push({
+          x: b.x / this.canvas.width,
+          y: (b.y + 16) / this.canvas.height
+        });
+      }
 
       // Platform collision for barrels
       for (const plat of this.platforms) {
@@ -335,6 +382,10 @@ export class DonkeyKongGame {
         this.barrels.splice(i, 1);
       }
     }
+
+    if (barrelSparks.length > 0) {
+      this.pendingEvents.barrelSparks = barrelSparks;
+    }
   }
 
   private checkCollisions() {
@@ -370,6 +421,12 @@ export class DonkeyKongGame {
     if (Math.sqrt(dx * dx + dy * dy) < 40) {
       this.score += 1000;
       this.level++;
+
+      this.pendingEvents.victory = {
+        x: this.princessX / this.canvas.width,
+        y: this.princessY / this.canvas.height
+      };
+
       if (this.level > 5) {
         this.status = 'won';
         if (this.animationId) cancelAnimationFrame(this.animationId);
@@ -382,10 +439,15 @@ export class DonkeyKongGame {
 
   private loseLife() {
     this.lives--;
-    this.emitState();
+
+    const hitX = (this.player.x + this.player.width / 2) / this.canvas.width;
+    const hitY = (this.player.y + this.player.height / 2) / this.canvas.height;
+
+    this.pendingEvents.playerHit = { x: hitX, y: hitY };
 
     if (this.lives <= 0) {
       this.status = 'lost';
+      this.pendingEvents.gameOver = { x: hitX, y: hitY };
       if (this.animationId) cancelAnimationFrame(this.animationId);
     } else {
       // Reset player position
@@ -397,6 +459,8 @@ export class DonkeyKongGame {
       this.player.climbing = false;
       this.barrels = [];
     }
+
+    this.emitState();
   }
 
   private draw() {
@@ -737,7 +801,11 @@ export class DonkeyKongGame {
       score: this.score,
       lives: this.lives,
       level: this.level,
-      status: this.status
+      status: this.status,
+      ...this.pendingEvents
     });
+
+    // Clear pending events after notification
+    this.pendingEvents = {};
   }
 }

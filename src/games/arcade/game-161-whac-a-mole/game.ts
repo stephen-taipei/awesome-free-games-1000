@@ -1,8 +1,18 @@
 /**
  * Whac-A-Mole Game
  * Game #161 - DOM Events
- * Classic arcade: Hit the moles as they pop up!
+ * Carnival / Fair / Grass Green and Brown Theme
  */
+
+interface PendingEvents {
+  whack: Array<{ x: number; y: number; type: 'normal' | 'golden' }>;
+  bombHit: Array<{ x: number; y: number }>;
+  molePopup: Array<{ x: number; y: number; type: 'normal' | 'golden' | 'bomb' }>;
+  miss: Array<{ x: number; y: number }>;
+  gameOver: boolean;
+  victory: boolean;
+  start: boolean;
+}
 
 interface Mole {
   index: number;
@@ -33,6 +43,16 @@ export class WhacAMoleGame {
   lives = 3;
   level = 1;
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
+
+  pendingEvents: PendingEvents = {
+    whack: [],
+    bombHit: [],
+    molePopup: [],
+    miss: [],
+    gameOver: false,
+    victory: false,
+    start: false,
+  };
 
   onStateChange: ((state: any) => void) | null = null;
 
@@ -70,6 +90,7 @@ export class WhacAMoleGame {
     this.status = 'playing';
     this.lastTime = performance.now();
     this.lastSecond = Math.floor(this.lastTime / 1000);
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.emitState();
   }
@@ -166,6 +187,25 @@ export class WhacAMoleGame {
     } else {
       hole.type = 'normal';
     }
+
+    // Emit mole popup event
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const col = hole.index % this.gridCols;
+    const row = Math.floor(hole.index / this.gridCols);
+    const holeWidth = w * 0.25;
+    const startX = w * 0.1;
+    const startY = h * 0.2;
+    const spacingX = w * 0.3;
+    const spacingY = h * 0.25;
+    const hx = startX + col * spacingX + holeWidth / 2;
+    const hy = startY + row * spacingY;
+    this.pendingEvents.molePopup.push({
+      x: hx / w,
+      y: hy / h,
+      type: hole.type,
+    });
+    this.emitState();
   }
 
   private checkWinCondition() {
@@ -175,12 +215,14 @@ export class WhacAMoleGame {
         this.level++;
         if (this.level > 10) {
           this.status = 'won';
+          this.pendingEvents.victory = true;
           if (this.animationId) cancelAnimationFrame(this.animationId);
         } else {
           this.setupGame();
         }
       } else {
         this.status = 'lost';
+        this.pendingEvents.gameOver = true;
         if (this.animationId) cancelAnimationFrame(this.animationId);
       }
       this.emitState();
@@ -192,14 +234,32 @@ export class WhacAMoleGame {
 
     mole.hit = true;
 
+    // Calculate mole position for events
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const col = mole.index % this.gridCols;
+    const row = Math.floor(mole.index / this.gridCols);
+    const holeWidth = w * 0.25;
+    const startX = w * 0.1;
+    const startY = h * 0.2;
+    const spacingX = w * 0.3;
+    const spacingY = h * 0.25;
+    const hx = startX + col * spacingX + holeWidth / 2;
+    const hy = startY + row * spacingY;
+    const nx = hx / w;
+    const ny = hy / h;
+
     if (mole.type === 'bomb') {
+      this.pendingEvents.bombHit.push({ x: nx, y: ny });
       this.lives--;
       this.emitState();
       if (this.lives <= 0) {
         this.status = 'lost';
+        this.pendingEvents.gameOver = true;
         if (this.animationId) cancelAnimationFrame(this.animationId);
       }
     } else {
+      this.pendingEvents.whack.push({ x: nx, y: ny, type: mole.type });
       const points = mole.type === 'golden' ? 200 : 50;
       this.score += points;
       this.emitState();
@@ -488,6 +548,18 @@ export class WhacAMoleGame {
   setOnStateChange(cb: (state: any) => void) {
     this.onStateChange = cb;
     this.emitState();
+  }
+
+  clearPendingEvents() {
+    this.pendingEvents = {
+      whack: [],
+      bombHit: [],
+      molePopup: [],
+      miss: [],
+      gameOver: false,
+      victory: false,
+      start: false,
+    };
   }
 
   private emitState() {
