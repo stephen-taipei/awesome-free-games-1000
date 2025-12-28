@@ -3,6 +3,18 @@
  * Game #446 - Zoo-themed endless runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slideStart: boolean;
+  slideEnd: boolean;
+  animalSwitch: { animal: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  obstaclePassed: boolean;
+  collision: boolean;
+  gameOver: { score: number; highScore: number; distance: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -57,6 +69,26 @@ export class ZooEscapeGame {
   private spawnTimer = 0;
   private gameTime = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slideStart: false,
+      slideEnd: false,
+      animalSwitch: [],
+      collectibleCollected: [],
+      obstaclePassed: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -104,6 +136,7 @@ export class ZooEscapeGame {
     this.collectibleId = 0;
     this.spawnTimer = 0;
     this.gameTime = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -114,6 +147,7 @@ export class ZooEscapeGame {
     if (player.isGrounded && !player.isSliding) {
       player.velocityY = JUMP_FORCE;
       player.isGrounded = false;
+      this.pendingEvents.jump = true;
     }
     this.emitState();
   }
@@ -125,7 +159,11 @@ export class ZooEscapeGame {
     if (active && player.isGrounded) {
       player.isSliding = true;
       player.height = 25;
+      this.pendingEvents.slideStart = true;
     } else {
+      if (player.isSliding) {
+        this.pendingEvents.slideEnd = true;
+      }
       player.isSliding = false;
       player.height = 50;
     }
@@ -137,6 +175,7 @@ export class ZooEscapeGame {
     const animals: Array<'monkey' | 'elephant' | 'giraffe'> = ['monkey', 'elephant', 'giraffe'];
     const currentIdx = animals.indexOf(this.state.player.animal);
     this.state.player.animal = animals[(currentIdx + 1) % animals.length];
+    this.pendingEvents.animalSwitch.push({ animal: this.state.player.animal });
     this.emitState();
   }
 
@@ -172,6 +211,7 @@ export class ZooEscapeGame {
       if (!obs.passed && obs.x + obs.width < player.x) {
         obs.passed = true;
         this.state.score += 10;
+        this.pendingEvents.obstaclePassed = true;
       }
       return obs.x > -obs.width;
     });
@@ -181,7 +221,9 @@ export class ZooEscapeGame {
       col.x -= this.state.gameSpeed;
       if (!col.collected && this.isCollectibleCollision(player, col)) {
         col.collected = true;
-        this.state.score += col.type === 'banana' ? 5 : col.type === 'peanut' ? 10 : 15;
+        const points = col.type === 'banana' ? 5 : col.type === 'peanut' ? 10 : 15;
+        this.state.score += points;
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: points });
       }
       return col.x > -20 && !col.collected;
     });
@@ -197,6 +239,7 @@ export class ZooEscapeGame {
     // Check collisions
     for (const obs of this.state.obstacles) {
       if (this.isObstacleCollision(player, obs)) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -266,6 +309,11 @@ export class ZooEscapeGame {
       this.state.highScore = this.state.score;
       localStorage.setItem('zooEscapeHighScore', this.state.highScore.toString());
     }
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      distance: Math.floor(this.state.distance),
+    });
     this.emitState();
   }
 
