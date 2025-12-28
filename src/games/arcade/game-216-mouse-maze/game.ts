@@ -26,6 +26,13 @@ export interface GameState {
   started: boolean;
 }
 
+export interface PendingEvents {
+  wallHit: { lives: number }[];
+  levelComplete: { level: number; time: number }[];
+  start: boolean;
+  gameOver: { level: number; time: number }[];
+}
+
 const MAX_LIVES = 3;
 const CURSOR_RADIUS = 8;
 const GOAL_RADIUS = 20;
@@ -38,8 +45,24 @@ export class MouseMazeGame {
   private canvasWidth: number = 450;
   private canvasHeight: number = 400;
 
+  public pendingEvents: PendingEvents = {
+    wallHit: [],
+    levelComplete: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      wallHit: [],
+      levelComplete: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -64,6 +87,7 @@ export class MouseMazeGame {
       ...this.createInitialState(),
       phase: "playing",
     };
+    this.pendingEvents.start = true;
     this.generateMaze(1);
     this.startTimer();
     this.emitState();
@@ -188,9 +212,11 @@ export class MouseMazeGame {
 
   private handleWallHit(): void {
     this.state.lives--;
+    this.pendingEvents.wallHit.push({ lives: this.state.lives });
 
     if (this.state.lives <= 0) {
       this.state.phase = "gameOver";
+      this.pendingEvents.gameOver.push({ level: this.state.level, time: this.state.time });
       this.stopTimer();
     } else {
       this.state.phase = "hitWall";
@@ -212,6 +238,7 @@ export class MouseMazeGame {
 
   private handleLevelComplete(): void {
     this.state.phase = "levelComplete";
+    this.pendingEvents.levelComplete.push({ level: this.state.level, time: this.state.time });
     this.emitState();
   }
 
