@@ -47,6 +47,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  collect: { type: Collectible["type"]; points: number }[];
+  hitSpike: { livesLeft: number }[];
+  levelComplete: { level: number; score: number }[];
+  gameOver: { score: number; level: number }[];
+}
+
 const GRAVITY = 0.3;
 const FRICTION = 0.98;
 const BOUNCE = 0.6;
@@ -70,6 +78,24 @@ export class BallRollGame {
   private onStateChange: StateCallback | null = null;
   private animationId: number | null = null;
   private particles: { x: number; y: number; vx: number; vy: number; life: number; color: string }[] = [];
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    collect: [],
+    hitSpike: [],
+    levelComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      collect: [],
+      hitSpike: [],
+      levelComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -116,6 +142,7 @@ export class BallRollGame {
     this.lives = 3;
     this.loadLevel();
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -261,7 +288,9 @@ export class BallRollGame {
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < this.ball.radius + col.radius) {
           col.collected = true;
-          this.score += col.type === "star" ? 50 : 10;
+          const points = col.type === "star" ? 50 : 10;
+          this.score += points;
+          this.pendingEvents.collect.push({ type: col.type, points });
           this.spawnParticles(col.x, col.y, col.type === "star" ? "#ffd700" : "#f1c40f");
           this.emitState();
         }
@@ -324,6 +353,7 @@ export class BallRollGame {
   private hitSpike() {
     this.lives--;
     this.spawnParticles(this.ball.x, this.ball.y, "#e74c3c");
+    this.pendingEvents.hitSpike.push({ livesLeft: this.lives });
     this.emitState();
 
     if (this.lives <= 0) {
@@ -331,6 +361,7 @@ export class BallRollGame {
       if (this.animationId) {
         cancelAnimationFrame(this.animationId);
       }
+      this.pendingEvents.gameOver.push({ score: this.score, level: this.level });
       this.emitState();
     } else {
       // Reset ball position
@@ -347,6 +378,7 @@ export class BallRollGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.levelComplete.push({ level: this.level, score: this.score });
     this.spawnParticles(this.ball.x, this.ball.y, "#2ecc71");
     this.emitState();
   }

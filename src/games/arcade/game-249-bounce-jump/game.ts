@@ -48,6 +48,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  bounce: { isSuper: boolean; score: number }[];
+  collect: { type: Collectible["type"]; points: number }[];
+  gameOver: { score: number; height: number; highScore: number; isNewBest: boolean }[];
+}
+
 const GRAVITY = 0.35;
 const BOUNCE_POWER = -16;
 const SUPER_BOUNCE = -22;
@@ -71,6 +78,22 @@ export class BounceJumpGame {
   private animationId: number | null = null;
   private moveDir = 0;
   private particles: { x: number; y: number; vx: number; vy: number; life: number; color: string }[] = [];
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    bounce: [],
+    collect: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      bounce: [],
+      collect: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -156,6 +179,7 @@ export class BounceJumpGame {
     this.generateClouds();
 
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -273,7 +297,10 @@ export class BounceJumpGame {
             tramp.bouncing = false;
           }, 200);
 
-          this.score += tramp.bouncePower === SUPER_BOUNCE ? 20 : 10;
+          const isSuper = tramp.bouncePower === SUPER_BOUNCE;
+          const bounceScore = isSuper ? 20 : 10;
+          this.score += bounceScore;
+          this.pendingEvents.bounce.push({ isSuper, score: bounceScore });
 
           // Bounce particles
           for (let i = 0; i < 8; i++) {
@@ -305,6 +332,7 @@ export class BounceJumpGame {
           col.collected = true;
           const points = col.type === "gem" ? 100 : col.type === "star" ? 50 : 10;
           this.score += points;
+          this.pendingEvents.collect.push({ type: col.type, points });
 
           if (this.score > this.highScore) {
             this.highScore = this.score;
@@ -361,6 +389,13 @@ export class BounceJumpGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    const isNewBest = this.score >= this.highScore;
+    this.pendingEvents.gameOver.push({
+      score: this.score,
+      height: Math.floor(this.maxHeight / 10),
+      highScore: this.highScore,
+      isNewBest
+    });
     this.emitState();
   }
 

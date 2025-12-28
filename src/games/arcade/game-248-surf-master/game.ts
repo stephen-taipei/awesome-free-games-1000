@@ -46,6 +46,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  jump: { trick: boolean; trickName: string }[];
+  collect: { type: Collectible["type"]; points: number }[];
+  trickComplete: { points: number; trickName: string }[];
+  gameOver: { score: number; distance: number; highScore: number }[];
+}
+
 const GRAVITY = 0.5;
 const JUMP_FORCE = -10;
 const GAME_SPEED = 4;
@@ -70,6 +78,24 @@ export class SurfMasterGame {
   private waterOffset = 0;
   private particles: { x: number; y: number; vx: number; vy: number; life: number; size: number }[] = [];
   private tricks = ["360 Spin!", "Air Grab!", "Flip!", "Super Jump!"];
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    jump: [],
+    collect: [],
+    trickComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      jump: [],
+      collect: [],
+      trickComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -150,10 +176,13 @@ export class SurfMasterGame {
       this.surfer.vy = JUMP_FORCE;
 
       // Random trick
-      if (Math.random() < 0.5) {
+      const hasTrick = Math.random() < 0.5;
+      if (hasTrick) {
         this.surfer.trick = 1;
         this.surfer.trickName = this.tricks[Math.floor(Math.random() * this.tricks.length)];
       }
+
+      this.pendingEvents.jump.push({ trick: hasTrick, trickName: this.surfer.trickName });
 
       // Splash particles
       this.spawnSplash(this.surfer.x, this.getWaveHeight(this.surfer.x));
@@ -171,6 +200,7 @@ export class SurfMasterGame {
     this.surfer = this.createSurfer();
     this.surfer.y = this.getWaveHeight(this.surfer.x) - 30;
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -223,6 +253,7 @@ export class SurfMasterGame {
         if (this.surfer.rotation >= Math.PI * 2) {
           this.surfer.rotation = 0;
           this.score += 50;
+          this.pendingEvents.trickComplete.push({ points: 50, trickName: this.surfer.trickName });
           this.surfer.trick = 0;
           this.emitState();
         }
@@ -273,7 +304,9 @@ export class SurfMasterGame {
 
         if (dist < 40) {
           col.collected = true;
-          this.score += col.type === "star" ? 50 : 10;
+          const points = col.type === "star" ? 50 : 10;
+          this.score += points;
+          this.pendingEvents.collect.push({ type: col.type, points });
           if (this.score > this.highScore) {
             this.highScore = this.score;
             this.saveHighScore();
@@ -366,6 +399,7 @@ export class SurfMasterGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, distance: Math.floor(this.distance), highScore: this.highScore });
     this.emitState();
   }
 
