@@ -16,9 +16,25 @@ interface Coin {
   collected: boolean;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  coinCollected: { total: number }[];
+  collision: { lane: string }[];
+  gameOver: { score: number; coins: number }[];
+}
+
 export class DuoRunGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    jump: false,
+    coinCollected: [],
+    collision: [],
+    gameOver: [],
+  };
 
   // Game state
   private status: "idle" | "playing" | "gameover" = "idle";
@@ -112,6 +128,8 @@ export class DuoRunGame {
       this.playerBottom.isJumping = true;
       this.playerBottom.grounded = false;
     }
+
+    this.pendingEvents.jump = true;
   }
 
   public start() {
@@ -137,6 +155,7 @@ export class DuoRunGame {
     this.playerBottom.grounded = true;
     this.playerBottom.isJumping = false;
 
+    this.pendingEvents.start = true;
     this.updateState();
     this.gameLoop();
   }
@@ -196,6 +215,7 @@ export class DuoRunGame {
       // Check collision
       const player = obs.lane === "top" ? this.playerTop : this.playerBottom;
       if (this.checkCollision(player, obs)) {
+        this.pendingEvents.collision.push({ lane: obs.lane });
         this.gameOver();
         return;
       }
@@ -225,6 +245,7 @@ export class DuoRunGame {
         ) {
           coin.collected = true;
           this.coins++;
+          this.pendingEvents.coinCollected.push({ total: this.coins });
           this.updateState();
         }
       }
@@ -289,6 +310,7 @@ export class DuoRunGame {
 
   private gameOver() {
     this.status = "gameover";
+    this.pendingEvents.gameOver.push({ score: this.score, coins: this.coins });
     this.stopAnimation();
     if (this.onStateChange) {
       this.onStateChange({ status: "gameover" });
@@ -521,6 +543,16 @@ export class DuoRunGame {
 
   public setOnStateChange(cb: (state: any) => void) {
     this.onStateChange = cb;
+  }
+
+  clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      jump: false,
+      coinCollected: [],
+      collision: [],
+      gameOver: [],
+    };
   }
 
   public destroy() {
