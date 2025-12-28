@@ -31,6 +31,15 @@ export interface GameState {
   status: "idle" | "playing" | "defused" | "exploded" | "gameOver";
 }
 
+export interface PendingEvents {
+  cut: { color: string; correct: boolean }[];
+  defuse: { score: number; timeBonus: number }[];
+  explode: { lives: number }[];
+  newBomb: { wireCount: number; hint: string }[];
+  start: boolean;
+  gameOver: { score: number; bombsDefused: number; level: number }[];
+}
+
 const WIRE_COLORS: WireColor[] = ["red", "blue", "green", "yellow", "white"];
 const COLOR_HEX: Record<WireColor, string> = {
   red: "#e74c3c",
@@ -78,8 +87,28 @@ export class CountdownBoomGame {
   onStateChange: ((state: GameState) => void) | null = null;
   private timerInterval: number | null = null;
 
+  public pendingEvents: PendingEvents = {
+    cut: [],
+    defuse: [],
+    explode: [],
+    newBomb: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      cut: [],
+      defuse: [],
+      explode: [],
+      newBomb: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -103,6 +132,7 @@ export class CountdownBoomGame {
       status: "playing",
     };
 
+    this.pendingEvents.start = true;
     this.createBomb();
     this.startTimer();
     this.emitState();
@@ -141,6 +171,8 @@ export class CountdownBoomGame {
       timeLeft: timeLimit,
       maxTime: timeLimit,
     };
+
+    this.pendingEvents.newBomb.push({ wireCount, hint });
   }
 
   private startTimer(): void {
@@ -166,8 +198,10 @@ export class CountdownBoomGame {
     if (!wire) return false;
 
     wire.cut = true;
+    const isCorrect = color === this.state.bomb.correctWire;
+    this.pendingEvents.cut.push({ color, correct: isCorrect });
 
-    if (color === this.state.bomb.correctWire) {
+    if (isCorrect) {
       this.defuse();
     } else {
       this.explode();
@@ -183,6 +217,7 @@ export class CountdownBoomGame {
     this.state.score += 100 + timeBonus;
     this.state.bombsDefused++;
     this.state.status = "defused";
+    this.pendingEvents.defuse.push({ score: 100 + timeBonus, timeBonus });
 
     // Level up every 3 bombs
     if (this.state.bombsDefused % 3 === 0) {
@@ -204,6 +239,7 @@ export class CountdownBoomGame {
   private explode(): void {
     this.state.lives--;
     this.state.status = "exploded";
+    this.pendingEvents.explode.push({ lives: this.state.lives });
 
     if (this.state.lives <= 0) {
       setTimeout(() => {
@@ -223,6 +259,11 @@ export class CountdownBoomGame {
 
   private endGame(): void {
     this.state.status = "gameOver";
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bombsDefused: this.state.bombsDefused,
+      level: this.state.level,
+    });
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;

@@ -28,6 +28,13 @@ export interface GameState {
   status: "idle" | "playing" | "gameOver";
 }
 
+export interface PendingEvents {
+  flip: { meatId: number; type: string; state: string; score: number }[];
+  burnt: { meatId: number; type: string }[];
+  start: boolean;
+  gameOver: { score: number; perfectCount: number; burntCount: number }[];
+}
+
 const COOK_SPEED: Record<MeatType, number> = {
   steak: 15,
   sausage: 20,
@@ -54,8 +61,24 @@ export class BBQMasterGame {
   private canvasWidth: number = 400;
   private canvasHeight: number = 450;
 
+  public pendingEvents: PendingEvents = {
+    flip: [],
+    burnt: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      flip: [],
+      burnt: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -87,6 +110,7 @@ export class BBQMasterGame {
     this.meatId = this.state.meats.length;
     this.lastTime = performance.now();
 
+    this.pendingEvents.start = true;
     this.startTimer();
     this.startGameLoop();
     this.emitState();
@@ -175,6 +199,7 @@ export class BBQMasterGame {
         if (!meat.scored) {
           this.state.burntCount++;
           meat.scored = true;
+          this.pendingEvents.burnt.push({ meatId: meat.id, type: meat.type });
         }
       }
     });
@@ -220,6 +245,7 @@ export class BBQMasterGame {
       this.state.score += 100;
       this.state.perfectCount++;
       meat.scored = true;
+      this.pendingEvents.flip.push({ meatId: meat.id, type: meat.type, state: "perfect", score: 100 });
 
       // Replace with new meat after delay
       setTimeout(() => {
@@ -232,6 +258,7 @@ export class BBQMasterGame {
     } else if (meat.state === "cooking") {
       this.state.score += 50;
       meat.scored = true;
+      this.pendingEvents.flip.push({ meatId: meat.id, type: meat.type, state: "cooking", score: 50 });
 
       setTimeout(() => {
         const index = this.state.meats.findIndex((m) => m.id === meatId);
@@ -243,6 +270,7 @@ export class BBQMasterGame {
     } else if (meat.state === "overcooked") {
       this.state.score += 25;
       meat.scored = true;
+      this.pendingEvents.flip.push({ meatId: meat.id, type: meat.type, state: "overcooked", score: 25 });
 
       setTimeout(() => {
         const index = this.state.meats.findIndex((m) => m.id === meatId);
@@ -277,6 +305,11 @@ export class BBQMasterGame {
 
   private endGame(): void {
     this.state.status = "gameOver";
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      perfectCount: this.state.perfectCount,
+      burntCount: this.state.burntCount,
+    });
     if (this.gameLoop) cancelAnimationFrame(this.gameLoop);
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.emitState();
