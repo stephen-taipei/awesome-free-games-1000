@@ -41,6 +41,13 @@ export interface GameState {
   inkRemaining: number;
 }
 
+export interface PendingEvents {
+  starCollect: { x: number; y: number; score: number }[];
+  success: { level: number; score: number; starsCollected: number }[];
+  failed: { level: number }[];
+  start: boolean;
+}
+
 const GRAVITY = 0.3;
 const BALL_RADIUS = 12;
 const GOAL_RADIUS = 25;
@@ -52,8 +59,24 @@ export class PathDrawGame {
   private canvasWidth: number = 400;
   private canvasHeight: number = 500;
 
+  public pendingEvents: PendingEvents = {
+    starCollect: [],
+    success: [],
+    failed: [],
+    start: false,
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      starCollect: [],
+      success: [],
+      failed: [],
+      start: false,
+    };
   }
 
   private createInitialState(): GameState {
@@ -79,6 +102,7 @@ export class PathDrawGame {
       ...this.createInitialState(),
       phase: "drawing",
     };
+    this.pendingEvents.start = true;
     this.loadLevel(1);
     this.emitState();
   }
@@ -216,6 +240,7 @@ export class PathDrawGame {
       const star = currentLevel.stars[i];
       const dist = Math.sqrt((ball.x - star.x) ** 2 + (ball.y - star.y) ** 2);
       if (dist < ball.radius + 15) {
+        this.pendingEvents.starCollect.push({ x: star.x, y: star.y, score: 100 });
         currentLevel.stars.splice(i, 1);
         this.state.starsCollected++;
         this.state.score += 100;
@@ -229,6 +254,11 @@ export class PathDrawGame {
     if (goalDist < GOAL_RADIUS) {
       this.state.phase = "success";
       this.state.score += 500 + this.state.inkRemaining;
+      this.pendingEvents.success.push({
+        level: this.state.level,
+        score: this.state.score,
+        starsCollected: this.state.starsCollected,
+      });
       this.emitState();
       return;
     }
@@ -236,6 +266,7 @@ export class PathDrawGame {
     // Check bounds
     if (ball.y > this.canvasHeight + 50 || ball.x < -50 || ball.x > this.canvasWidth + 50) {
       this.state.phase = "failed";
+      this.pendingEvents.failed.push({ level: this.state.level });
       this.emitState();
       return;
     }

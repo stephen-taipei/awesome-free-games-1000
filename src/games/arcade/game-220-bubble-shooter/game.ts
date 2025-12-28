@@ -29,6 +29,14 @@ export interface GameState {
   aimAngle: number;
 }
 
+export interface PendingEvents {
+  shoot: { color: string; angle: number }[];
+  pop: { count: number; score: number }[];
+  start: boolean;
+  win: { score: number }[];
+  gameOver: { score: number }[];
+}
+
 const COLORS = ["#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6"];
 const BUBBLE_RADIUS = 18;
 const ROWS = 8;
@@ -40,8 +48,26 @@ export class BubbleShooterGame {
   private canvasWidth: number = 360;
   private canvasHeight: number = 500;
 
+  public pendingEvents: PendingEvents = {
+    shoot: [],
+    pop: [],
+    start: false,
+    win: [],
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      shoot: [],
+      pop: [],
+      start: false,
+      win: [],
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -69,6 +95,7 @@ export class BubbleShooterGame {
       nextBubble: this.getRandomColor(),
     };
 
+    this.pendingEvents.start = true;
     this.generateInitialBubbles();
     this.emitState();
   }
@@ -124,6 +151,7 @@ export class BubbleShooterGame {
       color: this.state.currentBubble,
     };
 
+    this.pendingEvents.shoot.push({ color: this.state.currentBubble, angle: this.state.aimAngle });
     this.state.phase = "shooting";
     this.emitState();
   }
@@ -184,7 +212,9 @@ export class BubbleShooterGame {
     // Check for matches
     const matches = this.findMatches(newBubble);
     if (matches.length >= 3) {
+      const popScore = matches.length * 10;
       this.popBubbles(matches);
+      this.pendingEvents.pop.push({ count: matches.length, score: popScore });
     }
 
     // Check for floating bubbles
@@ -193,8 +223,10 @@ export class BubbleShooterGame {
     // Check win/lose conditions
     if (this.state.bubbles.length === 0) {
       this.state.phase = "win";
+      this.pendingEvents.win.push({ score: this.state.score });
     } else if (this.state.bubbles.some((b) => b.y > this.canvasHeight - 100)) {
       this.state.phase = "gameOver";
+      this.pendingEvents.gameOver.push({ score: this.state.score });
     } else {
       // Prepare next shot
       this.state.currentBubble = this.state.nextBubble;

@@ -40,6 +40,14 @@ export interface GameState {
   cameraY: number;
 }
 
+export interface PendingEvents {
+  jump: boolean;
+  starCollect: { y: number; score: number }[];
+  colorSwitch: { newColor: string }[];
+  start: boolean;
+  gameOver: { score: number; highScore: number; isNewHighScore: boolean }[];
+}
+
 const COLORS = ["#f1c40f", "#9b59b6", "#e74c3c", "#2ecc71"];
 const GRAVITY = 0.4;
 const JUMP_FORCE = -10;
@@ -51,8 +59,26 @@ export class ColorSwitchGame {
   private canvasHeight: number = 600;
   private canvasWidth: number = 300;
 
+  public pendingEvents: PendingEvents = {
+    jump: false,
+    starCollect: [],
+    colorSwitch: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      jump: false,
+      starCollect: [],
+      colorSwitch: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -93,6 +119,7 @@ export class ColorSwitchGame {
       },
     };
 
+    this.pendingEvents.start = true;
     this.generateInitialObstacles();
     this.emitState();
   }
@@ -135,6 +162,7 @@ export class ColorSwitchGame {
     if (this.state.phase !== "playing") return;
 
     this.state.ball.vy = JUMP_FORCE;
+    this.pendingEvents.jump = true;
     this.emitState();
   }
 
@@ -163,6 +191,7 @@ export class ColorSwitchGame {
         if (dist < 30 && Math.abs(ball.x - this.canvasWidth / 2) < 30) {
           star.collected = true;
           this.state.score++;
+          this.pendingEvents.starCollect.push({ y: star.y, score: this.state.score });
         }
       }
     }
@@ -180,6 +209,7 @@ export class ColorSwitchGame {
           } while (newIndex === ball.colorIndex);
           ball.colorIndex = newIndex;
           ball.color = COLORS[newIndex];
+          this.pendingEvents.colorSwitch.push({ newColor: ball.color });
         }
       }
     }
@@ -277,12 +307,18 @@ export class ColorSwitchGame {
 
   private gameOver(): void {
     this.state.phase = "gameOver";
+    const isNewHighScore = this.state.score > this.state.highScore;
 
-    if (this.state.score > this.state.highScore) {
+    if (isNewHighScore) {
       this.state.highScore = this.state.score;
       localStorage.setItem("colorSwitchHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      isNewHighScore,
+    });
     this.emitState();
   }
 
