@@ -25,6 +25,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  drop: { level: number }[];
+  merge: { newLevel: number; points: number }[];
+  gameOver: { score: number; highScore: number; maxLevel: number }[];
+}
+
 const GRAVITY = 0.3;
 const FRICTION = 0.98;
 const BOUNCE = 0.6;
@@ -64,6 +71,22 @@ export class MergeGame {
   private animationId: number | null = null;
   private itemIdCounter = 0;
   private dangerLineY = 80;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    drop: [],
+    merge: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      drop: [],
+      merge: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -113,6 +136,7 @@ export class MergeGame {
     this.canDrop = true;
     this.status = "playing";
     this.dropX = this.canvas.width / 2;
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -169,6 +193,7 @@ export class MergeGame {
     this.items.push(item);
     this.nextLevel = this.getRandomLevel();
     this.canDrop = false;
+    this.pendingEvents.drop.push({ level: level });
 
     setTimeout(() => {
       this.canDrop = true;
@@ -287,6 +312,7 @@ export class MergeGame {
     // Update score
     const points = Math.pow(2, newLevel) * 10;
     this.score += points;
+    this.pendingEvents.merge.push({ newLevel, points });
     if (this.score > this.highScore) {
       this.highScore = this.score;
       this.saveHighScore();
@@ -360,6 +386,7 @@ export class MergeGame {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+    this.pendingEvents.gameOver.push({ score: this.score, highScore: this.highScore, maxLevel: this.maxLevel });
     this.emitState();
   }
 

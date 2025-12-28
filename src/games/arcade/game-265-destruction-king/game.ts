@@ -47,6 +47,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  fire: { shotsLeft: number }[];
+  blockDestroyed: { points: number }[];
+  levelComplete: { level: number; score: number }[];
+  gameOver: { score: number; level: number }[];
+}
+
 const GRAVITY = 300;
 const CANNON_X = 50;
 const CANNON_Y_OFFSET = 80;
@@ -71,6 +79,24 @@ export class DestructionKingGame {
   private aimPower = 0;
   private dragStart = { x: 0, y: 0 };
   private cannonY = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    fire: [],
+    blockDestroyed: [],
+    levelComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      fire: [],
+      blockDestroyed: [],
+      levelComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -165,6 +191,7 @@ export class DestructionKingGame {
 
     this.shotsLeft--;
     this.aimPower = 0;
+    this.pendingEvents.fire.push({ shotsLeft: this.shotsLeft });
     this.emitState();
   }
 
@@ -198,6 +225,7 @@ export class DestructionKingGame {
     this.loadLevel();
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -404,6 +432,7 @@ export class DestructionKingGame {
   private destroyBlock(block: Block) {
     block.destroyed = true;
     this.score += 10;
+    this.pendingEvents.blockDestroyed.push({ points: 10 });
 
     // Create debris particles
     for (let i = 0; i < 8; i++) {
@@ -438,6 +467,7 @@ export class DestructionKingGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.levelComplete.push({ level: this.level, score: this.score });
     this.emitState();
   }
 
@@ -446,6 +476,7 @@ export class DestructionKingGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, level: this.level });
     this.emitState();
   }
 

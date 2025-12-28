@@ -27,6 +27,13 @@ const FRICTION = 0.99;
 const BOUNCE = 0.7;
 const COLORS = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6", "#1abc9c"];
 
+export interface PendingEvents {
+  start: boolean;
+  objectSpawned: { type: ObjectType; count: number }[];
+  objectsCleared: boolean;
+  collision: boolean;
+}
+
 export class PhysicsSandboxGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -39,6 +46,22 @@ export class PhysicsSandboxGame {
   private lastTime = 0;
   private size = 0;
   private isPlaying = false;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    objectSpawned: [],
+    objectsCleared: false,
+    collision: false,
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      objectSpawned: [],
+      objectsCleared: false,
+      collision: false,
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -167,6 +190,7 @@ export class PhysicsSandboxGame {
     }
 
     this.objects.push(obj);
+    this.pendingEvents.objectSpawned.push({ type: this.currentTool, count: this.objects.length });
 
     // Limit objects
     if (this.objects.length > 50) {
@@ -177,6 +201,7 @@ export class PhysicsSandboxGame {
   setTool(tool: ObjectType | "clear") {
     if (tool === "clear") {
       this.objects = [];
+      this.pendingEvents.objectsCleared = true;
     } else {
       this.currentTool = tool;
     }
@@ -194,6 +219,7 @@ export class PhysicsSandboxGame {
     this.isPlaying = true;
     this.objects = [];
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 

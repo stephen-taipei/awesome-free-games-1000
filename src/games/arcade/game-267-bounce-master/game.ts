@@ -38,6 +38,15 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  launch: { shotsLeft: number }[];
+  targetHit: { points: number; bounces: number }[];
+  bounce: { totalBounces: number }[];
+  levelClear: { level: number; score: number }[];
+  gameOver: { score: number; level: number }[];
+}
+
 const BALL_SPEED = 12;
 const MAX_BOUNCES = 8;
 const BALL_RADIUS = 10;
@@ -60,6 +69,26 @@ export class BounceGame {
   private status: GameState["status"] = "idle";
   private onStateChange: StateCallback | null = null;
   private animationId: number | null = null;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    launch: [],
+    targetHit: [],
+    bounce: [],
+    levelClear: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      launch: [],
+      targetHit: [],
+      bounce: [],
+      levelClear: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -96,6 +125,7 @@ export class BounceGame {
     this.shots = 3;
     this.status = "aiming";
     this.setupLevel();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -235,6 +265,7 @@ export class BounceGame {
 
     this.shots--;
     this.status = "playing";
+    this.pendingEvents.launch.push({ shotsLeft: this.shots });
     this.emitState();
   }
 
@@ -289,7 +320,9 @@ export class BounceGame {
 
       if (dist < target.radius + ball.radius) {
         target.hit = true;
-        this.score += 100 * (1 + ball.bounces);
+        const points = 100 * (1 + ball.bounces);
+        this.score += points;
+        this.pendingEvents.targetHit.push({ points, bounces: ball.bounces });
         this.emitState();
       }
     }
@@ -334,10 +367,12 @@ export class BounceGame {
       // Level complete!
       this.status = "clear";
       this.score += this.shots * 50; // Bonus for remaining shots
+      this.pendingEvents.levelClear.push({ level: this.level, score: this.score });
       this.emitState();
     } else if (this.shots <= 0) {
       // Game over
       this.status = "over";
+      this.pendingEvents.gameOver.push({ score: this.score, level: this.level });
       this.emitState();
     } else {
       // Continue aiming
