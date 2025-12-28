@@ -27,6 +27,12 @@ interface Particle {
   color: string;
 }
 
+export interface PendingEvents {
+  hit: { x: number; y: number; livesLeft: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; score: number }[];
+}
+
 export class DodgeballGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -47,10 +53,24 @@ export class DodgeballGame {
   private invincible: number = 0;
   onStateChange: ((state: any) => void) | null = null;
 
+  public pendingEvents: PendingEvents = {
+    hit: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.player = { x: 0, y: 0, radius: 20 };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      hit: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   public resize() {
@@ -85,6 +105,7 @@ export class DodgeballGame {
     this.targetX = this.player.x;
     this.targetY = this.player.y;
 
+    this.pendingEvents.start = true;
     this.emitState();
     this.lastTime = performance.now();
     this.loop();
@@ -193,6 +214,13 @@ export class DodgeballGame {
           this.lives--;
           this.invincible = 2000; // 2 seconds invincibility
           this.addHitParticles();
+
+          this.pendingEvents.hit.push({
+            x: this.player.x,
+            y: this.player.y,
+            livesLeft: this.lives,
+          });
+
           this.emitState();
 
           if (this.lives <= 0) {
@@ -238,6 +266,13 @@ export class DodgeballGame {
   private endGame() {
     this.status = "over";
     if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    this.pendingEvents.gameOver.push({
+      x: this.width / 2,
+      y: this.height / 2,
+      score: this.score,
+    });
+
     this.emitState();
   }
 
