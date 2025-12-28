@@ -44,6 +44,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  teleport: { teleportsLeft: number }[];
+  levelComplete: { level: number; score: number; teleportsLeft: number }[];
+  gameOver: { score: number; level: number }[];
+}
+
 const MAX_LEVELS = 5;
 
 export class TeleportRushGame {
@@ -62,6 +69,22 @@ export class TeleportRushGame {
   private lastTime = 0;
   private size = 0;
   private teleportCooldown = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    teleport: [],
+    levelComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      teleport: [],
+      levelComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -139,6 +162,7 @@ export class TeleportRushGame {
     this.player.y = y;
     this.teleportsLeft--;
     this.teleportCooldown = 0.3;
+    this.pendingEvents.teleport.push({ teleportsLeft: this.teleportsLeft });
 
     // Create arrival particles
     for (let i = 0; i < 15; i++) {
@@ -185,6 +209,7 @@ export class TeleportRushGame {
     this.loadLevel();
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -315,6 +340,7 @@ export class TeleportRushGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.levelComplete.push({ level: this.level, score: this.score, teleportsLeft: this.teleportsLeft });
     this.emitState();
   }
 
@@ -323,6 +349,7 @@ export class TeleportRushGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, level: this.level });
     this.emitState();
   }
 
