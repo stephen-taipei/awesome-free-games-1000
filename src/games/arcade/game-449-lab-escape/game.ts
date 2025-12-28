@@ -3,6 +3,19 @@
  * Game #449 - Laboratory-themed endless runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slideStart: boolean;
+  slideEnd: boolean;
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collectibleCollected: { type: string; score: number }[];
+  obstaclePassed: boolean;
+  collision: boolean;
+  gameOver: { score: number; highScore: number; distance: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -57,6 +70,27 @@ export class LabEscapeGame {
   private spawnTimer = 0;
   private gameTime = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slideStart: false,
+      slideEnd: false,
+      shieldActivated: false,
+      shieldBroken: false,
+      collectibleCollected: [],
+      obstaclePassed: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -104,6 +138,7 @@ export class LabEscapeGame {
     this.collectibleId = 0;
     this.spawnTimer = 0;
     this.gameTime = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -114,6 +149,7 @@ export class LabEscapeGame {
     if (player.isGrounded && !player.isSliding) {
       player.velocityY = JUMP_FORCE;
       player.isGrounded = false;
+      this.pendingEvents.jump = true;
     }
     this.emitState();
   }
@@ -125,7 +161,11 @@ export class LabEscapeGame {
     if (active && player.isGrounded) {
       player.isSliding = true;
       player.height = 25;
+      this.pendingEvents.slideStart = true;
     } else {
+      if (player.isSliding) {
+        this.pendingEvents.slideEnd = true;
+      }
       player.isSliding = false;
       player.height = 50;
     }
@@ -165,6 +205,7 @@ export class LabEscapeGame {
       if (!obs.passed && obs.x + obs.width < player.x) {
         obs.passed = true;
         this.state.score += 10;
+        this.pendingEvents.obstaclePassed = true;
       }
       return obs.x > -obs.width;
     });
@@ -176,11 +217,15 @@ export class LabEscapeGame {
         col.collected = true;
         if (col.type === 'serum') {
           this.state.score += 5;
+          this.pendingEvents.collectibleCollected.push({ type: col.type, score: 5 });
         } else if (col.type === 'data') {
           this.state.score += 15;
+          this.pendingEvents.collectibleCollected.push({ type: col.type, score: 15 });
         } else {
           player.shield = 3; // 3 seconds of shield
           this.state.score += 10;
+          this.pendingEvents.shieldActivated = true;
+          this.pendingEvents.collectibleCollected.push({ type: col.type, score: 10 });
         }
       }
       return col.x > -20 && !col.collected;
@@ -201,7 +246,9 @@ export class LabEscapeGame {
           player.shield = 0;
           obs.passed = true;
           this.state.score += 5;
+          this.pendingEvents.shieldBroken = true;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -277,6 +324,11 @@ export class LabEscapeGame {
       this.state.highScore = this.state.score;
       localStorage.setItem('labEscapeHighScore', this.state.highScore.toString());
     }
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      distance: Math.floor(this.state.distance),
+    });
     this.emitState();
   }
 

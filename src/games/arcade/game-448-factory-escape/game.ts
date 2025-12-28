@@ -3,6 +3,17 @@
  * Game #448 - Factory-themed endless runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slideStart: boolean;
+  slideEnd: boolean;
+  collectibleCollected: { type: string; score: number }[];
+  obstaclePassed: boolean;
+  collision: boolean;
+  gameOver: { score: number; highScore: number; distance: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -56,6 +67,25 @@ export class FactoryEscapeGame {
   private spawnTimer = 0;
   private gameTime = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slideStart: false,
+      slideEnd: false,
+      collectibleCollected: [],
+      obstaclePassed: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -102,6 +132,7 @@ export class FactoryEscapeGame {
     this.collectibleId = 0;
     this.spawnTimer = 0;
     this.gameTime = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -112,6 +143,7 @@ export class FactoryEscapeGame {
     if (player.isGrounded && !player.isSliding) {
       player.velocityY = JUMP_FORCE;
       player.isGrounded = false;
+      this.pendingEvents.jump = true;
     }
     this.emitState();
   }
@@ -123,7 +155,11 @@ export class FactoryEscapeGame {
     if (active && player.isGrounded) {
       player.isSliding = true;
       player.height = 25;
+      this.pendingEvents.slideStart = true;
     } else {
+      if (player.isSliding) {
+        this.pendingEvents.slideEnd = true;
+      }
       player.isSliding = false;
       player.height = 50;
     }
@@ -158,6 +194,7 @@ export class FactoryEscapeGame {
       if (!obs.passed && obs.x + obs.width < player.x) {
         obs.passed = true;
         this.state.score += 10;
+        this.pendingEvents.obstaclePassed = true;
       }
       return obs.x > -obs.width;
     });
@@ -167,7 +204,9 @@ export class FactoryEscapeGame {
       col.x -= this.state.gameSpeed;
       if (!col.collected && this.isCollectibleCollision(player, col)) {
         col.collected = true;
-        this.state.score += col.type === 'bolt' ? 5 : col.type === 'gear' ? 10 : 20;
+        const points = col.type === 'bolt' ? 5 : col.type === 'gear' ? 10 : 20;
+        this.state.score += points;
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: points });
       }
       return col.x > -20 && !col.collected;
     });
@@ -183,6 +222,7 @@ export class FactoryEscapeGame {
     // Check collisions
     for (const obs of this.state.obstacles) {
       if (this.isObstacleCollision(player, obs)) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -256,6 +296,11 @@ export class FactoryEscapeGame {
       this.state.highScore = this.state.score;
       localStorage.setItem('factoryEscapeHighScore', this.state.highScore.toString());
     }
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      distance: Math.floor(this.state.distance),
+    });
     this.emitState();
   }
 

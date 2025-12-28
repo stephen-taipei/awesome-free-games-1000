@@ -3,6 +3,16 @@
  * Game #447 - Farm-themed endless runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  obstaclePassed: boolean;
+  collision: boolean;
+  gameOver: { score: number; highScore: number; distance: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -60,6 +70,24 @@ export class FarmRunGame {
   private spawnTimer = 0;
   private gameTime = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      obstaclePassed: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -115,6 +143,7 @@ export class FarmRunGame {
     this.collectibleId = 0;
     this.spawnTimer = 0;
     this.gameTime = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -125,6 +154,7 @@ export class FarmRunGame {
     if (player.isGrounded) {
       player.velocityY = JUMP_FORCE;
       player.isGrounded = false;
+      this.pendingEvents.jump = true;
     }
     this.emitState();
   }
@@ -134,6 +164,7 @@ export class FarmRunGame {
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
       this.state.player.x = this.state.lanePositions[this.state.player.lane] - 20;
+      this.pendingEvents.laneChange.push({ direction: "left" });
     }
     this.emitState();
   }
@@ -143,6 +174,7 @@ export class FarmRunGame {
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
       this.state.player.x = this.state.lanePositions[this.state.player.lane] - 20;
+      this.pendingEvents.laneChange.push({ direction: "right" });
     }
     this.emitState();
   }
@@ -175,6 +207,7 @@ export class FarmRunGame {
       if (!obs.passed && obs.x + obs.width < player.x) {
         obs.passed = true;
         this.state.score += 10;
+        this.pendingEvents.obstaclePassed = true;
       }
       return obs.x > -obs.width;
     });
@@ -184,7 +217,9 @@ export class FarmRunGame {
       col.x -= this.state.gameSpeed;
       if (!col.collected && this.isCollectibleCollision(player, col)) {
         col.collected = true;
-        this.state.score += col.type === 'corn' ? 5 : col.type === 'carrot' ? 10 : 15;
+        const points = col.type === 'corn' ? 5 : col.type === 'carrot' ? 10 : 15;
+        this.state.score += points;
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: points });
       }
       return col.x > -20 && !col.collected;
     });
@@ -200,6 +235,7 @@ export class FarmRunGame {
     // Check collisions
     for (const obs of this.state.obstacles) {
       if (this.isObstacleCollision(player, obs)) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -275,6 +311,11 @@ export class FarmRunGame {
       this.state.highScore = this.state.score;
       localStorage.setItem('farmRunHighScore', this.state.highScore.toString());
     }
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      distance: Math.floor(this.state.distance),
+    });
     this.emitState();
   }
 
