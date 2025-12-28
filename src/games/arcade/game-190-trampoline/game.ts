@@ -29,6 +29,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  bounce: { x: number; y: number; type: string }[];
+  starCollect: { x: number; y: number; points: number }[];
+  platformBreak: { x: number; y: number }[];
+  start: boolean;
+  gameOver: { score: number; height: number; stars: number }[];
+}
+
 export class TrampolineGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -48,9 +56,27 @@ export class TrampolineGame {
   private keys: Set<string> = new Set();
   private cameraY = 0;
 
+  public pendingEvents: PendingEvents = {
+    bounce: [],
+    starCollect: [],
+    platformBreak: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      bounce: [],
+      starCollect: [],
+      platformBreak: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(cb: StateCallback) {
@@ -96,6 +122,7 @@ export class TrampolineGame {
     this.generatePlatforms(0, h * 3);
 
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -237,11 +264,15 @@ export class TrampolineGame {
           if (platform.type === "break") {
             platform.broken = true;
             this.playerVy = -10;
+            this.pendingEvents.platformBreak.push({ x: platform.x + platform.width / 2, y: platform.y });
+            this.pendingEvents.bounce.push({ x: this.playerX, y: this.playerY, type: "break" });
           } else if (platform.type === "spring") {
             this.playerVy = -18;
             this.score += 20;
+            this.pendingEvents.bounce.push({ x: this.playerX, y: this.playerY, type: "spring" });
           } else {
             this.playerVy = -12;
+            this.pendingEvents.bounce.push({ x: this.playerX, y: this.playerY, type: platform.type });
           }
 
           this.emitState();
@@ -262,6 +293,7 @@ export class TrampolineGame {
         star.collected = true;
         this.stars++;
         this.score += 50;
+        this.pendingEvents.starCollect.push({ x: star.x, y: star.y, points: 50 });
         this.emitState();
       }
     }
@@ -279,6 +311,7 @@ export class TrampolineGame {
     // Check game over
     if (this.playerY > this.cameraY + h + 50) {
       this.status = "over";
+      this.pendingEvents.gameOver.push({ score: this.score, height: Math.floor(this.maxHeight / 10), stars: this.stars });
       this.emitState();
     }
   }

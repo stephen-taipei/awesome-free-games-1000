@@ -35,6 +35,16 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  attack: { x: number; y: number; isPlayer: boolean }[];
+  hit: { x: number; y: number; damage: number; isPlayer: boolean }[];
+  enemyDefeat: { x: number; y: number; points: number }[];
+  waveComplete: { wave: number }[];
+  start: boolean;
+  won: { score: number }[];
+  gameOver: { score: number; wave: number }[];
+}
+
 const ENEMY_COLORS = ["#e74c3c", "#9b59b6", "#1abc9c", "#e91e63"];
 
 export class CrabBattleGame {
@@ -51,9 +61,31 @@ export class CrabBattleGame {
   private keys: Set<string> = new Set();
   private groundY = 0;
 
+  public pendingEvents: PendingEvents = {
+    attack: [],
+    hit: [],
+    enemyDefeat: [],
+    waveComplete: [],
+    start: false,
+    won: [],
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      attack: [],
+      hit: [],
+      enemyDefeat: [],
+      waveComplete: [],
+      start: false,
+      won: [],
+      gameOver: [],
+    };
   }
 
   setOnStateChange(cb: StateCallback) {
@@ -104,6 +136,7 @@ export class CrabBattleGame {
     this.spawnWave();
 
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -148,6 +181,7 @@ export class CrabBattleGame {
       life: 15,
       isPlayer: true,
     });
+    this.pendingEvents.attack.push({ x: this.player.x, y: this.player.y, isPlayer: true });
   }
 
   movePlayer(direction: "left" | "right") {
@@ -221,6 +255,7 @@ export class CrabBattleGame {
           life: 10,
           isPlayer: false,
         });
+        this.pendingEvents.attack.push({ x: enemy.x, y: enemy.y, isPlayer: false });
       }
     }
 
@@ -249,10 +284,12 @@ export class CrabBattleGame {
             enemy.health -= 20;
             enemy.hitCooldown = 15;
             this.attacks.splice(i, 1);
+            this.pendingEvents.hit.push({ x: enemy.x, y: enemy.y, damage: 20, isPlayer: false });
 
             if (enemy.health <= 0) {
               this.enemies.splice(j, 1);
               this.score += 100;
+              this.pendingEvents.enemyDefeat.push({ x: enemy.x, y: enemy.y, points: 100 });
               this.emitState();
             }
             break;
@@ -268,10 +305,12 @@ export class CrabBattleGame {
             this.player.health -= 10;
             this.player.hitCooldown = 30;
             this.attacks.splice(i, 1);
+            this.pendingEvents.hit.push({ x: this.player.x, y: this.player.y, damage: 10, isPlayer: true });
             this.emitState();
 
             if (this.player.health <= 0) {
               this.status = "over";
+              this.pendingEvents.gameOver.push({ score: this.score, wave: this.wave });
               this.emitState();
               return;
             }
@@ -285,8 +324,11 @@ export class CrabBattleGame {
       if (this.wave >= 5) {
         this.status = "won";
         this.score += 500;
+        this.pendingEvents.waveComplete.push({ wave: this.wave });
+        this.pendingEvents.won.push({ score: this.score });
         this.emitState();
       } else {
+        this.pendingEvents.waveComplete.push({ wave: this.wave });
         this.wave++;
         this.spawnWave();
         this.emitState();

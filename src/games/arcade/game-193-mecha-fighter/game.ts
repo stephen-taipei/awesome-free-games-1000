@@ -34,6 +34,16 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  punch: { x: number; y: number; isPlayer: boolean }[];
+  kick: { x: number; y: number; isPlayer: boolean }[];
+  hit: { x: number; y: number; damage: number; isPlayer: boolean }[];
+  roundWon: { round: number }[];
+  start: boolean;
+  won: { round: number }[];
+  gameOver: { round: number; playerHealth: number }[];
+}
+
 export class MechaFighterGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -47,9 +57,31 @@ export class MechaFighterGame {
   private keys: Set<string> = new Set();
   private groundY = 0;
 
+  public pendingEvents: PendingEvents = {
+    punch: [],
+    kick: [],
+    hit: [],
+    roundWon: [],
+    start: false,
+    won: [],
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      punch: [],
+      kick: [],
+      hit: [],
+      roundWon: [],
+      start: false,
+      won: [],
+      gameOver: [],
+    };
   }
 
   setOnStateChange(cb: StateCallback) {
@@ -86,6 +118,7 @@ export class MechaFighterGame {
     this.effects = [];
     this.round = 1;
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -139,6 +172,7 @@ export class MechaFighterGame {
     this.player.state = "punch";
     this.player.stateTimer = 20;
     this.player.attackCooldown = 30;
+    this.pendingEvents.punch.push({ x: this.player.x, y: this.player.y, isPlayer: true });
   }
 
   kick() {
@@ -148,6 +182,7 @@ export class MechaFighterGame {
     this.player.state = "kick";
     this.player.stateTimer = 25;
     this.player.attackCooldown = 35;
+    this.pendingEvents.kick.push({ x: this.player.x, y: this.player.y, isPlayer: true });
   }
 
   private gameLoop() {
@@ -220,6 +255,7 @@ export class MechaFighterGame {
           life: 15,
         });
 
+        this.pendingEvents.hit.push({ x: this.enemy.x, y: this.groundY - 80, damage, isPlayer: false });
         this.emitState();
       }
     }
@@ -246,6 +282,7 @@ export class MechaFighterGame {
           life: 15,
         });
 
+        this.pendingEvents.hit.push({ x: this.player.x, y: this.groundY - 80, damage, isPlayer: true });
         this.emitState();
       }
     }
@@ -273,12 +310,16 @@ export class MechaFighterGame {
     if (this.enemy.health <= 0) {
       if (this.round >= 3) {
         this.status = "won";
+        this.pendingEvents.roundWon.push({ round: this.round });
+        this.pendingEvents.won.push({ round: this.round });
       } else {
         this.status = "roundWon";
+        this.pendingEvents.roundWon.push({ round: this.round });
       }
       this.emitState();
     } else if (this.player.health <= 0) {
       this.status = "over";
+      this.pendingEvents.gameOver.push({ round: this.round, playerHealth: this.player.health });
       this.emitState();
     }
   }
@@ -307,10 +348,12 @@ export class MechaFighterGame {
         this.enemy.state = "punch";
         this.enemy.stateTimer = 20;
         this.enemy.attackCooldown = 40;
+        this.pendingEvents.punch.push({ x: this.enemy.x, y: this.enemy.y, isPlayer: false });
       } else {
         this.enemy.state = "kick";
         this.enemy.stateTimer = 25;
         this.enemy.attackCooldown = 50;
+        this.pendingEvents.kick.push({ x: this.enemy.x, y: this.enemy.y, isPlayer: false });
       }
     }
   }
