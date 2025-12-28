@@ -32,6 +32,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  fire: { power: number; angle: number }[];
+  blockHit: { type: Block["type"]; destroyed: boolean; points: number }[];
+  levelComplete: { level: number; shotsRemaining: number }[];
+  gameOver: { score: number; level: number }[];
+}
+
 const GRAVITY = 0.3;
 const CANNON_X = 60;
 const CANNON_Y_RATIO = 0.7;
@@ -57,6 +65,24 @@ export class AngryCannonGame {
   private isDragging = false;
   private dragX = 0;
   private dragY = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    fire: [],
+    blockHit: [],
+    levelComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      fire: [],
+      blockHit: [],
+      levelComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -144,6 +170,7 @@ export class AngryCannonGame {
 
     this.shots--;
     this.status = "flying";
+    this.pendingEvents.fire.push({ power, angle });
     this.emitState();
   }
 
@@ -177,6 +204,7 @@ export class AngryCannonGame {
     this.score = 0;
     this.loadLevel();
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -260,9 +288,13 @@ export class AngryCannonGame {
         this.projectile.vy *= 0.5;
 
         if (block.hp <= 0) {
-          this.score += block.type === "target" ? 500 : block.type === "stone" ? 100 : 50;
+          const points = block.type === "target" ? 500 : block.type === "stone" ? 100 : 50;
+          this.score += points;
+          this.pendingEvents.blockHit.push({ type: block.type, destroyed: true, points });
           this.emitState();
           return false;
+        } else {
+          this.pendingEvents.blockHit.push({ type: block.type, destroyed: false, points: 0 });
         }
       }
 
@@ -301,10 +333,12 @@ export class AngryCannonGame {
       if (!targetsRemaining) {
         this.level++;
         this.score += this.shots * 100;
+        this.pendingEvents.levelComplete.push({ level: this.level - 1, shotsRemaining: this.shots });
         this.loadLevel();
         this.status = "playing";
       } else if (this.shots <= 0) {
         this.status = "lose";
+        this.pendingEvents.gameOver.push({ score: this.score, level: this.level });
         if (this.animationId) {
           cancelAnimationFrame(this.animationId);
         }

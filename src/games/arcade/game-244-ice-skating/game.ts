@@ -26,6 +26,12 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  collectStar: { score: number }[];
+  gameOver: { score: number; highScore: number; isNewBest: boolean }[];
+}
+
 const PLAYER_SIZE = 15;
 const FRICTION = 0.995;
 const TURN_SPEED = 0.08;
@@ -55,6 +61,20 @@ export class IceSkatingGame {
 
   private turningLeft = false;
   private turningRight = false;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    collectStar: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      collectStar: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -144,6 +164,7 @@ export class IceSkatingGame {
     this.trail = [];
     this.status = "playing";
 
+    this.pendingEvents.start = true;
     this.generateItems();
     this.emitState();
     this.gameLoop();
@@ -247,6 +268,7 @@ export class IceSkatingGame {
         if (dist < PLAYER_SIZE + 15) {
           star.collected = true;
           this.score += 100;
+          this.pendingEvents.collectStar.push({ score: 100 });
         }
       }
     });
@@ -305,6 +327,8 @@ export class IceSkatingGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    const isNewBest = this.score >= this.highScore;
+    this.pendingEvents.gameOver.push({ score: this.score, highScore: this.highScore, isNewBest });
     this.emitState();
   }
 
