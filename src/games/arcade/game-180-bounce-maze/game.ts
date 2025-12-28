@@ -34,6 +34,15 @@ interface GameState {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  launch: { x: number; y: number }[];
+  bounce: { x: number; y: number }[];
+  goalReached: { x: number; y: number; level: number }[];
+  levelComplete: { level: number }[];
+  gameComplete: { bounces: number }[];
+  start: boolean;
+}
+
 const BALL_RADIUS = 12;
 const GOAL_RADIUS = 20;
 const FRICTION = 0.995;
@@ -120,10 +129,30 @@ export class BounceMazeGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  public pendingEvents: PendingEvents = {
+    launch: [],
+    bounce: [],
+    goalReached: [],
+    levelComplete: [],
+    gameComplete: [],
+    start: false,
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.ball = { x: 0, y: 0, vx: 0, vy: 0, radius: BALL_RADIUS };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      launch: [],
+      bounce: [],
+      goalReached: [],
+      levelComplete: [],
+      gameComplete: [],
+      start: false,
+    };
   }
 
   setOnStateChange(callback: StateChangeCallback) {
@@ -183,6 +212,7 @@ export class BounceMazeGame {
   }
 
   start() {
+    this.pendingEvents.start = true;
     this.initLevel();
     this.draw();
   }
@@ -229,6 +259,7 @@ export class BounceMazeGame {
     this.ball.vy = (dy / dist) * power;
     this.isAiming = false;
     this.isMoving = true;
+    this.pendingEvents.launch.push({ x: this.ball.x, y: this.ball.y });
     this.gameLoop();
   }
 
@@ -255,6 +286,7 @@ export class BounceMazeGame {
     for (const wall of this.walls) {
       if (this.ballWallCollision(wall)) {
         this.bounces++;
+        this.pendingEvents.bounce.push({ x: this.ball.x, y: this.ball.y });
       }
     }
 
@@ -263,21 +295,25 @@ export class BounceMazeGame {
       this.ball.x = this.ball.radius;
       this.ball.vx *= -BOUNCE_DAMPING;
       this.bounces++;
+      this.pendingEvents.bounce.push({ x: this.ball.x, y: this.ball.y });
     }
     if (this.ball.x + this.ball.radius > this.width) {
       this.ball.x = this.width - this.ball.radius;
       this.ball.vx *= -BOUNCE_DAMPING;
       this.bounces++;
+      this.pendingEvents.bounce.push({ x: this.ball.x, y: this.ball.y });
     }
     if (this.ball.y - this.ball.radius < 0) {
       this.ball.y = this.ball.radius;
       this.ball.vy *= -BOUNCE_DAMPING;
       this.bounces++;
+      this.pendingEvents.bounce.push({ x: this.ball.x, y: this.ball.y });
     }
     if (this.ball.y + this.ball.radius > this.height) {
       this.ball.y = this.height - this.ball.radius;
       this.ball.vy *= -BOUNCE_DAMPING;
       this.bounces++;
+      this.pendingEvents.bounce.push({ x: this.ball.x, y: this.ball.y });
     }
 
     // Check goal
@@ -285,8 +321,10 @@ export class BounceMazeGame {
     if (goalDist < GOAL_RADIUS + this.ball.radius) {
       this.isMoving = false;
       cancelAnimationFrame(this.animationId);
+      this.pendingEvents.goalReached.push({ x: this.goalX, y: this.goalY, level: this.currentLevel + 1 });
 
       if (this.currentLevel >= LEVELS.length - 1) {
+        this.pendingEvents.gameComplete.push({ bounces: this.bounces });
         if (this.onStateChange) {
           this.onStateChange({
             level: this.currentLevel + 1,
@@ -295,6 +333,7 @@ export class BounceMazeGame {
           });
         }
       } else {
+        this.pendingEvents.levelComplete.push({ level: this.currentLevel + 1 });
         if (this.onStateChange) {
           this.onStateChange({
             level: this.currentLevel + 1,
