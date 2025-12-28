@@ -20,6 +20,16 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  roll: { value: number }[];
+  move: { from: number; to: number }[];
+  ladderClimb: { from: number; to: number }[];
+  snakeBite: { from: number; to: number }[];
+  start: boolean;
+  win: { score: number; timeBonus: number }[];
+  gameOver: { score: number; position: number }[];
+}
+
 const BOARD_SIZE = 10;
 const TOTAL_CELLS = 100;
 
@@ -41,6 +51,16 @@ export class SnakeLadderArcadeGame {
   private playerAnimY = 0;
   private targetAnimX = 0;
   private targetAnimY = 0;
+
+  public pendingEvents: PendingEvents = {
+    roll: [],
+    move: [],
+    ladderClimb: [],
+    snakeBite: [],
+    start: false,
+    win: [],
+    gameOver: [],
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -68,6 +88,18 @@ export class SnakeLadderArcadeGame {
       { start: 89, end: 53, type: "snake" },
       { start: 99, end: 41, type: "snake" },
     ];
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      roll: [],
+      move: [],
+      ladderClimb: [],
+      snakeBite: [],
+      start: false,
+      win: [],
+      gameOver: [],
+    };
   }
 
   setOnStateChange(cb: StateCallback) {
@@ -127,6 +159,7 @@ export class SnakeLadderArcadeGame {
     this.targetAnimY = pos.y;
 
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.startTimer();
     this.gameLoop();
@@ -141,6 +174,7 @@ export class SnakeLadderArcadeGame {
 
       if (this.time <= 0) {
         this.status = "over";
+        this.pendingEvents.gameOver.push({ score: this.score, position: this.position });
         this.emitState();
         this.stopTimer();
       }
@@ -174,9 +208,12 @@ export class SnakeLadderArcadeGame {
   }
 
   private movePlayer() {
+    const oldPosition = this.position;
     const newPosition = Math.min(this.position + this.diceValue, TOTAL_CELLS);
     this.position = newPosition;
     this.score += this.diceValue * 10;
+    this.pendingEvents.roll.push({ value: this.diceValue });
+    this.pendingEvents.move.push({ from: oldPosition, to: newPosition });
 
     // Check for snake or ladder
     const snakeOrLadder = this.snakesAndLadders.find(
@@ -187,8 +224,10 @@ export class SnakeLadderArcadeGame {
       setTimeout(() => {
         if (snakeOrLadder.type === "ladder") {
           this.score += 50;
+          this.pendingEvents.ladderClimb.push({ from: snakeOrLadder.start, to: snakeOrLadder.end });
         } else {
           this.score = Math.max(0, this.score - 30);
+          this.pendingEvents.snakeBite.push({ from: snakeOrLadder.start, to: snakeOrLadder.end });
         }
         this.position = snakeOrLadder.end;
         this.updateTargetPosition();
@@ -202,8 +241,10 @@ export class SnakeLadderArcadeGame {
     // Check win
     if (this.position >= TOTAL_CELLS) {
       setTimeout(() => {
-        this.score += this.time * 10; // Bonus for remaining time
+        const timeBonus = this.time * 10;
+        this.score += timeBonus; // Bonus for remaining time
         this.status = "won";
+        this.pendingEvents.win.push({ score: this.score, timeBonus });
         this.emitState();
         this.stopTimer();
       }, 500);

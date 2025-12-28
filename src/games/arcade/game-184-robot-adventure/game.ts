@@ -41,6 +41,16 @@ interface GameState {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  jump: { x: number; y: number }[];
+  coinCollect: { x: number; y: number }[];
+  death: { x: number; y: number }[];
+  levelComplete: { level: number }[];
+  gameComplete: { coins: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; coins: number }[];
+}
+
 const GRAVITY = 0.5;
 const JUMP_FORCE = -12;
 const MOVE_SPEED = 5;
@@ -121,9 +131,31 @@ export class RobotAdventureGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  public pendingEvents: PendingEvents = {
+    jump: [],
+    coinCollect: [],
+    death: [],
+    levelComplete: [],
+    gameComplete: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      jump: [],
+      coinCollect: [],
+      death: [],
+      levelComplete: [],
+      gameComplete: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(callback: StateChangeCallback) {
@@ -184,7 +216,11 @@ export class RobotAdventureGame {
     const dx = this.playerX + PLAYER_WIDTH / 2 - this.goal.x;
     const dy = this.playerY + PLAYER_HEIGHT / 2 - this.goal.y;
     if (Math.sqrt(dx * dx + dy * dy) < 30) {
-      if (this.currentLevel >= LEVELS.length - 1) return "complete";
+      if (this.currentLevel >= LEVELS.length - 1) {
+        this.pendingEvents.gameComplete.push({ coins: this.totalCoins });
+        return "complete";
+      }
+      this.pendingEvents.levelComplete.push({ level: this.currentLevel + 1 });
       return "won";
     }
     return "playing";
@@ -192,6 +228,7 @@ export class RobotAdventureGame {
 
   start() {
     this.isPlaying = true;
+    this.pendingEvents.start = true;
     this.currentLevel = 0;
     this.totalCoins = 0;
     this.lives = 3;
@@ -231,6 +268,7 @@ export class RobotAdventureGame {
     if ((key === " " || key === "ArrowUp" || key === "w" || key === "W") && this.isGrounded) {
       this.playerVY = JUMP_FORCE;
       this.isGrounded = false;
+      this.pendingEvents.jump.push({ x: this.playerX, y: this.playerY });
     }
   }
 
@@ -326,7 +364,10 @@ export class RobotAdventureGame {
     // Fall death
     if (this.playerY > this.height + 50) {
       this.lives--;
-      if (this.lives > 0) {
+      this.pendingEvents.death.push({ x: this.playerX, y: this.playerY });
+      if (this.lives <= 0) {
+        this.pendingEvents.gameOver.push({ x: this.playerX, y: this.playerY, coins: this.totalCoins });
+      } else {
         this.initLevel();
       }
       this.emitState();
@@ -340,6 +381,7 @@ export class RobotAdventureGame {
       if (Math.sqrt(dx * dx + dy * dy) < 25) {
         coin.collected = true;
         this.totalCoins++;
+        this.pendingEvents.coinCollect.push({ x: coin.x, y: coin.y });
         this.emitState();
       }
     }
