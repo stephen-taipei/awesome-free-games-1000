@@ -35,6 +35,14 @@ interface GameState {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  stomp: { x: number; y: number; points: number }[];
+  playerHit: { x: number; y: number }[];
+  jump: { x: number; y: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; score: number; won: boolean }[];
+}
+
 const GAME_DURATION = 60;
 const GRAVITY = 800;
 const JUMP_FORCE = -350;
@@ -60,10 +68,28 @@ export class BalloonStompGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  public pendingEvents: PendingEvents = {
+    stomp: [],
+    playerHit: [],
+    jump: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.player = this.createPlayer();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      stomp: [],
+      playerHit: [],
+      jump: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createPlayer(): Player {
@@ -142,6 +168,7 @@ export class BalloonStompGame {
       this.enemies.push(enemy);
     }
 
+    this.pendingEvents.start = true;
     this.lastTime = performance.now();
     this.gameLoop();
   }
@@ -157,6 +184,12 @@ export class BalloonStompGame {
     if (this.timeRemaining <= 0 || !this.player.hasBalloon) {
       this.timeRemaining = Math.max(0, this.timeRemaining);
       this.isPlaying = false;
+      this.pendingEvents.gameOver.push({
+        x: this.width / 2,
+        y: this.height / 2,
+        score: this.score,
+        won: this.player.hasBalloon,
+      });
       this.emitState();
       this.draw();
       return;
@@ -183,6 +216,7 @@ export class BalloonStompGame {
     if ((this.keys.has("ArrowUp") || this.keys.has("KeyW") || this.keys.has("Space")) && !this.player.isJumping) {
       this.player.vy = JUMP_FORCE;
       this.player.isJumping = true;
+      this.pendingEvents.jump.push({ x: this.player.x, y: this.player.y });
     }
 
     // Update player physics
@@ -264,10 +298,12 @@ export class BalloonStompGame {
           enemy.hasBalloon = false;
           this.score += 100;
           this.player.vy = JUMP_FORCE * 0.5;
+          this.pendingEvents.stomp.push({ x: enemy.x, y: enemy.y, points: 100 });
         }
         // Enemy landing on player
         else if (enemy.vy > 0 && enemy.y < this.player.y - 10 && this.player.hasBalloon) {
           this.player.hasBalloon = false;
+          this.pendingEvents.playerHit.push({ x: this.player.x, y: this.player.y });
         }
       }
     }
