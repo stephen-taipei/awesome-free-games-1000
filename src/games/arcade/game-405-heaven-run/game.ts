@@ -5,6 +5,15 @@
  * A heavenly parkour game where you run and jump on clouds
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  landOnPlatform: { type: string }[];
+  starCollected: { score: number }[];
+  powerupCollected: { type: string }[];
+  gameOver: { score: number; highScore: number; height: number }[];
+}
+
 interface Point {
   x: number;
   y: number;
@@ -62,6 +71,24 @@ const MAX_PLATFORM_GAP = 200;
 export class HeavenRunGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      landOnPlatform: [],
+      starCollected: [],
+      powerupCollected: [],
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   private player: Player;
   private platforms: Platform[] = [];
   private stars: Star[] = [];
@@ -170,6 +197,7 @@ export class HeavenRunGame {
     this.powerups = [];
 
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -234,6 +262,7 @@ export class HeavenRunGame {
     if (this.player.onGround) {
       this.player.vy = this.player.jumpPower;
       this.player.onGround = false;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -286,6 +315,7 @@ export class HeavenRunGame {
         this.player.y = relativeY - this.player.height;
         this.player.vy = 0;
         this.player.onGround = true;
+        this.pendingEvents.landOnPlatform.push({ type: platform.type });
 
         if (platform.type === "golden") {
           this.score += 50;
@@ -307,6 +337,7 @@ export class HeavenRunGame {
         if (dist < 25) {
           star.collected = true;
           this.score += 10;
+          this.pendingEvents.starCollected.push({ score: this.score });
           this.emitState();
         }
       }
@@ -323,6 +354,7 @@ export class HeavenRunGame {
 
         if (dist < 25) {
           powerup.collected = true;
+          this.pendingEvents.powerupCollected.push({ type: powerup.type });
 
           if (powerup.type === "halo") {
             this.haloEffect = true;
@@ -432,6 +464,11 @@ export class HeavenRunGame {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+    this.pendingEvents.gameOver.push({
+      score: this.score,
+      highScore: this.highScore,
+      height: this.height,
+    });
     this.emitState();
   }
 
