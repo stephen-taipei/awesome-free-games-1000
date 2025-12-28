@@ -34,6 +34,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  itemCaught: { type: string; weight: number; points: number }[];
+  itemFallen: boolean;
+  bombHit: { lostPoints: number }[];
+  gameOver: { score: number; highScore: number; time: number }[];
+}
+
 const PLATFORM_WIDTH = 200;
 const PLATFORM_HEIGHT = 15;
 const MAX_TILT = 30;
@@ -69,6 +77,24 @@ export class BalanceGame {
   private spawnInterval = 2000;
   private startTime = 0;
   private keysPressed = { left: false, right: false };
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    itemCaught: [],
+    itemFallen: false,
+    bombHit: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      itemCaught: [],
+      itemFallen: false,
+      bombHit: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -124,6 +150,7 @@ export class BalanceGame {
     this.startTime = Date.now();
     this.lastSpawnTime = Date.now();
     this.spawnInterval = 2000;
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -215,6 +242,7 @@ export class BalanceGame {
         if (item.type === "bad") {
           // Bomb - remove some stacked items
           this.score = Math.max(0, this.score - 50);
+          this.pendingEvents.bombHit.push({ lostPoints: 50 });
           for (let j = 0; j < 2 && this.stackedItems.length > 0; j++) {
             const removed = this.stackedItems.pop()!;
             if (removed.x < this.platformX) {
@@ -226,7 +254,9 @@ export class BalanceGame {
         } else {
           // Add to stack
           this.addToStack(item);
-          this.score += item.weight * 10;
+          const points = item.weight * 10;
+          this.score += points;
+          this.pendingEvents.itemCaught.push({ type: item.type, weight: item.weight, points });
           if (this.score > this.highScore) {
             this.highScore = this.score;
             this.saveHighScore();
@@ -323,6 +353,7 @@ export class BalanceGame {
       // Check if fallen off
       if (item.x < leftX - item.radius || item.x > rightX + item.radius) {
         toRemove.push(i);
+        this.pendingEvents.itemFallen = true;
         if (item.x < this.platformX) {
           this.leftWeight -= item.weight;
         } else {
@@ -348,6 +379,7 @@ export class BalanceGame {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+    this.pendingEvents.gameOver.push({ score: this.score, highScore: this.highScore, time: this.time });
     this.emitState();
   }
 
