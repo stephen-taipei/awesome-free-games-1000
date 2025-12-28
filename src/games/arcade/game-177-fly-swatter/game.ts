@@ -25,6 +25,14 @@ interface GameState {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  swat: { x: number; y: number }[];
+  hit: { x: number; y: number; combo: number; points: number }[];
+  miss: { x: number; y: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; score: number }[];
+}
+
 const GAME_DURATION = 45;
 
 export class FlySwatterGame {
@@ -52,9 +60,27 @@ export class FlySwatterGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  public pendingEvents: PendingEvents = {
+    swat: [],
+    hit: [],
+    miss: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      swat: [],
+      hit: [],
+      miss: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(callback: StateChangeCallback) {
@@ -135,6 +161,7 @@ export class FlySwatterGame {
       this.spawnFly();
     }
 
+    this.pendingEvents.start = true;
     this.lastTime = performance.now();
     this.gameLoop();
   }
@@ -150,6 +177,11 @@ export class FlySwatterGame {
     if (this.timeRemaining <= 0) {
       this.timeRemaining = 0;
       this.isPlaying = false;
+      this.pendingEvents.gameOver.push({
+        x: this.width / 2,
+        y: this.height / 2,
+        score: this.score,
+      });
       this.emitState();
       this.draw();
       return;
@@ -230,6 +262,7 @@ export class FlySwatterGame {
     this.swatY = y;
     this.showSwat = true;
     this.swatTimer = 0.15;
+    this.pendingEvents.swat.push({ x, y });
 
     let hit = false;
     for (const fly of this.flies) {
@@ -241,7 +274,9 @@ export class FlySwatterGame {
         fly.deathTime = 0.5;
         this.combo++;
         this.lastHitTime = performance.now();
-        this.score += 10 * this.combo;
+        const points = 10 * this.combo;
+        this.score += points;
+        this.pendingEvents.hit.push({ x: fly.x, y: fly.y, combo: this.combo, points });
         hit = true;
         break;
       }
@@ -249,6 +284,7 @@ export class FlySwatterGame {
 
     if (!hit) {
       this.combo = 0;
+      this.pendingEvents.miss.push({ x, y });
     }
   }
 
