@@ -89,12 +89,55 @@ export class ButterflyEffectGame {
   private chainQueue: Tile[] = [];
   private animating = false;
 
+  // Event state for WebGPU
+  private pendingEvents: {
+    butterflyClick?: { x: number; y: number; color: number[] };
+    chainReaction?: { fromX: number; fromY: number; toX: number; toY: number; color: number[] };
+    flowerActivate?: { x: number; y: number; color: number[] };
+    windActivate?: { x: number; y: number };
+    targetActivate?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
   onStateChange: ((state: any) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
+  }
+
+  // Convert grid position to normalized 0-1 coordinates for WebGPU
+  private getNormalizedPos(row: number, col: number): { x: number; y: number } {
+    const x = this.offsetX + col * this.cellSize + this.cellSize / 2;
+    const y = this.offsetY + row * this.cellSize + this.cellSize / 2;
+    return {
+      x: x / this.canvas.width,
+      y: y / this.canvas.height
+    };
+  }
+
+  // Convert hex color to RGB array for WebGPU
+  private hexToRgb(hex: string): number[] {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? [
+          parseInt(result[1], 16) / 255,
+          parseInt(result[2], 16) / 255,
+          parseInt(result[3], 16) / 255
+        ]
+      : [1, 0, 0];
+  }
+
+  // Get color for tile type
+  private getTileColor(type: string): number[] {
+    switch (type) {
+      case 'butterfly': return [0.91, 0.12, 0.39]; // Pink
+      case 'flower': return [1.0, 0.41, 0.71]; // Pink flower
+      case 'wind': return [0.53, 0.81, 0.92]; // Sky blue
+      case 'target': return [0.30, 0.69, 0.31]; // Green
+      default: return [1, 1, 1];
+    }
   }
 
   start() {
@@ -203,6 +246,15 @@ export class ButterflyEffectGame {
       if (row >= 0 && row < this.gridRows && col >= 0 && col < this.gridCols) {
         const tile = this.grid[row][col];
         if (tile.type === 'butterfly' && !tile.activated) {
+          // Emit butterfly click event for WebGPU
+          const pos = this.getNormalizedPos(row, col);
+          this.pendingEvents.butterflyClick = {
+            x: pos.x,
+            y: pos.y,
+            color: this.getTileColor('butterfly')
+          };
+          this.notifyState();
+
           this.triggerChain(tile);
         }
       }
@@ -230,8 +282,28 @@ export class ButterflyEffectGame {
 
     tile.activated = true;
 
+    // Emit activation events based on tile type
+    const tilePos = this.getNormalizedPos(tile.row, tile.col);
+
     if (tile.type === 'target') {
       this.targetsActivated++;
+      this.pendingEvents.targetActivate = {
+        x: tilePos.x,
+        y: tilePos.y
+      };
+      this.notifyState();
+    } else if (tile.type === 'flower') {
+      this.pendingEvents.flowerActivate = {
+        x: tilePos.x,
+        y: tilePos.y,
+        color: this.getTileColor('flower')
+      };
+      this.notifyState();
+    } else if (tile.type === 'wind') {
+      this.pendingEvents.windActivate = {
+        x: tilePos.x,
+        y: tilePos.y
+      };
       this.notifyState();
     }
 
@@ -244,6 +316,18 @@ export class ButterflyEffectGame {
     setTimeout(() => {
       for (const target of targets) {
         if (!target.activated && target.type !== 'empty') {
+          // Emit chain reaction event for WebGPU
+          const fromPos = this.getNormalizedPos(tile.row, tile.col);
+          const toPos = this.getNormalizedPos(target.row, target.col);
+          this.pendingEvents.chainReaction = {
+            fromX: fromPos.x,
+            fromY: fromPos.y,
+            toX: toPos.x,
+            toY: toPos.y,
+            color: this.getTileColor(target.type)
+          };
+          this.notifyState();
+
           this.chainQueue.push(target);
         }
       }
@@ -547,8 +631,10 @@ export class ButterflyEffectGame {
   }
 
   reset() {
+    this.pendingEvents.reset = true;
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
+    this.notifyState();
     this.draw();
   }
 
@@ -570,8 +656,18 @@ export class ButterflyEffectGame {
         level: this.currentLevel + 1,
         totalLevels: LEVELS.length,
         targetsActivated: this.targetsActivated,
-        targetCount: this.targetCount
+        targetCount: this.targetCount,
+        // WebGPU events
+        butterflyClick: this.pendingEvents.butterflyClick,
+        chainReaction: this.pendingEvents.chainReaction,
+        flowerActivate: this.pendingEvents.flowerActivate,
+        windActivate: this.pendingEvents.windActivate,
+        targetActivate: this.pendingEvents.targetActivate,
+        reset: this.pendingEvents.reset
       });
+
+      // Clear pending events after notification
+      this.pendingEvents = {};
     }
   }
 

@@ -1,25 +1,95 @@
+/* Color Palette - Artist Studio Theme */
+/* Game #107 - WebGPU Enhanced */
+
+:root {
+  --purple-primary: #9b59b6;
+  --purple-dark: #8e44ad;
+  --canvas-white: #faf8f5;
+  --canvas-cream: #f5f0e6;
+  --easel-wood: #8b5a2b;
+  --easel-dark: #6b4423;
+  --paint-red: #e74c3c;
+  --paint-blue: #3498db;
+  --paint-yellow: #f1c40f;
+  --paint-green: #2ecc71;
+  --palette-brown: #d4a574;
+  --glass-bg: rgba(155, 89, 182, 0.1);
+  --glass-border: rgba(155, 89, 182, 0.3);
+  --shadow-purple: rgba(155, 89, 182, 0.4);
+  --shadow-dark: rgba(0, 0, 0, 0.3);
+}
+
 .game-container {
   max-width: 600px;
+}
+
+.game-header h1 {
+  background: linear-gradient(135deg, var(--paint-red) 0%, var(--paint-yellow) 25%, var(--paint-green) 50%, var(--paint-blue) 75%, var(--purple-primary) 100%);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbow-title 4s ease-in-out infinite;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 4px var(--shadow-dark));
+}
+
+@keyframes rainbow-title {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, var(--canvas-white) 0%, var(--canvas-cream) 100%);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 20px var(--shadow-dark),
+    inset 0 0 60px rgba(139, 90, 43, 0.1),
+    0 0 30px var(--shadow-purple);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  border: 4px solid var(--easel-wood);
 }
 
-canvas {
+.game-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 10% 10%, rgba(231, 76, 60, 0.1) 0%, transparent 20%),
+    radial-gradient(ellipse at 90% 10%, rgba(52, 152, 219, 0.1) 0%, transparent 20%),
+    radial-gradient(ellipse at 50% 90%, rgba(241, 196, 15, 0.1) 0%, transparent 20%);
+  pointer-events: none;
+  animation: paint-glow 5s ease-in-out infinite;
+}
+
+@keyframes paint-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  cursor: pointer;
+  pointer-events: none;
+  z-index: 1;
+}
+
+canvas#game-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  position: relative;
+  z-index: 2;
 }
 
 .game-controls {
@@ -30,14 +100,49 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  color: var(--purple-primary);
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.4);
+  box-shadow:
+    0 4px 15px var(--shadow-purple),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  animation: palette-float 3s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 60%
+  );
+  animation: brush-shine 4s ease-in-out infinite;
+}
+
+@keyframes palette-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes brush-shine {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
 }
 
 .footer-controls {
@@ -46,6 +151,210 @@ canvas {
   gap: 1rem;
 }
 
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--purple-primary) 0%, var(--purple-dark) 100%);
+  color: white;
+  border: 2px solid var(--purple-dark);
+  box-shadow: 0 4px 15px var(--shadow-purple);
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 25px var(--shadow-purple);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, var(--easel-wood) 0%, var(--easel-dark) 100%);
+  color: var(--canvas-cream);
+  border: 2px solid var(--easel-dark);
+}
+
+.btn.warning:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(139, 90, 43, 0.4);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn:hover::after {
+  transform: translateX(100%);
+}
+
+.overlay {
+  background: radial-gradient(ellipse at center, rgba(155, 89, 182, 0.9) 0%, rgba(142, 68, 173, 0.95) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.overlay-content {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow:
+    0 8px 32px var(--shadow-dark),
+    0 0 40px var(--shadow-purple);
+  animation: canvas-reveal 0.5s ease-out;
+}
+
+@keyframes canvas-reveal {
+  0% {
+    transform: scale(0.8) rotate(-5deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.overlay-title {
+  background: linear-gradient(135deg, var(--paint-red) 0%, var(--paint-yellow) 33%, var(--paint-green) 66%, var(--paint-blue) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbow-title 3s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px var(--shadow-dark));
+}
+
 .controls-hint small {
-  color: #7f8c8d;
+  color: var(--canvas-cream);
+  opacity: 0.9;
+}
+
+/* Paint splatter animation */
+@keyframes splatter {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* Color wheel spin */
+@keyframes color-wheel {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Brush stroke animation */
+@keyframes brush-stroke {
+  0% {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  100% {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+/* Paint drip animation */
+@keyframes paint-drip {
+  0% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+}
+
+/* Palette shake */
+@keyframes palette-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px) rotate(-1deg); }
+  75% { transform: translateX(5px) rotate(1deg); }
+}
+
+/* Blend swirl */
+@keyframes blend-swirl {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* Masterpiece reveal */
+@keyframes masterpiece-reveal {
+  0% {
+    filter: blur(10px) saturate(0);
+    transform: scale(0.9);
+  }
+  50% {
+    filter: blur(5px) saturate(0.5);
+  }
+  100% {
+    filter: blur(0) saturate(1);
+    transform: scale(1);
+  }
+}
+
+/* Spectrum flow */
+@keyframes spectrum-flow {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* Canvas texture overlay */
+.game-area::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='0' x2='100' y2='0' stroke='%23ddd' stroke-width='0.2'/%3E%3Cline x1='0' y1='0' x2='0' y2='100' stroke='%23ddd' stroke-width='0.2'/%3E%3C/svg%3E");
+  background-size: 10px 10px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .game-area {
+    height: 380px;
+  }
+
+  .stats-card {
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+  }
 }

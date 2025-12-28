@@ -1,3 +1,43 @@
+/**
+ * Domino Chain Styles
+ * Wooden Board Game / Classic Domino Theme
+ * Game #061
+ */
+
+:root {
+  /* Wood Palette */
+  --wood-dark: #3d2817;
+  --wood-medium: #5c3d2a;
+  --wood-light: #8b5a3c;
+  --wood-highlight: #a67c52;
+
+  /* Board Surface */
+  --board-dark: #654321;
+  --board-light: #8b6914;
+  --board-grain: rgba(0, 0, 0, 0.1);
+
+  /* Domino Colors */
+  --domino-white: #f5f5f0;
+  --domino-black: #2c2c2c;
+  --domino-ivory: #fffff0;
+
+  /* Accent Colors */
+  --accent-teal: #1abc9c;
+  --accent-green: #27ae60;
+  --accent-gold: #f1c40f;
+  --accent-red: #e74c3c;
+
+  /* UI Elements */
+  --ui-text: #f5f5f0;
+  --ui-muted: #a89880;
+  --ui-border: rgba(139, 90, 60, 0.3);
+
+  /* Effects */
+  --glow-teal: rgba(26, 188, 156, 0.4);
+  --glow-gold: rgba(241, 196, 15, 0.4);
+  --glow-green: rgba(39, 174, 96, 0.4);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,8 +45,12 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  font-family: 'Georgia', 'Times New Roman', serif;
+  background: var(--wood-dark);
+  background-image:
+    radial-gradient(ellipse at 30% 20%, var(--wood-medium) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(60, 40, 25, 0.5) 0%, transparent 50%),
+    linear-gradient(180deg, var(--wood-dark) 0%, #2a1a0e 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -14,69 +58,183 @@ body {
   padding: 1rem;
 }
 
-.game-container {
-  max-width: 700px;
+/* Wood grain texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
+  height: 100%;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.game-container {
+  max-width: 720px;
+  width: 100%;
+  background: rgba(61, 40, 23, 0.92);
   border-radius: 16px;
   padding: 1.5rem;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(15px);
+  border: 3px solid var(--wood-light);
+  box-shadow:
+    0 0 0 1px var(--wood-dark),
+    0 0 50px rgba(0, 0, 0, 0.4),
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+  z-index: 1;
+}
+
+/* Corner decorations */
+.game-container::before,
+.game-container::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--wood-highlight);
+}
+
+.game-container::before {
+  top: 10px;
+  left: 10px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.game-container::after {
+  bottom: 10px;
+  right: 10px;
+  border-left: none;
+  border-top: none;
 }
 
 .game-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--ui-border);
 }
 
 .game-header h1 {
-  color: #1abc9c;
-  font-size: 1.5rem;
+  color: var(--accent-teal);
+  font-size: 1.6rem;
+  font-weight: 600;
+  text-shadow: 0 0 20px var(--glow-teal);
+  letter-spacing: 1px;
 }
 
 #language-select {
-  padding: 0.4rem 0.8rem;
+  padding: 0.5rem 1rem;
   border-radius: 6px;
-  border: none;
-  background: #34495e;
-  color: white;
+  border: 1px solid var(--ui-border);
+  background: rgba(92, 61, 42, 0.8);
+  color: var(--ui-text);
   cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+#language-select:hover {
+  background: rgba(139, 90, 60, 0.8);
+  border-color: var(--wood-highlight);
+}
+
+#language-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--glow-teal);
 }
 
 .game-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
 }
 
 .stats-card {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 0.5rem 1rem;
+  background: rgba(92, 61, 42, 0.6);
+  padding: 0.6rem 1.2rem;
   border-radius: 8px;
-  color: white;
+  color: var(--ui-text);
   display: flex;
   gap: 0.5rem;
-  font-weight: bold;
+  font-weight: 500;
+  border: 1px solid var(--ui-border);
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+  background: rgba(92, 61, 42, 0.8);
+  transform: translateY(-1px);
+}
+
+.stats-card span:last-child {
+  color: var(--accent-teal);
+  text-shadow: 0 0 10px var(--glow-teal);
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  height: 400px;
-  background: linear-gradient(180deg, #8b4513 0%, #654321 100%);
+  height: 420px;
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(139, 105, 20, 0.2) 0%, transparent 50%),
+    linear-gradient(180deg, var(--board-dark) 0%, #4a3520 100%);
   border-radius: 12px;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   overflow: hidden;
-  box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 3px solid var(--wood-medium);
+  box-shadow:
+    inset 0 4px 30px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Wood grain pattern on board */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 15px,
+      rgba(0, 0, 0, 0.05) 15px,
+      rgba(0, 0, 0, 0.05) 16px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 50px,
+      rgba(0, 0, 0, 0.02) 50px,
+      rgba(0, 0, 0, 0.02) 51px
+    );
+  pointer-events: none;
+  z-index: 0;
 }
 
 #game-canvas {
   width: 100%;
   height: 100%;
   cursor: crosshair;
+  position: relative;
+  z-index: 5;
 }
 
 .overlay {
@@ -85,63 +243,110 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.9);
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(45, 30, 18, 0.92) 0%, rgba(45, 30, 18, 0.98) 100%);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 100;
   border-radius: 12px;
+  backdrop-filter: blur(5px);
 }
 
 .overlay-content {
   text-align: center;
-  color: white;
-  padding: 2rem;
+  color: var(--ui-text);
+  padding: 2.5rem;
 }
 
 .overlay-title {
-  font-size: 2rem;
+  font-size: 2.2rem;
   margin-bottom: 1rem;
-  color: #1abc9c;
+  color: var(--accent-teal);
+  text-shadow: 0 0 30px var(--glow-teal);
+  font-weight: 600;
+  letter-spacing: 2px;
 }
 
 .overlay-msg {
-  margin-bottom: 1.5rem;
-  color: #bdc3c7;
+  margin-bottom: 1.75rem;
+  color: var(--ui-muted);
+  font-size: 1.1rem;
+  line-height: 1.6;
 }
 
 .controls-hint {
-  margin-top: 1rem;
-  color: #7f8c8d;
+  margin-top: 1.25rem;
+  color: var(--ui-muted);
+  font-size: 0.9rem;
 }
 
 .btn {
-  padding: 0.75rem 2rem;
+  padding: 0.85rem 2.2rem;
   border: none;
   border-radius: 8px;
   font-size: 1rem;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Georgia', serif;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+}
+
+.btn:active {
+  transform: translateY(-1px);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #1abc9c, #16a085);
+  background: linear-gradient(135deg, var(--accent-teal) 0%, #16a085 100%);
   color: white;
-  font-weight: bold;
+  box-shadow: 0 4px 25px var(--glow-teal);
+}
+
+.btn.primary:hover {
+  box-shadow: 0 6px 35px var(--glow-teal);
 }
 
 .btn.success {
-  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  background: linear-gradient(135deg, var(--accent-green) 0%, #229954 100%);
   color: white;
+  box-shadow: 0 4px 25px var(--glow-green);
+}
+
+.btn.success:hover {
+  box-shadow: 0 6px 35px var(--glow-green);
 }
 
 .btn.warning {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  background: linear-gradient(135deg, var(--accent-red) 0%, #c0392b 100%);
   color: white;
+  box-shadow: 0 4px 25px rgba(231, 76, 60, 0.4);
+}
+
+.btn.warning:hover {
+  box-shadow: 0 6px 35px rgba(231, 76, 60, 0.5);
 }
 
 .footer-controls {
@@ -150,8 +355,109 @@ body {
   gap: 1rem;
 }
 
-@media (max-width: 500px) {
+/* Domino placement indicator */
+.placement-indicator {
+  position: absolute;
+  width: 10px;
+  height: 45px;
+  background: rgba(26, 188, 156, 0.3);
+  border: 2px dashed var(--accent-teal);
+  border-radius: 3px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: placementPulse 1s ease-in-out infinite;
+}
+
+@keyframes placementPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Target zone styling */
+.target-zone {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-green) 0%, transparent 70%);
+  animation: targetGlow 2s ease-in-out infinite;
+}
+
+@keyframes targetGlow {
+  0%, 100% { box-shadow: 0 0 20px var(--glow-green); }
+  50% { box-shadow: 0 0 40px var(--glow-green), 0 0 60px var(--glow-green); }
+}
+
+/* Domino counter */
+.domino-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.domino-icon {
+  width: 8px;
+  height: 20px;
+  background: var(--domino-ivory);
+  border: 1px solid var(--wood-dark);
+  border-radius: 2px;
+}
+
+/* Chain reaction visual */
+@keyframes chainReaction {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.chain-active {
+  animation: chainReaction 0.2s ease-out;
+}
+
+@media (max-width: 600px) {
+  .game-container {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .game-header h1 {
+    font-size: 1.3rem;
+  }
+
   .game-area {
-    height: 350px;
+    height: 360px;
+  }
+
+  .stats-card {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.9rem;
+  }
+
+  .btn {
+    padding: 0.7rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .overlay-title {
+    font-size: 1.8rem;
+  }
+
+  .footer-controls {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 400px) {
+  .game-area {
+    height: 300px;
+  }
+
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .stats-card {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.7rem;
   }
 }

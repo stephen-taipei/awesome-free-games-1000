@@ -72,12 +72,41 @@ export class RainbowBridgeGame {
 
   private animating = false;
 
+  // Event state for WebGPU
+  private pendingEvents: {
+    colorSelect?: { x: number; y: number; color: number[] };
+    colorPlace?: { x: number; y: number; color: number[] };
+    wrongPlace?: { x: number; y: number };
+    bridgeComplete?: { startX: number; endX: number; y: number };
+    reset?: boolean;
+  } = {};
+
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
   onStateChange: ((state: any) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
+  }
+
+  // Convert hex color to RGB array for WebGPU
+  private hexToRgb(hex: string): number[] {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? [
+          parseInt(result[1], 16) / 255,
+          parseInt(result[2], 16) / 255,
+          parseInt(result[3], 16) / 255,
+        ]
+      : [1, 0, 0];
+  }
+
+  // Convert canvas coordinates to normalized 0-1 for WebGPU
+  private getNormalizedPos(x: number, y: number): { x: number; y: number } {
+    return {
+      x: x / this.canvas.width,
+      y: y / this.canvas.height,
+    };
   }
 
   start() {
@@ -136,6 +165,18 @@ export class RainbowBridgeGame {
         if (x >= slotX && x <= slotX + this.colorSlotSize &&
             y >= this.colorPaletteY && y <= this.colorPaletteY + this.colorSlotSize) {
           this.selectedColor = this.availableColors[i];
+
+          // Emit color select event for WebGPU
+          const centerX = slotX + this.colorSlotSize / 2;
+          const centerY = this.colorPaletteY + this.colorSlotSize / 2;
+          const pos = this.getNormalizedPos(centerX, centerY);
+          this.pendingEvents.colorSelect = {
+            x: pos.x,
+            y: pos.y,
+            color: this.hexToRgb(this.selectedColor)
+          };
+          this.notifyState();
+
           this.draw();
           return;
         }
@@ -164,6 +205,16 @@ export class RainbowBridgeGame {
     this.bridgeSegments[index].placed = true;
     this.attempts++;
 
+    // Emit color place event for WebGPU
+    const bridgeStartX = (this.canvas.width - this.bridgeSegments.length * this.segmentWidth) / 2;
+    const segX = bridgeStartX + index * this.segmentWidth + this.segmentWidth / 2;
+    const pos = this.getNormalizedPos(segX, this.bridgeY);
+    this.pendingEvents.colorPlace = {
+      x: pos.x,
+      y: pos.y,
+      color: this.hexToRgb(color)
+    };
+
     // Remove from available colors
     const colorIndex = this.availableColors.indexOf(color);
     if (colorIndex !== -1) {
@@ -191,10 +242,30 @@ export class RainbowBridgeGame {
       }
     }
 
+    const bridgeStartX = (this.canvas.width - this.bridgeSegments.length * this.segmentWidth) / 2;
+    const bridgeEndX = bridgeStartX + this.bridgeSegments.length * this.segmentWidth;
+
     if (correct) {
+      // Emit bridge complete event for WebGPU
+      const startPos = this.getNormalizedPos(bridgeStartX, this.bridgeY);
+      const endPos = this.getNormalizedPos(bridgeEndX, this.bridgeY);
+      this.pendingEvents.bridgeComplete = {
+        startX: startPos.x,
+        endX: endPos.x,
+        y: startPos.y
+      };
+
       this.animating = true;
       this.animateSuccess();
     } else {
+      // Emit wrong place event for WebGPU
+      const centerX = (bridgeStartX + bridgeEndX) / 2;
+      const pos = this.getNormalizedPos(centerX, this.bridgeY);
+      this.pendingEvents.wrongPlace = {
+        x: pos.x,
+        y: pos.y
+      };
+
       this.status = 'lost';
       this.notifyState();
     }
@@ -394,8 +465,10 @@ export class RainbowBridgeGame {
   }
 
   reset() {
+    this.pendingEvents.reset = true;
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
+    this.notifyState();
     this.draw();
   }
 
@@ -417,8 +490,17 @@ export class RainbowBridgeGame {
         level: this.currentLevel + 1,
         totalLevels: LEVELS.length,
         placed: this.currentPlacementIndex,
-        total: this.bridgeSegments.length
+        total: this.bridgeSegments.length,
+        // WebGPU events
+        colorSelect: this.pendingEvents.colorSelect,
+        colorPlace: this.pendingEvents.colorPlace,
+        wrongPlace: this.pendingEvents.wrongPlace,
+        bridgeComplete: this.pendingEvents.bridgeComplete,
+        reset: this.pendingEvents.reset
       });
+
+      // Clear pending events after notification
+      this.pendingEvents = {};
     }
   }
 

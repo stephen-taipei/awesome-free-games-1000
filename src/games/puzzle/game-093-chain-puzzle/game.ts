@@ -1,6 +1,7 @@
 /**
  * Chain Puzzle Game Engine
  * Game #093 - Unlink all the chains by rotating links
+ * Chain / Metal / Industrial Theme
  */
 
 export interface ChainLink {
@@ -15,6 +16,17 @@ export interface ChainLink {
 export interface LevelConfig {
   links: { x: number; y: number; rotation: number; color: string }[];
   connections: [number, number][]; // Pairs of link IDs that are connected
+}
+
+export interface GameState {
+  event?: "rotate" | "unlock" | "locked" | "victory" | "levelStart" | "reset";
+  linkX?: number;
+  linkY?: number;
+  linkId?: number;
+  linkRotation?: number;
+  moves?: number;
+  level?: number;
+  status?: "playing" | "won";
 }
 
 export class ChainPuzzleGame {
@@ -32,7 +44,7 @@ export class ChainPuzzleGame {
   private linkWidth = 60;
   private linkHeight = 30;
 
-  private onStateChange: ((state: any) => void) | null = null;
+  private onStateChange: ((state: GameState) => void) | null = null;
 
   private colors = ["#74b9ff", "#fd79a8", "#55efc4", "#ffeaa7", "#a29bfe"];
 
@@ -132,6 +144,15 @@ export class ChainPuzzleGame {
     this.moves = 0;
     this.status = "playing";
     this.loadLevel(this.currentLevel);
+
+    // Emit level start
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "levelStart",
+        level: this.currentLevel,
+      });
+    }
+
     this.loop();
   }
 
@@ -170,14 +191,47 @@ export class ChainPuzzleGame {
     // Find clicked link
     for (const link of this.links) {
       if (this.isPointInLink(x, y, link)) {
+        const wasLocked = link.locked;
+
         // Rotate the link
         link.rotation = (link.rotation + 90) % 180;
         this.moves++;
 
+        // Emit rotation event
+        if (this.onStateChange) {
+          this.onStateChange({
+            event: "rotate",
+            linkX: link.x,
+            linkY: link.y,
+            linkId: link.id,
+            linkRotation: link.rotation,
+            moves: this.moves,
+          });
+        }
+
         this.updateLockState();
 
-        if (this.onStateChange) {
-          this.onStateChange({ moves: this.moves });
+        // Check for unlock/lock state change
+        if (wasLocked && !link.locked) {
+          // Just unlocked
+          if (this.onStateChange) {
+            this.onStateChange({
+              event: "unlock",
+              linkX: link.x,
+              linkY: link.y,
+              linkId: link.id,
+            });
+          }
+        } else if (!wasLocked && link.locked) {
+          // Just locked
+          if (this.onStateChange) {
+            this.onStateChange({
+              event: "locked",
+              linkX: link.x,
+              linkY: link.y,
+              linkId: link.id,
+            });
+          }
         }
 
         // Check win condition
@@ -185,6 +239,7 @@ export class ChainPuzzleGame {
           this.status = "won";
           if (this.onStateChange) {
             this.onStateChange({
+              event: "victory",
               status: "won",
               moves: this.moves,
               level: this.currentLevel,
@@ -233,9 +288,8 @@ export class ChainPuzzleGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Clear
-    ctx.fillStyle = "#2d3436";
-    ctx.fillRect(0, 0, w, h);
+    // Clear with transparent background (WebGPU handles visuals)
+    ctx.clearRect(0, 0, w, h);
 
     // Draw connections first (behind links)
     ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
@@ -294,9 +348,22 @@ export class ChainPuzzleGame {
     if (link.locked) {
       ctx.strokeStyle = "#e74c3c";
       ctx.lineWidth = 3;
+      ctx.shadowColor = "#e74c3c";
+      ctx.shadowBlur = 10;
       ctx.beginPath();
       ctx.roundRect(-w / 2 - 2, -h / 2 - 2, w + 4, h + 4, h / 2 + 2);
       ctx.stroke();
+      ctx.shadowBlur = 0;
+    } else {
+      // Unlocked glow
+      ctx.strokeStyle = "#27ae60";
+      ctx.lineWidth = 2;
+      ctx.shadowColor = "#27ae60";
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 1, -h / 2 - 1, w + 2, h + 2, h / 2 + 1);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
     }
 
     ctx.restore();
@@ -323,6 +390,13 @@ export class ChainPuzzleGame {
 
   public reset() {
     this.stop();
+
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "reset",
+      });
+    }
+
     this.start(this.currentLevel);
   }
 
@@ -343,7 +417,7 @@ export class ChainPuzzleGame {
     return this.moves;
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 }

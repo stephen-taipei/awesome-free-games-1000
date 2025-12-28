@@ -89,6 +89,7 @@ export class YinYangGame {
           status: "complete",
           level: levelIndex + 1,
           balance: 0,
+          event: "gameComplete",
         });
       }
       return;
@@ -113,6 +114,7 @@ export class YinYangGame {
         availableYin: LEVELS[levelIndex].availableYin,
         availableYang: LEVELS[levelIndex].availableYang,
         selectedType: this.selectedType,
+        event: "levelStart",
       });
     }
   }
@@ -187,9 +189,49 @@ export class YinYangGame {
       this.placedYang++;
     }
 
+    // Emit element placement event
+    const dpr = window.devicePixelRatio || 1;
+    if (this.onStateChange) {
+      this.onStateChange({
+        status: "playing",
+        level: this.currentLevel + 1,
+        balance: this.balance,
+        placedYin: this.placedYin,
+        placedYang: this.placedYang,
+        availableYin: level.availableYin,
+        availableYang: level.availableYang,
+        selectedType: this.selectedType,
+        event: "elementPlace",
+        elementType: this.selectedType,
+        x: x * dpr,
+        y: y * dpr,
+      });
+    }
+
     // Calculate new balance
     this.balance = this.calculateBalance();
     this.targetAngle = this.balance * 0.3; // Max 0.3 radians tilt
+
+    // Check if balanced after placement
+    if (Math.abs(this.balance) <= level.tolerance) {
+      if (this.onStateChange) {
+        this.onStateChange({
+          status: "playing",
+          level: this.currentLevel + 1,
+          balance: this.balance,
+          event: "balanceAchieved",
+        });
+      }
+    } else if (Math.abs(this.balance) > 0.3) {
+      if (this.onStateChange) {
+        this.onStateChange({
+          status: "playing",
+          level: this.currentLevel + 1,
+          balance: this.balance,
+          event: "imbalance",
+        });
+      }
+    }
 
     // Check win condition
     const totalPlaced = this.placedYin + this.placedYang;
@@ -202,6 +244,7 @@ export class YinYangGame {
             status: "won",
             level: this.currentLevel + 1,
             balance: this.balance,
+            event: "victory",
           });
         }
         return;
@@ -235,6 +278,7 @@ export class YinYangGame {
         availableYin: level.availableYin,
         availableYang: level.availableYang,
         selectedType: this.selectedType,
+        event: "typeSelect",
       });
     }
   }
@@ -469,6 +513,14 @@ export class YinYangGame {
   }
 
   public reset() {
+    if (this.onStateChange) {
+      this.onStateChange({
+        status: "playing",
+        level: this.currentLevel + 1,
+        balance: 0,
+        event: "reset",
+      });
+    }
     this.loadLevel(this.currentLevel);
   }
 

@@ -1,6 +1,7 @@
 /**
  * Layer Stack Game Engine
  * Game #090 - Stack layers in the correct order
+ * Holographic / Translucent / Layered Theme
  */
 
 export interface Layer {
@@ -12,6 +13,15 @@ export interface Layer {
 export interface LevelConfig {
   layers: Layer[];
   targetOrder: number[];
+}
+
+export interface GameState {
+  event?: "layerMove" | "correct" | "victory" | "levelStart" | "reset";
+  layerIndex?: number;
+  layerId?: number;
+  moves?: number;
+  level?: number;
+  status?: "playing" | "won";
 }
 
 export class LayerStackGame {
@@ -26,70 +36,70 @@ export class LayerStackGame {
   private currentLevel = 0;
   private status: "playing" | "won" = "playing";
 
-  private onStateChange: ((state: any) => void) | null = null;
+  private onStateChange: ((state: GameState) => void) | null = null;
 
   private colors = [
-    { bg: "#e74c3c", label: "A" },
-    { bg: "#3498db", label: "B" },
-    { bg: "#2ecc71", label: "C" },
-    { bg: "#f1c40f", label: "D" },
-    { bg: "#9b59b6", label: "E" },
-    { bg: "#e67e22", label: "F" },
-    { bg: "#1abc9c", label: "G" },
-    { bg: "#fd79a8", label: "H" },
+    { bg: "linear-gradient(135deg, rgba(231, 76, 60, 0.85), rgba(192, 57, 43, 0.85))", label: "A" },
+    { bg: "linear-gradient(135deg, rgba(52, 152, 219, 0.85), rgba(41, 128, 185, 0.85))", label: "B" },
+    { bg: "linear-gradient(135deg, rgba(46, 204, 113, 0.85), rgba(39, 174, 96, 0.85))", label: "C" },
+    { bg: "linear-gradient(135deg, rgba(241, 196, 15, 0.85), rgba(243, 156, 18, 0.85))", label: "D" },
+    { bg: "linear-gradient(135deg, rgba(155, 89, 182, 0.85), rgba(142, 68, 173, 0.85))", label: "E" },
+    { bg: "linear-gradient(135deg, rgba(230, 126, 34, 0.85), rgba(211, 84, 0, 0.85))", label: "F" },
+    { bg: "linear-gradient(135deg, rgba(26, 188, 156, 0.85), rgba(22, 160, 133, 0.85))", label: "G" },
+    { bg: "linear-gradient(135deg, rgba(253, 121, 168, 0.85), rgba(232, 67, 147, 0.85))", label: "H" },
   ];
 
   private levels: LevelConfig[] = [
     // Level 1 - 3 layers
     {
       layers: [
-        { id: 0, color: "#e74c3c", label: "A" },
-        { id: 1, color: "#3498db", label: "B" },
-        { id: 2, color: "#2ecc71", label: "C" },
+        { id: 0, color: this.colors[0].bg, label: "A" },
+        { id: 1, color: this.colors[1].bg, label: "B" },
+        { id: 2, color: this.colors[2].bg, label: "C" },
       ],
       targetOrder: [2, 1, 0], // C, B, A from top to bottom
     },
     // Level 2 - 4 layers
     {
       layers: [
-        { id: 0, color: "#e74c3c", label: "A" },
-        { id: 1, color: "#3498db", label: "B" },
-        { id: 2, color: "#2ecc71", label: "C" },
-        { id: 3, color: "#f1c40f", label: "D" },
+        { id: 0, color: this.colors[0].bg, label: "A" },
+        { id: 1, color: this.colors[1].bg, label: "B" },
+        { id: 2, color: this.colors[2].bg, label: "C" },
+        { id: 3, color: this.colors[3].bg, label: "D" },
       ],
       targetOrder: [3, 1, 2, 0], // D, B, C, A
     },
     // Level 3 - 5 layers
     {
       layers: [
-        { id: 0, color: "#e74c3c", label: "A" },
-        { id: 1, color: "#3498db", label: "B" },
-        { id: 2, color: "#2ecc71", label: "C" },
-        { id: 3, color: "#f1c40f", label: "D" },
-        { id: 4, color: "#9b59b6", label: "E" },
+        { id: 0, color: this.colors[0].bg, label: "A" },
+        { id: 1, color: this.colors[1].bg, label: "B" },
+        { id: 2, color: this.colors[2].bg, label: "C" },
+        { id: 3, color: this.colors[3].bg, label: "D" },
+        { id: 4, color: this.colors[4].bg, label: "E" },
       ],
       targetOrder: [4, 2, 0, 3, 1], // E, C, A, D, B
     },
     // Level 4 - 5 layers different
     {
       layers: [
-        { id: 0, color: "#e74c3c", label: "A" },
-        { id: 1, color: "#3498db", label: "B" },
-        { id: 2, color: "#2ecc71", label: "C" },
-        { id: 3, color: "#f1c40f", label: "D" },
-        { id: 4, color: "#9b59b6", label: "E" },
+        { id: 0, color: this.colors[0].bg, label: "A" },
+        { id: 1, color: this.colors[1].bg, label: "B" },
+        { id: 2, color: this.colors[2].bg, label: "C" },
+        { id: 3, color: this.colors[3].bg, label: "D" },
+        { id: 4, color: this.colors[4].bg, label: "E" },
       ],
       targetOrder: [1, 3, 0, 4, 2], // B, D, A, E, C
     },
     // Level 5 - 6 layers
     {
       layers: [
-        { id: 0, color: "#e74c3c", label: "A" },
-        { id: 1, color: "#3498db", label: "B" },
-        { id: 2, color: "#2ecc71", label: "C" },
-        { id: 3, color: "#f1c40f", label: "D" },
-        { id: 4, color: "#9b59b6", label: "E" },
-        { id: 5, color: "#e67e22", label: "F" },
+        { id: 0, color: this.colors[0].bg, label: "A" },
+        { id: 1, color: this.colors[1].bg, label: "B" },
+        { id: 2, color: this.colors[2].bg, label: "C" },
+        { id: 3, color: this.colors[3].bg, label: "D" },
+        { id: 4, color: this.colors[4].bg, label: "E" },
+        { id: 5, color: this.colors[5].bg, label: "F" },
       ],
       targetOrder: [5, 2, 4, 0, 3, 1], // F, C, E, A, D, B
     },
@@ -106,6 +116,13 @@ export class LayerStackGame {
     this.status = "playing";
     this.loadLevel(this.currentLevel);
     this.render();
+
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "levelStart",
+        level: this.currentLevel,
+      });
+    }
   }
 
   private loadLevel(levelIndex: number) {
@@ -140,8 +157,9 @@ export class LayerStackGame {
       div.style.background = layer.color;
       div.textContent = layer.label;
       div.dataset.id = layerId.toString();
+      div.style.animationDelay = `${index * 0.1}s`;
 
-      div.addEventListener("click", () => this.moveToTop(layerId));
+      div.addEventListener("click", () => this.moveToTop(layerId, index));
 
       this.container.appendChild(div);
     });
@@ -158,7 +176,7 @@ export class LayerStackGame {
     });
   }
 
-  private moveToTop(layerId: number) {
+  private moveToTop(layerId: number, visualIndex: number) {
     if (this.status !== "playing") return;
 
     const index = this.currentOrder.indexOf(layerId);
@@ -170,16 +188,33 @@ export class LayerStackGame {
 
     this.moves++;
 
+    // Check if the move resulted in a correct placement
+    const isNowCorrect = this.targetOrder[0] === layerId;
+
     this.render();
 
     if (this.onStateChange) {
-      this.onStateChange({ moves: this.moves });
+      this.onStateChange({
+        event: "layerMove",
+        layerIndex: 0,
+        layerId,
+        moves: this.moves,
+      });
+
+      if (isNowCorrect) {
+        this.onStateChange({
+          event: "correct",
+          layerIndex: 0,
+          layerId,
+        });
+      }
     }
 
     if (this.checkWin()) {
       this.status = "won";
       if (this.onStateChange) {
         this.onStateChange({
+          event: "victory",
           status: "won",
           moves: this.moves,
           level: this.currentLevel,
@@ -193,6 +228,11 @@ export class LayerStackGame {
   }
 
   public reset() {
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "reset",
+      });
+    }
     this.start(this.currentLevel);
   }
 
@@ -213,7 +253,7 @@ export class LayerStackGame {
     return this.moves;
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 }

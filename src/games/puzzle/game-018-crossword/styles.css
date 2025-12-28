@@ -1,11 +1,69 @@
-.game-container {
-  max-width: 800px; /* Wider for clue layout */
+/**
+ * Crossword Styles - WebGPU Enhanced
+ * Cyber Cipher Theme
+ * Game #018
+ */
+
+/* ===== Theme Variables ===== */
+:root {
+  --cipher-dark: #010208;
+  --cipher-deep: #0a0f18;
+  --neon-green: #00ff66;
+  --neon-lime: #66ff00;
+  --neon-cyan: #00ffcc;
+  --error-red: #ff3344;
+  --grid-line: rgba(0, 255, 102, 0.15);
+  --glass-bg: rgba(10, 15, 24, 0.9);
+  --glass-border: rgba(0, 255, 102, 0.3);
 }
 
+/* ===== Game Container ===== */
+.game-container {
+  max-width: 800px;
+  background: linear-gradient(145deg, var(--cipher-dark), var(--cipher-deep));
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow:
+    0 0 40px rgba(0, 255, 102, 0.15),
+    0 0 80px rgba(0, 255, 204, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 102, 0.015) 2px,
+      rgba(0, 255, 102, 0.015) 4px
+    );
+  pointer-events: none;
+  z-index: 1;
+  animation: scanMove 8s linear infinite;
+}
+
+@keyframes scanMove {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+
+/* ===== Game Layout ===== */
 .game-layout {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  position: relative;
+  z-index: 2;
 }
 
 @media (min-width: 600px) {
@@ -23,28 +81,48 @@
   }
 }
 
+/* ===== Grid Area ===== */
 .grid-area {
   display: flex;
   justify-content: center;
+  position: relative;
+  padding: 10px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(0, 255, 102, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 70% 70%, rgba(0, 255, 204, 0.04) 0%, transparent 50%),
+    var(--cipher-dark);
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 0 30px rgba(0, 255, 102, 0.03);
 }
 
+/* ===== Crossword Grid ===== */
 .crossword-grid {
   display: grid;
-  /* Grid template columns handled by JS */
-  gap: 1px;
-  background: #000; /* Border color */
-  border: 2px solid #000;
+  gap: 2px;
+  background: rgba(0, 255, 102, 0.2);
+  border: 2px solid var(--neon-green);
+  border-radius: 4px;
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
+  position: relative;
+  z-index: 10;
 }
 
+/* ===== Cells ===== */
 .cell {
   position: relative;
   width: 30px;
   height: 30px;
-  background: #fff;
+  background: var(--glass-bg);
+  border-radius: 2px;
+  transition: all 0.2s ease;
 }
 
 .cell.blocked {
-  background: #000;
+  background: rgba(0, 20, 10, 0.95);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .cell-input {
@@ -57,26 +135,80 @@
   background: transparent;
   padding: 0;
   margin: 0;
-  font-family: inherit;
+  font-family: 'Courier New', monospace;
   outline: none;
+  color: var(--neon-green);
+  text-shadow: 0 0 8px var(--neon-green);
+  caret-color: var(--neon-lime);
 }
 
 .cell-input:focus {
-  background: #e8f0fe;
+  background: rgba(0, 255, 102, 0.15);
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+}
+
+.cell-input::selection {
+  background: rgba(0, 255, 102, 0.3);
 }
 
 .cell-number {
   position: absolute;
   top: 1px;
   left: 2px;
-  font-size: 0.6rem;
-  color: #666;
+  font-size: 0.55rem;
+  color: var(--neon-cyan);
   pointer-events: none;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 4px var(--neon-cyan);
+}
+
+/* Cell States */
+.cell.correct {
+  background: rgba(0, 255, 102, 0.2);
+  box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.3);
+}
+
+.cell.correct .cell-input {
+  color: var(--neon-lime);
+  text-shadow: 0 0 12px var(--neon-lime);
+}
+
+.cell.wrong {
+  background: rgba(255, 51, 68, 0.15);
+  box-shadow: inset 0 0 10px rgba(255, 51, 68, 0.3);
+  animation: errorPulse 0.5s ease-out;
+}
+
+.cell.wrong .cell-input {
+  color: var(--error-red);
+  text-shadow: 0 0 10px var(--error-red);
+}
+
+@keyframes errorPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ===== Clue Area ===== */
+.clue-area {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 1rem;
+  backdrop-filter: blur(10px);
 }
 
 .clue-area h3,
 .clue-area h4 {
   margin: 0.5rem 0;
+  color: var(--neon-green);
+  text-shadow: 0 0 10px var(--neon-green);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.clue-section {
+  margin-bottom: 1rem;
 }
 
 .clue-section ul {
@@ -86,34 +218,207 @@
 }
 
 .clue-section li {
-  padding: 2px 0;
+  padding: 4px 8px;
   cursor: pointer;
+  color: rgba(0, 255, 102, 0.7);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  border-left: 2px solid transparent;
 }
 
 .clue-section li:hover {
-  color: #3498db;
+  color: var(--neon-green);
+  background: rgba(0, 255, 102, 0.1);
+  border-left-color: var(--neon-green);
 }
 
 .clue-section li.active {
   font-weight: bold;
-  color: #2980b9;
+  color: var(--neon-lime);
+  background: rgba(102, 255, 0, 0.15);
+  border-left-color: var(--neon-lime);
+  text-shadow: 0 0 8px var(--neon-lime);
 }
 
-.cell.active-word {
-  background: #fff9c4;
-}
-
-.cell.correct {
-  color: #27ae60;
-}
-
-.cell.wrong {
-  color: #c0392b;
-}
-
+/* ===== Footer Controls ===== */
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
   margin-top: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.footer-controls button {
+  background: linear-gradient(
+    145deg,
+    rgba(0, 200, 80, 0.2) 0%,
+    rgba(0, 100, 50, 0.3) 100%
+  );
+  border: 1px solid var(--neon-green);
+  color: var(--neon-green);
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+  text-shadow: 0 0 5px rgba(0, 255, 102, 0.5);
+  box-shadow:
+    0 0 10px rgba(0, 255, 102, 0.2),
+    inset 0 0 10px rgba(0, 255, 102, 0.05);
+}
+
+.footer-controls button:hover {
+  background: linear-gradient(
+    145deg,
+    rgba(0, 255, 102, 0.3) 0%,
+    rgba(0, 150, 80, 0.4) 100%
+  );
+  border-color: var(--neon-lime);
+  color: var(--neon-lime);
+  box-shadow:
+    0 0 20px rgba(102, 255, 0, 0.3),
+    inset 0 0 15px rgba(102, 255, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* ===== Overlay ===== */
+.game-overlay {
+  background: rgba(1, 2, 8, 0.95);
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--glass-border);
+}
+
+.game-overlay h2 {
+  color: var(--neon-green);
+  text-shadow: 0 0 20px var(--neon-green);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+}
+
+.game-overlay p {
+  color: rgba(0, 255, 102, 0.8);
+  font-family: 'Courier New', monospace;
+}
+
+.game-overlay button {
+  background: linear-gradient(
+    145deg,
+    rgba(0, 200, 80, 0.3) 0%,
+    rgba(0, 100, 50, 0.4) 100%
+  );
+  border: 2px solid var(--neon-green);
+  color: var(--neon-green);
+  text-shadow: 0 0 10px var(--neon-green);
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.3);
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+}
+
+.game-overlay button:hover {
+  background: linear-gradient(
+    145deg,
+    rgba(102, 255, 0, 0.3) 0%,
+    rgba(50, 200, 50, 0.4) 100%
+  );
+  border-color: var(--neon-lime);
+  color: var(--neon-lime);
+  box-shadow: 0 0 30px rgba(102, 255, 0, 0.4);
+  transform: scale(1.05);
+}
+
+/* ===== Sound Toggle ===== */
+.sound-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--neon-green);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  z-index: 100;
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.2);
+}
+
+.sound-toggle:hover {
+  background: rgba(0, 255, 102, 0.2);
+  box-shadow: 0 0 25px rgba(0, 255, 102, 0.4);
+  transform: scale(1.1);
+}
+
+.sound-toggle.muted {
+  border-color: rgba(255, 100, 100, 0.5);
+  color: rgba(255, 100, 100, 0.8);
+}
+
+/* ===== Header ===== */
+.game-header h1 {
+  color: var(--neon-green);
+  text-shadow:
+    0 0 10px var(--neon-green),
+    0 0 20px rgba(0, 255, 102, 0.5);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 3px;
+}
+
+/* ===== Language Select ===== */
+.language-select {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--neon-green);
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-family: 'Courier New', monospace;
+}
+
+/* ===== WebGPU Canvas ===== */
+#webgpu-canvas {
+  border-radius: 8px;
+}
+
+/* ===== Scrollbar ===== */
+.clue-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.clue-area::-webkit-scrollbar-track {
+  background: rgba(0, 255, 102, 0.05);
+  border-radius: 3px;
+}
+
+.clue-area::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 102, 0.3);
+  border-radius: 3px;
+}
+
+.clue-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 102, 0.5);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+  .cell {
+    width: 26px;
+    height: 26px;
+  }
+
+  .cell-input {
+    font-size: 1rem;
+  }
+
+  .clue-section li {
+    font-size: 0.8rem;
+  }
 }

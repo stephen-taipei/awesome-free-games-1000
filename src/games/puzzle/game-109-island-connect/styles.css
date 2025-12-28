@@ -1,25 +1,100 @@
+/* Island Connect - Tropical Ocean Theme */
+/* Game #109 - WebGPU Enhanced */
+
+:root {
+  --ocean-deep: #1a5fb4;
+  --ocean-shallow: #3584e4;
+  --turquoise: #40e0d0;
+  --sand-light: #f5deb3;
+  --sand-dark: #deb887;
+  --palm-green: #228b22;
+  --palm-dark: #1e6b1e;
+  --coral: #ff7f50;
+  --sky-blue: #87ceeb;
+  --foam-white: #f0f8ff;
+  --glass-bg: rgba(26, 95, 180, 0.15);
+  --glass-border: rgba(64, 224, 208, 0.3);
+  --shadow-ocean: rgba(26, 95, 180, 0.4);
+  --shadow-dark: rgba(0, 0, 0, 0.3);
+}
+
 .game-container {
   max-width: 600px;
+}
+
+.game-header h1 {
+  background: linear-gradient(135deg, var(--turquoise) 0%, var(--ocean-shallow) 50%, var(--sand-light) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: ocean-shimmer 4s ease-in-out infinite;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 4px var(--shadow-dark));
+}
+
+@keyframes ocean-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg,
+    var(--sky-blue) 0%,
+    var(--sky-blue) 35%,
+    var(--turquoise) 35%,
+    var(--ocean-shallow) 60%,
+    var(--ocean-deep) 100%
+  );
+  border-radius: 12px;
+  box-shadow:
+    0 4px 20px var(--shadow-ocean),
+    inset 0 0 60px rgba(64, 224, 208, 0.15),
+    0 0 30px var(--shadow-ocean);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  border: 3px solid var(--ocean-deep);
 }
 
-canvas {
+.game-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 70%, rgba(245, 222, 179, 0.3) 0%, transparent 20%),
+    radial-gradient(ellipse at 70% 65%, rgba(245, 222, 179, 0.25) 0%, transparent 18%),
+    radial-gradient(ellipse at 50% 75%, rgba(245, 222, 179, 0.2) 0%, transparent 15%);
+  pointer-events: none;
+  animation: island-glow 5s ease-in-out infinite;
+}
+
+@keyframes island-glow {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+canvas#game-canvas {
   width: 100%;
   height: 100%;
   cursor: pointer;
+  position: relative;
+  z-index: 2;
 }
 
 .game-controls {
@@ -30,14 +105,49 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  color: var(--foam-white);
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(26, 188, 156, 0.4);
+  box-shadow:
+    0 4px 15px var(--shadow-ocean),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  animation: wave-bob 3s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(64, 224, 208, 0.15) 50%,
+    transparent 60%
+  );
+  animation: wave-shine 3s ease-in-out infinite;
+}
+
+@keyframes wave-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes wave-shine {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
 }
 
 .footer-controls {
@@ -46,6 +156,188 @@ canvas {
   gap: 1rem;
 }
 
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--turquoise) 0%, var(--ocean-shallow) 100%);
+  color: white;
+  border: 2px solid var(--ocean-deep);
+  box-shadow: 0 4px 15px rgba(64, 224, 208, 0.4);
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 25px rgba(64, 224, 208, 0.5);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, var(--coral) 0%, #e55c3a 100%);
+  color: white;
+  border: 2px solid #c44a2d;
+}
+
+.btn.warning:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 127, 80, 0.4);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn:hover::after {
+  transform: translateX(100%);
+}
+
+.overlay {
+  background: radial-gradient(ellipse at center, rgba(26, 95, 180, 0.85) 0%, rgba(13, 47, 90, 0.95) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.overlay-content {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow:
+    0 8px 32px var(--shadow-dark),
+    0 0 40px var(--shadow-ocean);
+  animation: wave-rise 0.5s ease-out;
+}
+
+@keyframes wave-rise {
+  0% {
+    transform: translateY(30px) scale(0.95);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-5px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.overlay-title {
+  background: linear-gradient(135deg, var(--turquoise) 0%, var(--foam-white) 50%, var(--turquoise) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: ocean-shimmer 2s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px var(--shadow-dark));
+}
+
 .controls-hint small {
-  color: #a0aec0;
+  color: #a8d5e5;
+}
+
+/* Wave patterns */
+@keyframes ocean-wave {
+  0% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(-20px) translateY(5px); }
+  100% { transform: translateX(0) translateY(0); }
+}
+
+/* Bridge building animation */
+@keyframes bridge-build {
+  0% { transform: scaleX(0); opacity: 0; }
+  50% { transform: scaleX(0.5); opacity: 0.7; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+
+/* Splash effect */
+@keyframes splash {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Palm tree sway */
+@keyframes palm-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+
+/* Seagull flight path */
+@keyframes seagull-fly {
+  0% { transform: translateX(-100%) translateY(0); }
+  25% { transform: translateX(-25%) translateY(-10px); }
+  50% { transform: translateX(50%) translateY(5px); }
+  75% { transform: translateX(75%) translateY(-5px); }
+  100% { transform: translateX(200%) translateY(0); }
+}
+
+/* Victory celebration */
+@keyframes tropical-celebration {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.05) rotate(-2deg);
+    filter: brightness(1.2);
+  }
+  50% {
+    transform: scale(1.1) rotate(2deg);
+    filter: brightness(1.3);
+  }
+  75% {
+    transform: scale(1.05) rotate(-1deg);
+    filter: brightness(1.2);
+  }
+}
+
+/* Sand texture overlay */
+.game-area::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 15%;
+  background: linear-gradient(
+    to top,
+    rgba(245, 222, 179, 0.15) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .game-area {
+    height: 380px;
+  }
+
+  .stats-card {
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+  }
 }

@@ -1,5 +1,6 @@
 /**
  * Pyramid Puzzle Styles
+ * Ancient Egypt / Desert Mystique Theme
  * Game #105
  */
 
@@ -7,12 +8,16 @@
   --bg-color: #1a1a2e;
   --pyramid-bg: #16213e;
   --gold: #f39c12;
+  --gold-dark: #c9850c;
   --purple: #9b59b6;
   --sand: #e6c688;
+  --sand-dark: #c9a86c;
   --text-color: #e0e0e0;
   --text-muted: #a0a0a0;
   --btn-primary: #e67e22;
   --btn-secondary: #4a4a6a;
+  --glass-bg: rgba(22, 33, 62, 0.7);
+  --glass-border: rgba(243, 156, 18, 0.3);
 }
 
 * {
@@ -32,7 +37,19 @@ body {
   padding: 20px;
 }
 
+#webgpu-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .game-container {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 500px;
   display: flex;
@@ -48,23 +65,60 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .title {
   font-size: 1.8rem;
   font-weight: bold;
   color: var(--gold);
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow:
+    0 0 10px rgba(243, 156, 18, 0.5),
+    0 0 20px rgba(243, 156, 18, 0.3),
+    2px 2px 4px rgba(0, 0, 0, 0.5);
+  animation: pharaoh-glow 3s infinite alternate;
+  letter-spacing: 1px;
+}
+
+@keyframes pharaoh-glow {
+  from {
+    text-shadow:
+      0 0 10px rgba(243, 156, 18, 0.5),
+      0 0 20px rgba(243, 156, 18, 0.3),
+      2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  to {
+    text-shadow:
+      0 0 20px rgba(243, 156, 18, 0.8),
+      0 0 40px rgba(243, 156, 18, 0.5),
+      0 0 60px rgba(230, 126, 34, 0.3),
+      2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
 }
 
 .header-controls select {
   padding: 8px 12px;
   border: none;
   border-radius: 6px;
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text-color);
   font-size: 0.9rem;
   cursor: pointer;
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  border-color: var(--gold);
+  box-shadow: 0 0 10px rgba(243, 156, 18, 0.4);
 }
 
 .game-info {
@@ -72,9 +126,15 @@ body {
   display: flex;
   justify-content: center;
   gap: 30px;
-  background: var(--pyramid-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   padding: 12px 20px;
   border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 0 15px rgba(243, 156, 18, 0.15),
+    inset 0 0 20px rgba(243, 156, 18, 0.05);
 }
 
 .info-item {
@@ -86,6 +146,7 @@ body {
   font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .info-value {
@@ -93,6 +154,7 @@ body {
   font-size: 1.4rem;
   font-weight: bold;
   color: var(--gold);
+  text-shadow: 0 0 8px rgba(243, 156, 18, 0.5);
 }
 
 .target-indicator {
@@ -105,16 +167,59 @@ body {
   width: 30px;
   height: 30px;
   border-radius: 4px;
-  border: 2px solid white;
+  border: 2px solid var(--gold);
+  box-shadow:
+    0 0 10px rgba(243, 156, 18, 0.4),
+    inset 0 0 5px rgba(255, 255, 255, 0.2);
+  animation: target-pulse 2s infinite;
+}
+
+@keyframes target-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 10px rgba(243, 156, 18, 0.4),
+      inset 0 0 5px rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 20px rgba(243, 156, 18, 0.7),
+      0 0 30px rgba(243, 156, 18, 0.3),
+      inset 0 0 5px rgba(255, 255, 255, 0.2);
+  }
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  background: var(--pyramid-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(243, 156, 18, 0.15);
   overflow: hidden;
+  border: 2px solid var(--glass-border);
+}
+
+/* Hieroglyph pattern overlay */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 50px,
+      rgba(243, 156, 18, 0.02) 50px,
+      rgba(243, 156, 18, 0.02) 51px
+    );
+  pointer-events: none;
+  z-index: 1;
 }
 
 #game-canvas {
@@ -130,6 +235,8 @@ body {
   right: 0;
   bottom: 0;
   background: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -139,13 +246,36 @@ body {
 .overlay-content {
   text-align: center;
   padding: 32px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 30px rgba(243, 156, 18, 0.4);
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 16px;
   color: var(--gold);
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow:
+    0 0 15px rgba(243, 156, 18, 0.6),
+    0 0 30px rgba(243, 156, 18, 0.3);
+  animation: title-shimmer 2s infinite alternate;
+}
+
+@keyframes title-shimmer {
+  from {
+    text-shadow:
+      0 0 15px rgba(243, 156, 18, 0.6),
+      0 0 30px rgba(243, 156, 18, 0.3);
+  }
+  to {
+    text-shadow:
+      0 0 25px rgba(243, 156, 18, 0.9),
+      0 0 50px rgba(243, 156, 18, 0.5),
+      0 0 75px rgba(230, 126, 34, 0.3);
+  }
 }
 
 .overlay-msg {
@@ -169,26 +299,61 @@ body {
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn-primary {
-  background: var(--btn-primary);
+  background: linear-gradient(180deg, var(--btn-primary) 0%, #c9630a 100%);
   color: white;
+  box-shadow:
+    0 0 15px rgba(230, 126, 34, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(243, 156, 18, 0.5);
 }
 
 .btn-primary:hover {
-  background: #d35400;
+  background: linear-gradient(180deg, #f39c12 0%, var(--btn-primary) 100%);
   transform: translateY(-2px);
+  box-shadow:
+    0 0 25px rgba(230, 126, 34, 0.6),
+    0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .btn-secondary {
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text-color);
+  border: 1px solid var(--glass-border);
 }
 
 .btn-secondary:hover {
-  background: #5a5a7a;
+  background: rgba(155, 89, 182, 0.3);
+  border-color: var(--purple);
+  box-shadow: 0 0 15px rgba(155, 89, 182, 0.3);
+  transform: translateY(-1px);
 }
 
 .instructions {
@@ -196,9 +361,73 @@ body {
   color: var(--text-muted);
   font-size: 0.85rem;
   padding: 12px;
-  background: var(--pyramid-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 8px;
+  border: 1px solid var(--glass-border);
   width: 100%;
+}
+
+/* Pyramid shine effect */
+@keyframes pyramid-shine {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Sand drift animation */
+@keyframes sand-drift {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+/* Star twinkle */
+@keyframes star-twinkle {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Sacred energy burst */
+@keyframes sacred-burst {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Triangle flip effect */
+@keyframes triangle-flip {
+  0% {
+    transform: perspective(500px) rotateY(0deg);
+  }
+  50% {
+    transform: perspective(500px) rotateY(90deg);
+  }
+  100% {
+    transform: perspective(500px) rotateY(0deg);
+  }
 }
 
 /* Responsive */
@@ -218,5 +447,13 @@ body {
 
   .game-info {
     gap: 20px;
+  }
+
+  .overlay-content {
+    padding: 24px;
+  }
+
+  .overlay-title {
+    font-size: 1.6rem;
   }
 }

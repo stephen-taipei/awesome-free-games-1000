@@ -1,6 +1,7 @@
 /**
  * Space Station Game Engine
  * Game #092 - Rotate modules to dock with station
+ * Space Station / Nebula / Cosmic Theme
  */
 
 export interface Module {
@@ -18,6 +19,19 @@ export interface LevelConfig {
   modules: { x: number; y: number; ports: number[]; targetRotation: number }[];
 }
 
+export interface GameState {
+  event?: "rotate" | "dock" | "undock" | "victory" | "levelStart" | "reset";
+  moduleX?: number;
+  moduleY?: number;
+  moduleSize?: number;
+  stationX?: number;
+  stationY?: number;
+  moduleId?: number;
+  docked?: string;
+  level?: number;
+  status?: "playing" | "won";
+}
+
 export class SpaceStationGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -31,7 +45,7 @@ export class SpaceStationGame {
   private status: "playing" | "won" = "playing";
   private animationId = 0;
 
-  private onStateChange: ((state: any) => void) | null = null;
+  private onStateChange: ((state: GameState) => void) | null = null;
 
   private moduleSize = 60;
 
@@ -98,6 +112,17 @@ export class SpaceStationGame {
     this.dockedCount = 0;
     this.status = "playing";
     this.loadLevel(this.currentLevel);
+
+    // Emit level start
+    if (this.onStateChange && this.station) {
+      this.onStateChange({
+        event: "levelStart",
+        stationX: this.station.x,
+        stationY: this.station.y,
+        level: this.currentLevel,
+      });
+    }
+
     this.loop();
   }
 
@@ -160,9 +185,49 @@ export class SpaceStationGame {
     for (const module of this.modules) {
       const dist = Math.hypot(x - module.x, y - module.y);
       if (dist < this.moduleSize / 2 + 10) {
+        const wasDocked = module.docked;
+
         // Rotate module
         module.rotation = (module.rotation + 90) % 360;
+
+        // Emit rotation event
+        if (this.onStateChange) {
+          this.onStateChange({
+            event: "rotate",
+            moduleX: module.x,
+            moduleY: module.y,
+            moduleSize: this.moduleSize,
+            moduleId: module.id,
+          });
+        }
+
         this.checkAllDocking();
+
+        // Check for dock/undock events
+        if (!wasDocked && module.docked && this.station) {
+          // Just docked
+          if (this.onStateChange) {
+            this.onStateChange({
+              event: "dock",
+              moduleX: module.x,
+              moduleY: module.y,
+              stationX: this.station.x,
+              stationY: this.station.y,
+              moduleId: module.id,
+            });
+          }
+        } else if (wasDocked && !module.docked) {
+          // Just undocked
+          if (this.onStateChange) {
+            this.onStateChange({
+              event: "undock",
+              moduleX: module.x,
+              moduleY: module.y,
+              moduleId: module.id,
+            });
+          }
+        }
+
         break;
       }
     }
@@ -191,6 +256,7 @@ export class SpaceStationGame {
       this.status = "won";
       if (this.onStateChange) {
         this.onStateChange({
+          event: "victory",
           status: "won",
           level: this.currentLevel,
         });
@@ -203,9 +269,8 @@ export class SpaceStationGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Clear with space background
-    ctx.fillStyle = "#0a0a1a";
-    ctx.fillRect(0, 0, w, h);
+    // Clear with transparent background (WebGPU handles visuals)
+    ctx.clearRect(0, 0, w, h);
 
     // Draw stars
     ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
@@ -274,6 +339,12 @@ export class SpaceStationGame {
       ctx.lineWidth = 3;
       ctx.stroke();
 
+      // Station glow
+      ctx.shadowColor = "#74b9ff";
+      ctx.shadowBlur = 15;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
       // Center light
       ctx.fillStyle = "#74b9ff";
       ctx.beginPath();
@@ -292,6 +363,14 @@ export class SpaceStationGame {
       ctx.strokeStyle = module.docked ? "#2ecc71" : "#74b9ff";
       ctx.lineWidth = 2;
       ctx.stroke();
+
+      // Glow for docked
+      if (module.docked) {
+        ctx.shadowColor = "#2ecc71";
+        ctx.shadowBlur = 15;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
     }
 
     // Draw ports
@@ -339,6 +418,13 @@ export class SpaceStationGame {
 
   public reset() {
     this.stop();
+
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "reset",
+      });
+    }
+
     this.start(this.currentLevel);
   }
 
@@ -355,7 +441,7 @@ export class SpaceStationGame {
     return this.currentLevel + 1;
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 }

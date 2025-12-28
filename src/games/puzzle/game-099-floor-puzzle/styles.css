@@ -1,21 +1,31 @@
 /**
  * Floor Puzzle Styles
+ * Urban Building / Neon Tower Theme
  * Game #099
  */
 
 :root {
-  --bg-color: #2c3e50;
-  --building-bg: #34495e;
-  --floor-bg: #3d566e;
+  --bg-dark: #0a0c14;
+  --bg-deep: #101826;
+  --building-bg: #1a2438;
+  --building-dark: #141c2c;
+  --floor-bg: #243248;
+  --floor-current: rgba(243, 156, 18, 0.2);
   --elevator-bg: #f39c12;
   --elevator-dark: #d68910;
+  --elevator-glow: rgba(243, 156, 18, 0.5);
   --passenger-waiting: #3498db;
+  --passenger-waiting-glow: rgba(52, 152, 219, 0.5);
   --passenger-riding: #2ecc71;
-  --passenger-destination: #e74c3c;
-  --text-color: #ecf0f1;
-  --text-muted: #bdc3c7;
+  --passenger-riding-glow: rgba(46, 204, 113, 0.5);
+  --neon-cyan: #00d4ff;
+  --neon-cyan-glow: rgba(0, 212, 255, 0.5);
+  --text-color: #e8ecf4;
+  --text-muted: #8a94a6;
   --btn-primary: #27ae60;
-  --btn-secondary: #7f8c8d;
+  --btn-secondary: #3d4f6f;
+  --glass-bg: rgba(26, 36, 56, 0.7);
+  --glass-border: rgba(243, 156, 18, 0.3);
 }
 
 * {
@@ -26,7 +36,7 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, var(--bg-color) 0%, #1a252f 100%);
+  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-deep) 50%, #0d1520 100%);
   color: var(--text-color);
   min-height: 100vh;
   display: flex;
@@ -42,6 +52,17 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  position: relative;
+}
+
+#webgpu-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .game-header {
@@ -51,22 +72,55 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .title {
   font-size: 1.8rem;
   font-weight: bold;
   color: var(--elevator-bg);
+  text-shadow:
+    0 0 10px var(--elevator-glow),
+    0 0 20px var(--elevator-glow),
+    0 0 40px var(--elevator-glow);
+  letter-spacing: 2px;
+  animation: title-pulse 3s ease-in-out infinite;
+}
+
+@keyframes title-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 10px var(--elevator-glow),
+      0 0 20px var(--elevator-glow);
+  }
+  50% {
+    text-shadow:
+      0 0 20px var(--elevator-glow),
+      0 0 40px var(--elevator-glow),
+      0 0 60px var(--elevator-glow);
+  }
 }
 
 .header-controls select {
   padding: 8px 12px;
-  border: none;
+  border: 1px solid var(--glass-border);
   border-radius: 6px;
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
   color: var(--text-color);
   font-size: 0.9rem;
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  border-color: var(--elevator-bg);
+  box-shadow: 0 0 15px var(--elevator-glow);
+}
+
+.header-controls select option {
+  background: var(--bg-deep);
 }
 
 .game-info {
@@ -74,9 +128,14 @@ body {
   display: flex;
   justify-content: center;
   gap: 24px;
-  background: var(--building-bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(15px);
   padding: 12px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
 }
 
 .info-item {
@@ -88,6 +147,7 @@ body {
   font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .info-value {
@@ -95,20 +155,54 @@ body {
   font-size: 1.4rem;
   font-weight: bold;
   color: var(--elevator-bg);
+  text-shadow: 0 0 10px var(--elevator-glow);
 }
 
 .game-area {
   position: relative;
   width: 100%;
+  z-index: 1;
 }
 
 .building {
   display: flex;
-  background: var(--building-bg);
+  background: linear-gradient(180deg, var(--building-dark) 0%, var(--building-bg) 100%);
   border-radius: 12px;
   padding: 16px;
   gap: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(26, 36, 56, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+}
+
+/* Animated border for building */
+.building::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 14px;
+  background: linear-gradient(
+    45deg,
+    var(--elevator-bg),
+    var(--neon-cyan),
+    var(--passenger-waiting),
+    var(--elevator-bg)
+  );
+  background-size: 400% 400%;
+  z-index: -1;
+  animation: border-flow 8s ease infinite;
+  opacity: 0.4;
+}
+
+@keyframes border-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .floors {
@@ -121,16 +215,20 @@ body {
 .floor {
   display: flex;
   align-items: center;
-  background: var(--floor-bg);
+  background: linear-gradient(90deg, var(--floor-bg) 0%, rgba(36, 50, 72, 0.7) 100%);
   padding: 8px 12px;
   border-radius: 6px;
   min-height: 50px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
 }
 
 .floor.current {
-  background: rgba(243, 156, 18, 0.3);
+  background: var(--floor-current);
   border: 2px solid var(--elevator-bg);
+  box-shadow:
+    0 0 15px var(--elevator-glow),
+    inset 0 0 20px rgba(243, 156, 18, 0.1);
 }
 
 .floor-number {
@@ -138,6 +236,11 @@ body {
   font-weight: bold;
   font-size: 1.2rem;
   color: var(--text-muted);
+}
+
+.floor.current .floor-number {
+  color: var(--elevator-bg);
+  text-shadow: 0 0 10px var(--elevator-glow);
 }
 
 .floor-passengers {
@@ -163,30 +266,34 @@ body {
 }
 
 .passenger.waiting {
-  background: var(--passenger-waiting);
+  background: linear-gradient(145deg, #5dade2, var(--passenger-waiting));
+  box-shadow: 0 0 10px var(--passenger-waiting-glow);
 }
 
 .passenger.waiting:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 10px var(--passenger-waiting);
+  transform: scale(1.15);
+  box-shadow: 0 0 20px var(--passenger-waiting-glow);
 }
 
 .passenger.riding {
-  background: var(--passenger-riding);
+  background: linear-gradient(145deg, #58d68d, var(--passenger-riding));
+  box-shadow: 0 0 10px var(--passenger-riding-glow);
   animation: pulse 1s ease infinite;
 }
 
 .passenger.delivered {
-  background: var(--btn-primary);
+  background: linear-gradient(145deg, #58d68d, var(--btn-primary));
   animation: celebrate 0.5s ease;
 }
 
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
+    box-shadow: 0 0 10px var(--passenger-riding-glow);
   }
   50% {
-    transform: scale(1.05);
+    transform: scale(1.08);
+    box-shadow: 0 0 20px var(--passenger-riding-glow);
   }
 }
 
@@ -195,7 +302,8 @@ body {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.3);
+    transform: scale(1.4);
+    box-shadow: 0 0 30px var(--passenger-riding-glow);
   }
   100% {
     transform: scale(0);
@@ -205,10 +313,27 @@ body {
 
 .elevator-shaft {
   width: 70px;
-  background: #2c3e50;
+  background: linear-gradient(180deg, #1a2030 0%, #0d1420 100%);
   border-radius: 6px;
   position: relative;
   min-height: 300px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Shaft cables */
+.elevator-shaft::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(180deg,
+    rgba(243, 156, 18, 0.3) 0%,
+    rgba(243, 156, 18, 0.1) 50%,
+    rgba(243, 156, 18, 0.3) 100%
+  );
+  transform: translateX(-50%);
 }
 
 .elevator {
@@ -224,17 +349,22 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 4px 20px var(--elevator-glow),
+    0 0 30px var(--elevator-glow),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .elevator-display {
   font-size: 1rem;
   font-weight: bold;
-  color: var(--bg-color);
-  background: rgba(255, 255, 255, 0.9);
+  color: var(--bg-dark);
+  background: rgba(255, 255, 255, 0.95);
   padding: 2px 8px;
   border-radius: 4px;
   margin-bottom: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .elevator-passengers {
@@ -257,7 +387,8 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(44, 62, 80, 0.95);
+  background: rgba(10, 12, 20, 0.95);
+  backdrop-filter: blur(20px);
   border-radius: 12px;
   display: flex;
   justify-content: center;
@@ -274,6 +405,10 @@ body {
   font-size: 2rem;
   margin-bottom: 16px;
   color: var(--elevator-bg);
+  text-shadow:
+    0 0 20px var(--elevator-glow),
+    0 0 40px var(--elevator-glow);
+  letter-spacing: 3px;
 }
 
 .overlay-msg {
@@ -288,6 +423,8 @@ body {
   gap: 12px;
   justify-content: center;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 .controls.secondary {
@@ -302,26 +439,47 @@ body {
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn-primary {
-  background: var(--btn-primary);
+  background: linear-gradient(135deg, #2ecc71, var(--btn-primary));
   color: white;
+  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
 }
 
 .btn-primary:hover {
-  background: #2ecc71;
+  background: linear-gradient(135deg, #58d68d, #2ecc71);
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(39, 174, 96, 0.5);
 }
 
 .btn-elevator {
-  background: var(--elevator-bg);
-  color: var(--bg-color);
+  background: linear-gradient(135deg, var(--elevator-bg), var(--elevator-dark));
+  color: var(--bg-dark);
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 10px 16px;
   min-width: 60px;
+  box-shadow: 0 4px 15px var(--elevator-glow);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .btn-elevator .arrow {
@@ -334,8 +492,9 @@ body {
 }
 
 .btn-elevator:hover {
-  background: #f5b041;
+  background: linear-gradient(135deg, #f5b041, var(--elevator-bg));
   transform: scale(1.05);
+  box-shadow: 0 6px 25px var(--elevator-glow);
 }
 
 .btn-elevator:active {
@@ -343,22 +502,28 @@ body {
 }
 
 .btn-action {
-  background: var(--passenger-waiting);
+  background: linear-gradient(135deg, #5dade2, var(--passenger-waiting));
   color: white;
   min-width: 80px;
+  box-shadow: 0 4px 15px var(--passenger-waiting-glow);
 }
 
 .btn-action:hover {
-  background: #5dade2;
+  background: linear-gradient(135deg, #85c1e9, #5dade2);
+  box-shadow: 0 6px 20px var(--passenger-waiting-glow);
 }
 
 .btn-secondary {
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
   color: var(--text-color);
+  border: 1px solid var(--glass-border);
 }
 
 .btn-secondary:hover {
-  background: #95a5a6;
+  background: rgba(61, 79, 111, 0.8);
+  border-color: var(--elevator-bg);
+  box-shadow: 0 0 15px var(--elevator-glow);
 }
 
 /* Responsive */

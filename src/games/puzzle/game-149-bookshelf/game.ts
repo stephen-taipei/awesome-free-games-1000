@@ -24,6 +24,11 @@ interface GameState {
   maxLevel: number;
   moves: number;
   status: "idle" | "playing" | "won";
+  bookSelect?: { x: number; y: number };
+  bookDeselect?: { x: number; y: number };
+  bookSwap?: { x1: number; y1: number; x2: number; y2: number };
+  bookCorrect?: { x: number; y: number };
+  reset?: boolean;
 }
 
 type StateCallback = (state: GameState) => void;
@@ -62,6 +67,14 @@ export class BookshelfGame {
   private shelfY = 0;
   private bookWidth = 0;
 
+  private pendingEvents: {
+    bookSelect?: { x: number; y: number };
+    bookDeselect?: { x: number; y: number };
+    bookSwap?: { x1: number; y1: number; x2: number; y2: number };
+    bookCorrect?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -73,12 +86,18 @@ export class BookshelfGame {
 
   private emitState() {
     if (this.onStateChange) {
-      this.onStateChange({
+      const state: GameState = {
         level: this.level,
         maxLevel: LEVELS.length,
         moves: this.moves,
         status: this.status,
-      });
+        ...this.pendingEvents,
+      };
+
+      this.onStateChange(state);
+
+      // Clear pending events after emission
+      this.pendingEvents = {};
     }
   }
 
@@ -113,6 +132,7 @@ export class BookshelfGame {
   }
 
   reset() {
+    this.pendingEvents.reset = true;
     this.loadLevel();
     this.status = "playing";
     this.emitState();
@@ -181,8 +201,13 @@ export class BookshelfGame {
 
     // Clicked outside - deselect
     if (this.selectedBook) {
+      this.pendingEvents.bookDeselect = {
+        x: this.selectedBook.x + this.bookWidth / 2,
+        y: this.shelfY - this.selectedBook.height / 2,
+      };
       this.selectedBook.selected = false;
       this.selectedBook = null;
+      this.emitState();
     }
   }
 
@@ -191,14 +216,37 @@ export class BookshelfGame {
       // First selection
       book.selected = true;
       this.selectedBook = book;
+      this.pendingEvents.bookSelect = {
+        x: book.x + this.bookWidth / 2,
+        y: this.shelfY - book.height / 2,
+      };
+      this.emitState();
     } else if (this.selectedBook === book) {
       // Deselect
       book.selected = false;
+      this.pendingEvents.bookDeselect = {
+        x: book.x + this.bookWidth / 2,
+        y: this.shelfY - book.height / 2,
+      };
       this.selectedBook = null;
+      this.emitState();
     } else {
       // Swap books
+      const book1X = this.selectedBook.x + this.bookWidth / 2;
+      const book1Y = this.shelfY - this.selectedBook.height / 2;
+      const book2X = book.x + this.bookWidth / 2;
+      const book2Y = this.shelfY - book.height / 2;
+
       this.swapBooks(this.selectedBook, book);
       this.selectedBook.selected = false;
+
+      this.pendingEvents.bookSwap = {
+        x1: book1X,
+        y1: book1Y,
+        x2: book2X,
+        y2: book2Y,
+      };
+
       this.selectedBook = null;
       this.moves++;
       this.emitState();
@@ -264,14 +312,10 @@ export class BookshelfGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Background - room wall
-    const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
-    wallGrad.addColorStop(0, "#dfe6e9");
-    wallGrad.addColorStop(1, "#b2bec3");
-    ctx.fillStyle = wallGrad;
-    ctx.fillRect(0, 0, w, h);
+    // Clear with transparent to show WebGPU background
+    ctx.clearRect(0, 0, w, h);
 
-    // Wallpaper pattern
+    // Draw wallpaper pattern
     ctx.strokeStyle = "rgba(0,0,0,0.03)";
     ctx.lineWidth = 1;
     for (let x = 0; x < w; x += 30) {
@@ -377,7 +421,7 @@ export class BookshelfGame {
     const y = 40;
 
     ctx.fillStyle = "#2d3436";
-    ctx.font = "14px Arial";
+    ctx.font = "14px Georgia, serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 

@@ -1,6 +1,7 @@
 /**
  * Tube Sort Game Engine
  * Game #084 - Sort colored liquids in test tubes (with visual liquid effects)
+ * WebGPU Enhanced with Event Emissions
  */
 
 type Color = string;
@@ -13,7 +14,7 @@ interface Tube {
   tiltAngle: number; // For pour animation
 }
 
-interface GameState {
+interface InternalGameState {
   tubes: { liquids: { color: Color; amount: number }[]; capacity: number }[];
 }
 
@@ -22,6 +23,18 @@ interface Level {
   tubeCount: number;
   emptyTubes: number;
   unitsPerColor: number;
+}
+
+export interface GameState {
+  level: number;
+  maxLevel: number;
+  moves: number;
+  status: "playing" | "won";
+  canUndo: boolean;
+  event?: "select" | "pourStart" | "pourEnd" | "complete" | "undo" | "victory" | "levelStart" | "reset";
+  eventX?: number;
+  eventY?: number;
+  eventColorIndex?: number;
 }
 
 const COLORS: Color[] = [
@@ -53,7 +66,7 @@ export class TubeSortGame {
   currentLevel: number = 0;
   status: "playing" | "won" = "playing";
 
-  history: GameState[] = [];
+  history: InternalGameState[] = [];
 
   // Animation
   isPouring: boolean = false;
@@ -65,11 +78,20 @@ export class TubeSortGame {
   tubeHeight: number = 180;
   tubeSpacing: number = 20;
 
-  onStateChange: ((state: any) => void) | null = null;
+  onStateChange: ((state: GameState) => void) | null = null;
+
+  private pendingEvent: GameState["event"] = undefined;
+  private pendingEventX: number = 0;
+  private pendingEventY: number = 0;
+  private pendingEventColorIndex: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  private getColorIndex(color: string): number {
+    return COLORS.indexOf(color);
   }
 
   public start() {
@@ -140,6 +162,9 @@ export class TubeSortGame {
       });
     }
 
+    this.pendingEvent = "levelStart";
+    this.pendingEventX = this.canvas.width / 2;
+    this.pendingEventY = this.canvas.height / 2;
     this.notifyState();
   }
 
@@ -185,6 +210,13 @@ export class TubeSortGame {
       const totalLiquid = this.getTubeTotal(this.tubes[clickedIndex]);
       if (totalLiquid > 0) {
         this.selectedTubeIndex = clickedIndex;
+        const tube = this.tubes[clickedIndex];
+        const topLiquid = this.getTopLiquid(tube);
+
+        this.pendingEvent = "select";
+        this.pendingEventX = tube.x + this.tubeWidth / 2;
+        this.pendingEventY = tube.y;
+        this.pendingEventColorIndex = topLiquid ? this.getColorIndex(topLiquid.color) : 0;
       }
     } else if (this.selectedTubeIndex === clickedIndex) {
       // Deselect
@@ -230,6 +262,15 @@ export class TubeSortGame {
     this.pourProgress = 0;
     this.pourFrom = fromIndex;
     this.pourTo = toIndex;
+
+    const fromTube = this.tubes[fromIndex];
+    const fromTop = this.getTopLiquid(fromTube);
+
+    this.pendingEvent = "pourStart";
+    this.pendingEventX = fromTube.x + this.tubeWidth / 2;
+    this.pendingEventY = fromTube.y;
+    this.pendingEventColorIndex = fromTop ? this.getColorIndex(fromTop.color) : 0;
+    this.notifyState();
   }
 
   private completePour() {
@@ -242,6 +283,7 @@ export class TubeSortGame {
       return;
     }
 
+    const colorIndex = this.getColorIndex(fromTop.color);
     const toTotal = this.getTubeTotal(toTube);
     const spaceAvailable = toTube.capacity - toTotal;
     const amountToPour = Math.min(fromTop.amount, spaceAvailable);
@@ -262,15 +304,39 @@ export class TubeSortGame {
 
     this.moves++;
     this.isPouring = false;
+
+    // Emit pour end event
+    this.pendingEvent = "pourEnd";
+    this.pendingEventX = toTube.x + this.tubeWidth / 2;
+    this.pendingEventY = toTube.y + this.tubeHeight / 2;
+    this.pendingEventColorIndex = colorIndex;
+    this.notifyState();
+
+    // Check if tube is now complete
+    if (this.isTubeComplete(toTube)) {
+      setTimeout(() => {
+        this.pendingEvent = "complete";
+        this.pendingEventX = toTube.x + this.tubeWidth / 2;
+        this.pendingEventY = toTube.y + this.tubeHeight / 2;
+        this.pendingEventColorIndex = colorIndex;
+        this.notifyState();
+      }, 200);
+    }
+
     this.pourFrom = -1;
     this.pourTo = -1;
 
     this.checkWin();
-    this.notifyState();
+  }
+
+  private isTubeComplete(tube: Tube): boolean {
+    const total = this.getTubeTotal(tube);
+    if (total !== tube.capacity) return false;
+    return tube.liquids.length === 1;
   }
 
   private saveState() {
-    const state: GameState = {
+    const state: InternalGameState = {
       tubes: this.tubes.map((t) => ({
         liquids: t.liquids.map((l) => ({ ...l })),
         capacity: t.capacity,
@@ -289,6 +355,7 @@ export class TubeSortGame {
     this.moves = Math.max(0, this.moves - 1);
     this.selectedTubeIndex = -1;
 
+    this.pendingEvent = "undo";
     this.notifyState();
   }
 
@@ -302,19 +369,13 @@ export class TubeSortGame {
 
     if (won) {
       this.status = "won";
+      this.pendingEvent = "victory";
       this.notifyState();
     }
   }
 
   private draw() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // Background
-    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-    gradient.addColorStop(0, "#dfe6e9");
-    gradient.addColorStop(1, "#b2bec3");
-    this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Draw tubes
     this.tubes.forEach((tube, index) => {
@@ -336,8 +397,8 @@ export class TubeSortGame {
     this.ctx.save();
 
     // Glass body
-    this.ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+    this.ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
     this.ctx.lineWidth = 3;
 
     this.ctx.beginPath();
@@ -372,7 +433,7 @@ export class TubeSortGame {
       this.ctx.fill();
 
       // Liquid surface highlight
-      this.ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+      this.ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
       this.ctx.fillRect(x + 5, currentY - liquidHeight, this.tubeWidth - 10, 3);
 
       currentY -= liquidHeight;
@@ -380,7 +441,7 @@ export class TubeSortGame {
 
     // Selection indicator
     if (isSelected) {
-      this.ctx.strokeStyle = "#0984e3";
+      this.ctx.strokeStyle = "#00cec9";
       this.ctx.lineWidth = 4;
       this.ctx.setLineDash([5, 5]);
       this.ctx.strokeRect(x - 5, y + offsetY - 5, this.tubeWidth + 10, this.tubeHeight + 15);
@@ -479,6 +540,7 @@ export class TubeSortGame {
   }
 
   public reset() {
+    this.pendingEvent = "reset";
     this.loadLevel(this.currentLevel);
     if (this.status !== "playing") {
       this.status = "playing";
@@ -486,19 +548,25 @@ export class TubeSortGame {
     }
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 
   private notifyState() {
     if (this.onStateChange) {
-      this.onStateChange({
+      const state: GameState = {
         level: this.currentLevel + 1,
         maxLevel: LEVELS.length,
         moves: this.moves,
         status: this.status,
         canUndo: this.history.length > 0,
-      });
+        event: this.pendingEvent,
+        eventX: this.pendingEventX,
+        eventY: this.pendingEventY,
+        eventColorIndex: this.pendingEventColorIndex,
+      };
+      this.onStateChange(state);
+      this.pendingEvent = undefined;
     }
   }
 }

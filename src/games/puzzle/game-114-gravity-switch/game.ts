@@ -324,7 +324,14 @@ export class GravitySwitchGame {
     }
 
     if (this.onStateChange) {
-      this.onStateChange({ switches: this.switches });
+      this.onStateChange({
+        switches: this.switches,
+        gravitySwitch: {
+          x: this.player.x,
+          y: this.player.y,
+          direction: dir,
+        },
+      });
     }
   }
 

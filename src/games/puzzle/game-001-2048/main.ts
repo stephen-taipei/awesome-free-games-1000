@@ -1,9 +1,17 @@
 /**
- * 2048 遊戲主程式
+ * 2048 遊戲 - WebGPU 3A 級視覺體驗版
  * Game #001 - Awesome Free Games 1000
+ *
+ * 特色：
+ * - WebGPU 硬體加速 3D 渲染
+ * - PBR 物理光照系統
+ * - 粒子爆炸特效
+ * - 相機震動回饋
+ * - 動態發光效果
  */
 
 import { Game2048, type Direction, type Tile, type GameState } from './game';
+import { WebGPURenderer, type TileRenderData } from './webgpu';
 import { translations } from './i18n';
 import { analytics } from '../../../shared/analytics';
 import { formatTime, formatNumber, isTouchDevice } from '../../../shared/utils';
@@ -13,6 +21,11 @@ import { i18n, type Locale } from '../../../shared/i18n';
 const GAME_ID = 'game-001-2048';
 const GAME_NAME = '2048';
 const GAME_CATEGORY = 'puzzle';
+
+// WebGPU 渲染器
+let renderer: WebGPURenderer | null = null;
+let webgpuCanvas: HTMLCanvasElement;
+let useWebGPU = false;
 
 // DOM 元素
 const tileContainer = document.getElementById('tile-container')!;
@@ -30,26 +43,163 @@ const helpBtn = document.getElementById('help-btn')!;
 const helpModal = document.getElementById('help-modal')!;
 const modalClose = document.getElementById('modal-close')!;
 const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
+const gameContainer = document.getElementById('game-container')!;
 
 // 遊戲實例
 let game: Game2048;
 let tileElements: Map<number, HTMLElement> = new Map();
 let timeInterval: ReturnType<typeof setInterval> | null = null;
 
+// 動畫狀態
+let tileAnimations: Map<number, { progress: number; isNew: boolean; isMerged: boolean }> = new Map();
+let lastFrameTime = 0;
+let animationId: number;
+
+// 音效
+let audioContext: AudioContext | null = null;
+const sounds = {
+  move: null as AudioBuffer | null,
+  merge: null as AudioBuffer | null,
+  win: null as AudioBuffer | null,
+  gameOver: null as AudioBuffer | null
+};
+
+/**
+ * 初始化音效
+ */
+async function initAudio() {
+  try {
+    audioContext = new AudioContext();
+
+    // 生成合成音效
+    sounds.move = createMoveSound();
+    sounds.merge = createMergeSound();
+    sounds.win = createWinSound();
+    sounds.gameOver = createGameOverSound();
+  } catch (e) {
+    console.warn('Audio initialization failed:', e);
+  }
+}
+
+function createMoveSound(): AudioBuffer {
+  const ctx = audioContext!;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    data[i] = Math.sin(440 * 2 * Math.PI * t) * Math.exp(-t * 20) * 0.3;
+  }
+
+  return buffer;
+}
+
+function createMergeSound(): AudioBuffer {
+  const ctx = audioContext!;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    const freq = 200 + 400 * t;
+    data[i] = Math.sin(freq * 2 * Math.PI * t) * Math.exp(-t * 5) * 0.4;
+  }
+
+  return buffer;
+}
+
+function createWinSound(): AudioBuffer {
+  const ctx = audioContext!;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 1, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    const noteIndex = Math.floor(t * 4) % 4;
+    const freq = notes[noteIndex];
+    data[i] = Math.sin(freq * 2 * Math.PI * t) * Math.exp(-((t * 4) % 1) * 3) * 0.3;
+  }
+
+  return buffer;
+}
+
+function createGameOverSound(): AudioBuffer {
+  const ctx = audioContext!;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    const freq = 300 - t * 200;
+    data[i] = Math.sin(freq * 2 * Math.PI * t) * Math.exp(-t * 3) * 0.3;
+  }
+
+  return buffer;
+}
+
+function playSound(buffer: AudioBuffer | null, volume = 1) {
+  if (!audioContext || !buffer) return;
+
+  const source = audioContext.createBufferSource();
+  const gainNode = audioContext.createGain();
+
+  source.buffer = buffer;
+  gainNode.gain.value = volume;
+
+  source.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+
+  source.start();
+}
+
+/**
+ * 初始化 WebGPU
+ */
+async function initWebGPU(): Promise<boolean> {
+  try {
+    // 創建 WebGPU canvas
+    webgpuCanvas = document.createElement('canvas');
+    webgpuCanvas.id = 'webgpu-canvas';
+    webgpuCanvas.width = 600;
+    webgpuCanvas.height = 600;
+
+    renderer = new WebGPURenderer(webgpuCanvas);
+    const success = await renderer.init();
+
+    if (success) {
+      // 隱藏 DOM 渲染，使用 WebGPU
+      const gridBg = document.querySelector('.grid-background') as HTMLElement;
+      if (gridBg) gridBg.style.display = 'none';
+      tileContainer.style.display = 'none';
+
+      // 插入 WebGPU canvas
+      gameContainer.insertBefore(webgpuCanvas, gameContainer.firstChild);
+      gameContainer.classList.add('webgpu-mode');
+
+      useWebGPU = true;
+      console.log('🚀 WebGPU 3D 渲染已啟用！');
+      return true;
+    }
+  } catch (e) {
+    console.warn('WebGPU initialization failed:', e);
+  }
+
+  return false;
+}
+
 /**
  * 初始化語言
  */
 function initI18n() {
-  // 載入所有語言翻譯
   Object.entries(translations).forEach(([locale, trans]) => {
     i18n.loadTranslations(locale as Locale, trans);
   });
 
-  // 設定當前語言
   languageSelect.value = i18n.getLocale();
   updateI18nTexts();
 
-  // 監聽語言變更
   languageSelect.addEventListener('change', () => {
     i18n.setLocale(languageSelect.value as Locale);
     updateI18nTexts();
@@ -69,7 +219,6 @@ function updateI18nTexts() {
     element.textContent = i18n.t(key);
   });
 
-  // 更新 HTML lang 屬性
   document.documentElement.lang = i18n.getLocale();
 }
 
@@ -83,10 +232,30 @@ function initGame() {
     updateUI(state);
   });
 
+  game.setOnTileMove((tiles) => {
+    // 檢測合併和新方塊
+    tiles.forEach(tile => {
+      if (tile.mergedFrom) {
+        if (useWebGPU && renderer) {
+          renderer.triggerMergeEffect(tile.position.row, tile.position.col, tile.value);
+        }
+        playSound(sounds.merge, Math.min(1, tile.value / 512));
+
+        tileAnimations.set(tile.id, { progress: 0, isNew: false, isMerged: true });
+      } else if (tile.isNew) {
+        if (useWebGPU && renderer) {
+          renderer.triggerNewTileEffect(tile.position.row, tile.position.col);
+        }
+        playSound(sounds.move, 0.3);
+
+        tileAnimations.set(tile.id, { progress: 0, isNew: true, isMerged: false });
+      }
+    });
+  });
+
   game.newGame();
   startTimer();
 
-  // 追蹤遊戲開始
   analytics.gameStart({
     game_id: GAME_ID,
     game_name: GAME_NAME,
@@ -102,16 +271,18 @@ function updateUI(state: GameState) {
   bestScoreElement.textContent = formatNumber(state.bestScore);
   movesElement.textContent = formatNumber(state.moveCount);
 
-  renderTiles(game.getAllTiles());
+  if (!useWebGPU) {
+    renderTiles(game.getAllTiles());
+  }
 
-  // 處理遊戲結束或獲勝
   if (state.won && !state.keepPlaying) {
     showOverlay('win');
+    playSound(sounds.win);
   } else if (state.gameOver) {
     showOverlay('gameover');
     stopTimer();
+    playSound(sounds.gameOver);
 
-    // 追蹤遊戲結束
     analytics.gameEnd({
       game_id: GAME_ID,
       game_name: GAME_NAME,
@@ -122,13 +293,11 @@ function updateUI(state: GameState) {
 }
 
 /**
- * 渲染方塊
+ * 渲染方塊 (DOM 模式備用)
  */
 function renderTiles(tiles: Tile[]) {
-  // 收集當前方塊 ID
   const currentIds = new Set(tiles.map(t => t.id));
 
-  // 移除不存在的方塊
   tileElements.forEach((element, id) => {
     if (!currentIds.has(id)) {
       element.remove();
@@ -136,35 +305,68 @@ function renderTiles(tiles: Tile[]) {
     }
   });
 
-  // 更新或建立方塊
   tiles.forEach((tile) => {
     let element = tileElements.get(tile.id);
 
     if (!element) {
-      // 建立新方塊
       element = document.createElement('div');
       element.className = 'tile';
       tileContainer.appendChild(element);
       tileElements.set(tile.id, element);
     }
 
-    // 更新方塊樣式
     const valueClass = tile.value <= 2048 ? `tile-${tile.value}` : 'tile-super';
     const posClass = `tile-pos-${tile.position.row}-${tile.position.col}`;
 
     element.className = `tile ${valueClass} ${posClass}`;
     element.textContent = formatNumber(tile.value);
 
-    // 新方塊動畫
     if (tile.isNew) {
       element.classList.add('new');
     }
 
-    // 合併動畫
     if (tile.mergedFrom) {
       element.classList.add('merged');
     }
   });
+}
+
+/**
+ * WebGPU 渲染循環
+ */
+function renderLoop(currentTime: number) {
+  const deltaTime = (currentTime - lastFrameTime) / 1000;
+  lastFrameTime = currentTime;
+
+  // 更新動畫
+  tileAnimations.forEach((anim, id) => {
+    anim.progress = Math.min(1, anim.progress + deltaTime * 4);
+    if (anim.progress >= 1) {
+      tileAnimations.delete(id);
+    }
+  });
+
+  // 準備渲染資料
+  const tiles = game.getAllTiles();
+  const renderData: TileRenderData[] = tiles.map(tile => {
+    const anim = tileAnimations.get(tile.id);
+    return {
+      id: tile.id,
+      value: tile.value,
+      row: tile.position.row,
+      col: tile.position.col,
+      isNew: anim?.isNew ?? false,
+      isMerged: anim?.isMerged ?? false,
+      animationProgress: anim?.progress ?? 1
+    };
+  });
+
+  if (renderer) {
+    renderer.updateTiles(renderData);
+    renderer.render(deltaTime);
+  }
+
+  animationId = requestAnimationFrame(renderLoop);
 }
 
 /**
@@ -178,7 +380,6 @@ function showOverlay(type: 'win' | 'gameover') {
     overlayTitle.textContent = i18n.t('game.youWin');
     continueBtn.style.display = 'inline-block';
 
-    // 追蹤達到 2048
     analytics.achievementUnlock({
       game_id: GAME_ID,
       game_name: GAME_NAME,
@@ -247,7 +448,6 @@ function handleKeyDown(event: KeyboardEvent) {
  * 處理觸控滑動
  */
 function initTouchHandler() {
-  const gameContainer = document.getElementById('game-container')!;
   let startX: number;
   let startY: number;
   const minSwipeDistance = 30;
@@ -284,19 +484,28 @@ function initTouchHandler() {
  * 初始化事件監聽
  */
 function initEventListeners() {
-  // 鍵盤事件
   document.addEventListener('keydown', handleKeyDown);
 
-  // 觸控事件
   if (isTouchDevice()) {
     initTouchHandler();
   }
 
-  // 新遊戲按鈕
+  // 啟用音效 (需要用戶交互)
+  const enableAudio = () => {
+    if (audioContext?.state === 'suspended') {
+      audioContext.resume();
+    }
+    document.removeEventListener('click', enableAudio);
+    document.removeEventListener('touchstart', enableAudio);
+  };
+  document.addEventListener('click', enableAudio);
+  document.addEventListener('touchstart', enableAudio);
+
   newGameBtn.addEventListener('click', () => {
     hideOverlay();
     tileElements.clear();
     tileContainer.innerHTML = '';
+    tileAnimations.clear();
     game.newGame();
     startTimer();
 
@@ -307,11 +516,11 @@ function initEventListeners() {
     });
   });
 
-  // 重試按鈕
   retryBtn.addEventListener('click', () => {
     hideOverlay();
     tileElements.clear();
     tileContainer.innerHTML = '';
+    tileAnimations.clear();
     game.newGame();
     startTimer();
 
@@ -322,18 +531,15 @@ function initEventListeners() {
     });
   });
 
-  // 繼續遊戲按鈕
   continueBtn.addEventListener('click', () => {
     hideOverlay();
     game.continueGame();
   });
 
-  // 說明按鈕
   helpBtn.addEventListener('click', () => {
     helpModal.style.display = 'flex';
   });
 
-  // 關閉彈窗
   modalClose.addEventListener('click', () => {
     helpModal.style.display = 'none';
   });
@@ -344,10 +550,19 @@ function initEventListeners() {
     }
   });
 
-  // ESC 關閉彈窗
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       helpModal.style.display = 'none';
+    }
+  });
+
+  // 視窗大小調整
+  window.addEventListener('resize', () => {
+    if (useWebGPU && renderer) {
+      const size = Math.min(window.innerWidth - 40, 600);
+      renderer.resize(size, size);
+      webgpuCanvas.style.width = `${size}px`;
+      webgpuCanvas.style.height = `${size}px`;
     }
   });
 }
@@ -355,18 +570,35 @@ function initEventListeners() {
 /**
  * 主程式入口
  */
-function main() {
-  // 初始化 Analytics（如果有設定）
+async function main() {
+  // 初始化 Analytics
   const measurementId = import.meta.env?.VITE_GA_MEASUREMENT_ID;
   if (measurementId) {
     analytics.init(measurementId);
   }
 
+  // 初始化音效
+  await initAudio();
+
+  // 嘗試初始化 WebGPU
+  const webgpuReady = await initWebGPU();
+
   initI18n();
   initEventListeners();
   initGame();
 
-  console.log('🎮 2048 遊戲已載入！');
+  if (webgpuReady) {
+    // 開始 WebGPU 渲染循環
+    lastFrameTime = performance.now();
+    animationId = requestAnimationFrame(renderLoop);
+
+    console.log('🎮 2048 遊戲 WebGPU 3A 版已載入！');
+    console.log('✨ 享受 3D 立體方塊、PBR 光照、粒子特效！');
+  } else {
+    console.log('🎮 2048 遊戲已載入 (DOM 模式)');
+    console.log('💡 您的瀏覽器不支援 WebGPU，使用傳統渲染');
+  }
+
   console.log('📱 支援鍵盤方向鍵或觸控滑動操作');
 }
 

@@ -1,3 +1,14 @@
+:root {
+  --neon-cyan: #00cec9;
+  --neon-purple: #6c5ce7;
+  --neon-green: #00b894;
+  --neon-orange: #fdcb6e;
+  --neon-pink: #fd79a8;
+  --dark-bg: #0a0a15;
+  --dark-secondary: #1a1a2e;
+  --grid-color: rgba(0, 206, 201, 0.15);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,9 +16,11 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, sans-serif;
-  background: linear-gradient(135deg, #4834d4 0%, #686de0 100%);
+  font-family: "Courier New", "Monaco", monospace;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(108, 92, 231, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 70% 80%, rgba(0, 206, 201, 0.2) 0%, transparent 40%),
+    linear-gradient(135deg, var(--dark-bg) 0%, var(--dark-secondary) 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -25,19 +38,32 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  color: white;
+  color: var(--neon-cyan);
 }
 
 .game-header h1 {
   font-size: 1.5rem;
+  text-shadow:
+    0 0 10px var(--neon-cyan),
+    0 0 20px var(--neon-cyan),
+    0 0 30px var(--neon-cyan);
+  letter-spacing: 0.1em;
 }
 
 .header-controls select {
-  padding: 0.5rem;
+  padding: 0.5rem 1rem;
   border-radius: 4px;
-  border: none;
-  background: white;
+  border: 1px solid var(--neon-purple);
+  background: var(--dark-secondary);
+  color: var(--neon-cyan);
   cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px var(--neon-cyan);
 }
 
 .game-controls {
@@ -51,25 +77,55 @@ body {
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   align-items: center;
   min-width: 100px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 2px,
+      rgba(255, 255, 255, 0.03) 2px,
+      rgba(255, 255, 255, 0.03) 4px
+    );
+  pointer-events: none;
 }
 
 .stats-card.target {
-  background: #00b894;
-  color: white;
+  background:
+    linear-gradient(135deg, rgba(0, 184, 148, 0.3) 0%, rgba(0, 184, 148, 0.1) 100%);
+  border: 2px solid var(--neon-green);
+  color: var(--neon-green);
+  box-shadow:
+    0 0 10px rgba(0, 184, 148, 0.3),
+    inset 0 0 20px rgba(0, 184, 148, 0.1);
 }
 
 .stats-card.current {
-  background: white;
-  color: #4834d4;
+  background:
+    linear-gradient(135deg, rgba(0, 206, 201, 0.3) 0%, rgba(0, 206, 201, 0.1) 100%);
+  border: 2px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+  box-shadow:
+    0 0 10px rgba(0, 206, 201, 0.3),
+    inset 0 0 20px rgba(0, 206, 201, 0.1);
 }
 
 .stats-card span:last-child {
   font-size: 1.5rem;
+  text-shadow: 0 0 10px currentColor;
 }
 
 .game-area {
@@ -77,16 +133,46 @@ body {
   width: 100%;
   aspect-ratio: 1;
   max-height: 400px;
-  background: #2d3436;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 39px,
+      var(--grid-color) 39px,
+      var(--grid-color) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 39px,
+      var(--grid-color) 39px,
+      var(--grid-color) 40px
+    ),
+    var(--dark-bg);
+  border-radius: 12px;
+  box-shadow:
+    0 0 30px rgba(0, 206, 201, 0.2),
+    inset 0 0 60px rgba(108, 92, 231, 0.1);
   margin-bottom: 1rem;
   overflow: hidden;
+  border: 2px solid var(--neon-purple);
 }
 
-canvas {
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#game-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
 }
 
 .overlay {
@@ -95,27 +181,34 @@ canvas {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(45, 52, 54, 0.95);
+  background:
+    radial-gradient(circle at center, rgba(10, 10, 21, 0.95) 0%, rgba(26, 26, 46, 0.98) 100%);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
+  backdrop-filter: blur(4px);
 }
 
 .overlay-content {
   text-align: center;
-  color: white;
+  color: var(--neon-cyan);
   padding: 2rem;
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
+  text-shadow:
+    0 0 10px var(--neon-cyan),
+    0 0 20px var(--neon-cyan);
+  letter-spacing: 0.15em;
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
   opacity: 0.9;
+  color: #b2bec3;
 }
 
 .btn {
@@ -125,27 +218,68 @@ canvas {
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  transition: all 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+  background:
+    linear-gradient(135deg, var(--neon-green) 0%, #00a087 100%);
   color: white;
+  border: 2px solid var(--neon-green);
+  box-shadow:
+    0 0 15px rgba(0, 184, 148, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 0 25px rgba(0, 184, 148, 0.6),
+    0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .btn.warning {
-  background: #d63031;
+  background:
+    linear-gradient(135deg, #d63031 0%, #a51e1e 100%);
   color: white;
+  border: 2px solid #e74c3c;
+  box-shadow: 0 0 15px rgba(214, 48, 49, 0.3);
 }
 
 .controls-hint {
   margin-top: 1rem;
   opacity: 0.7;
+  font-size: 0.85rem;
+  color: #636e72;
 }
 
 .mobile-controls {
@@ -165,18 +299,22 @@ canvas {
   width: 60px;
   height: 60px;
   font-size: 1.5rem;
-  border: none;
+  border: 2px solid var(--neon-purple);
   border-radius: 8px;
-  background: white;
-  color: #4834d4;
+  background:
+    linear-gradient(135deg, rgba(108, 92, 231, 0.3) 0%, rgba(108, 92, 231, 0.1) 100%);
+  color: var(--neon-cyan);
   cursor: pointer;
   touch-action: manipulation;
   font-weight: bold;
+  transition: all 0.2s ease;
 }
 
 .control-btn:active {
-  background: #00b894;
+  background: var(--neon-green);
   color: white;
+  border-color: var(--neon-green);
+  box-shadow: 0 0 20px var(--neon-green);
 }
 
 @media (max-width: 768px) {
@@ -189,4 +327,52 @@ canvas {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+/* Digital glow animation */
+@keyframes digitalGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(0, 206, 201, 0.3),
+      inset 0 0 40px rgba(108, 92, 231, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(0, 206, 201, 0.5),
+      inset 0 0 60px rgba(108, 92, 231, 0.2);
+  }
+}
+
+.game-area:hover {
+  animation: digitalGlow 2s ease-in-out infinite;
+}
+
+/* Scanline effect */
+.game-area::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.1) 2px,
+      rgba(0, 0, 0, 0.1) 4px
+    );
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Data stream animation */
+@keyframes dataStream {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 100px;
+  }
 }

@@ -62,6 +62,14 @@ export class AncientScriptGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  private pendingEvents: {
+    keyPress?: { x: number; y: number };
+    runeSelect?: { x: number; y: number };
+    submitCorrect?: { x: number; y: number };
+    submitWrong?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -138,7 +146,10 @@ export class AncientScriptGame {
         status: this.getStatus(),
         decodedCount,
         totalRunes: this.runes.length,
+        ...this.pendingEvents,
       });
+
+      this.pendingEvents = {};
     }
   }
 
@@ -156,6 +167,8 @@ export class AncientScriptGame {
 
   reset() {
     this.attempts = 0;
+    this.pendingEvents.reset = true;
+    this.emitState();
     this.initLevel();
     this.draw();
   }
@@ -189,6 +202,8 @@ export class AncientScriptGame {
       const boxY = 180;
       if (x >= boxX && x <= boxX + 45 && y >= boxY && y <= boxY + 45) {
         this.selectedIndex = i;
+        this.pendingEvents.runeSelect = { x: boxX + 22, y: boxY + 22 };
+        this.emitState();
         this.draw();
         return;
       }
@@ -233,6 +248,14 @@ export class AncientScriptGame {
 
     if (/^[a-zA-Z]$/.test(key)) {
       this.userInput[this.selectedIndex] = key.toUpperCase();
+
+      // Emit keyPress event
+      const level = LEVELS[this.currentLevel];
+      const startX = this.width / 2 - (level.word.length * 50) / 2;
+      const boxX = startX + this.selectedIndex * 50 + 22;
+      const boxY = 202;
+      this.pendingEvents.keyPress = { x: boxX, y: boxY };
+
       if (this.selectedIndex < this.userInput.length - 1) {
         this.selectedIndex++;
       }
@@ -248,8 +271,12 @@ export class AncientScriptGame {
     const answer = this.userInput.join("");
     this.attempts++;
 
+    const cx = this.width / 2;
+    const cy = this.height / 2;
+
     if (answer === level.word) {
       this.runes.forEach((r) => (r.revealed = true));
+      this.pendingEvents.submitCorrect = { x: cx, y: cy };
       this.draw();
 
       if (this.currentLevel >= LEVELS.length - 1) {
@@ -261,7 +288,9 @@ export class AncientScriptGame {
             status: "complete",
             decodedCount: this.runes.length,
             totalRunes: this.runes.length,
+            ...this.pendingEvents,
           });
+          this.pendingEvents = {};
         }
       } else {
         if (this.onStateChange) {
@@ -271,12 +300,15 @@ export class AncientScriptGame {
             status: "won",
             decodedCount: this.runes.length,
             totalRunes: this.runes.length,
+            ...this.pendingEvents,
           });
+          this.pendingEvents = {};
         }
       }
       return true;
     } else {
       this.showWrong = true;
+      this.pendingEvents.submitWrong = { x: cx, y: cy };
       this.draw();
       this.emitState();
       return false;

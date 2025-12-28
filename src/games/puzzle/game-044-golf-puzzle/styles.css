@@ -1,25 +1,138 @@
+/**
+ * Golf Puzzle - Lush Golf Course / Country Club Theme
+ * Game #044
+ */
+
+/* Theme Colors */
+:root {
+  --fairway-green: #2d5a27;
+  --fairway-light: #3d7a37;
+  --rough-green: #1e4a1a;
+  --sky-blue: #87ceeb;
+  --sky-light: #b0e0ff;
+  --sand-bunker: #e8d9b5;
+  --wood-brown: #8b4513;
+  --flag-red: #e74c3c;
+  --gold: #ffd700;
+  --white: #ffffff;
+  --hole-black: #1a1a1a;
+}
+
 .game-container {
   max-width: 650px;
+  background: linear-gradient(
+    180deg,
+    var(--sky-light) 0%,
+    var(--sky-blue) 30%,
+    var(--fairway-light) 30%,
+    var(--fairway-green) 100%
+  );
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Grass texture overlay */
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 30%;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.02) 0px,
+      rgba(255, 255, 255, 0.02) 2px,
+      transparent 2px,
+      transparent 20px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Sun decoration */
+.game-container::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  right: 40px;
+  width: 50px;
+  height: 50px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 200, 0.9) 0%,
+    rgba(255, 220, 100, 0.5) 40%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 400px;
-  background: #2d5a27;
+  background: linear-gradient(
+    180deg,
+    var(--fairway-light) 0%,
+    var(--fairway-green) 100%
+  );
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 2px 4px rgba(255, 255, 255, 0.1),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  z-index: 1;
 }
 
-canvas {
+/* Fairway stripes */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03) 0px,
+      rgba(255, 255, 255, 0.03) 25px,
+      transparent 25px,
+      transparent 50px
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+
+#bg-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+canvas#game-canvas {
   width: 100%;
   height: 100%;
   cursor: crosshair;
+  position: relative;
+  z-index: 2;
 }
 
 .game-controls {
@@ -28,6 +141,8 @@ canvas {
   gap: 0.75rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
 }
 
 .stats-card {
@@ -36,10 +151,20 @@ canvas {
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  box-shadow:
+    0 2px 8px rgba(39, 174, 96, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   display: flex;
   gap: 0.5rem;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 12px rgba(39, 174, 96, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .stats-card span:first-child {
@@ -48,27 +173,163 @@ canvas {
 
 .stats-card.strokes-card {
   background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
 }
 
 .stats-card.strokes-card.over-par {
   background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
+  animation: overParPulse 0.5s ease;
 }
 
 .stats-card.strokes-card.under-par {
   background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+  box-shadow:
+    0 2px 8px rgba(241, 196, 15, 0.4),
+    0 0 15px rgba(255, 215, 0, 0.3);
+  animation: underParGlow 1s ease infinite;
+}
+
+@keyframes overParPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes underParGlow {
+  0%, 100% {
+    box-shadow:
+      0 2px 8px rgba(241, 196, 15, 0.4),
+      0 0 15px rgba(255, 215, 0, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 2px 12px rgba(241, 196, 15, 0.6),
+      0 0 25px rgba(255, 215, 0, 0.5);
+  }
 }
 
 .stats-card.par-card {
   background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.footer-controls button {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow:
+    0 2px 8px rgba(39, 174, 96, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer-controls button:hover {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 12px rgba(39, 174, 96, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.footer-controls button:active {
+  transform: translateY(0);
+  box-shadow:
+    0 2px 6px rgba(39, 174, 96, 0.3),
+    inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .controls-hint {
   margin-top: 1rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  font-size: 0.9rem;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Victory effect */
+.game-container.victory {
+  animation: victoryGlow 0.6s ease-out;
+}
+
+@keyframes victoryGlow {
+  0% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 8px 50px rgba(255, 215, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 0 40px rgba(255, 215, 0, 0.3);
+  }
+  100% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Cloud animation */
+@keyframes cloudDrift {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(50px); }
+}
+
+/* Flag wave animation */
+@keyframes flagWave {
+  0%, 100% { transform: skewX(0deg); }
+  50% { transform: skewX(-3deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .game-container {
+    padding: 1rem;
+    border-radius: 8px;
+  }
+
+  .game-area {
+    height: 350px;
+  }
+
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .footer-controls {
+    flex-wrap: wrap;
+  }
+
+  .footer-controls button {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Text selection */
+::selection {
+  background: rgba(39, 174, 96, 0.3);
+  color: white;
 }

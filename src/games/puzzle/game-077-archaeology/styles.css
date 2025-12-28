@@ -1,3 +1,17 @@
+:root {
+  --earth-dark: #4a3728;
+  --earth-medium: #6b4c3a;
+  --earth-light: #8b6b4f;
+  --sand: #d4b896;
+  --sand-light: #e8d4b8;
+  --gold: #d4a657;
+  --gold-light: #f0c674;
+  --stone: #7a7a6e;
+  --stone-light: #a0a090;
+  --bone: #f5f0e6;
+  --turquoise: #5db4b8;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -7,17 +21,58 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
     Ubuntu, sans-serif;
-  background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+  background: linear-gradient(135deg, var(--earth-dark) 0%, var(--earth-medium) 50%, var(--earth-light) 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Floating dust particles */
+body::before {
+  content: "🏺 ⚱️ 💀 🪙 🗿";
+  position: fixed;
+  top: -50px;
+  left: 0;
+  right: 0;
+  font-size: 1.5rem;
+  letter-spacing: 4rem;
+  animation: floatDust 20s linear infinite;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+body::after {
+  content: "🦴 📜 🏛️ ⚱️ 🪙";
+  position: fixed;
+  top: -50px;
+  left: 2rem;
+  right: 0;
+  font-size: 1.2rem;
+  letter-spacing: 3rem;
+  animation: floatDust 25s linear infinite;
+  animation-delay: -8s;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+@keyframes floatDust {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    transform: translateY(100vh) rotate(20deg);
+  }
 }
 
 .game-container {
   max-width: 600px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .game-header {
@@ -25,19 +80,29 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  color: white;
+  color: var(--sand-light);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .game-header h1 {
   font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.game-header h1::before {
+  content: "🏺";
 }
 
 .header-controls select {
   padding: 0.5rem;
-  border-radius: 4px;
-  border: none;
-  background: white;
+  border-radius: 8px;
+  border: 2px solid var(--gold);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   cursor: pointer;
+  font-weight: 500;
 }
 
 .game-controls {
@@ -48,13 +113,16 @@ body {
 }
 
 .stats-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
   padding: 0.5rem 1.5rem;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   display: flex;
   gap: 0.5rem;
+  border: 2px solid var(--gold);
+  color: var(--earth-dark);
 }
 
 .tool-selector {
@@ -69,11 +137,13 @@ body {
   flex-direction: column;
   align-items: center;
   padding: 0.75rem 1.5rem;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  background: white;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .tool-btn span {
@@ -81,26 +151,45 @@ body {
 }
 
 .tool-btn.active {
-  border-color: #8B4513;
-  background: #FFF8DC;
+  border-color: var(--gold);
+  background: linear-gradient(135deg, var(--sand-light) 0%, var(--sand) 100%);
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(212, 166, 87, 0.4);
 }
 
 .tool-btn:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 400px;
-  background: #654321;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(180deg, var(--earth-light) 0%, var(--earth-dark) 100%);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
   margin-bottom: 1rem;
   overflow: hidden;
+  border: 3px solid var(--gold);
 }
 
-canvas {
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
 }
@@ -111,7 +200,8 @@ canvas {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(74, 55, 40, 0.9);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -120,52 +210,115 @@ canvas {
 
 .overlay-content {
   text-align: center;
-  color: white;
+  color: var(--sand-light);
   padding: 2rem;
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.overlay-title::before {
+  content: "🏛️ ";
+}
+
+.overlay-title::after {
+  content: " 🏛️";
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
   opacity: 0.9;
+  font-size: 1.1rem;
 }
 
 .btn {
   padding: 0.75rem 2rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.btn:active {
+  transform: translateY(-1px);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  color: var(--earth-dark);
+  box-shadow: 0 4px 15px rgba(212, 166, 87, 0.4);
+}
+
+.btn.primary:hover {
+  box-shadow: 0 8px 25px rgba(212, 166, 87, 0.6);
 }
 
 .btn.warning {
-  background: #e67e22;
-  color: white;
+  background: linear-gradient(135deg, var(--earth-medium) 0%, var(--earth-light) 100%);
+  color: var(--sand-light);
+  box-shadow: 0 4px 15px rgba(107, 76, 58, 0.4);
 }
 
 .controls-hint {
   margin-top: 1rem;
   opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.controls-hint::before {
+  content: "💡 ";
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+/* Excavation grid overlay animation */
+@keyframes excavate {
+  0%, 100% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.game-area::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      rgba(212, 166, 87, 0.1) 39px,
+      rgba(212, 166, 87, 0.1) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 39px,
+      rgba(212, 166, 87, 0.1) 39px,
+      rgba(212, 166, 87, 0.1) 40px
+    );
+  pointer-events: none;
+  animation: excavate 4s ease-in-out infinite;
 }

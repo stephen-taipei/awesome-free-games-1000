@@ -1,61 +1,275 @@
-.game-container {
-  max-width: 650px;
+/**
+ * Mechanism Puzzle Styles
+ * Steampunk / Clockwork / Industrial Brass Theme
+ * Game #066
+ */
+
+:root {
+  /* Steampunk Palette */
+  --steam-dark: #1a1510;
+  --steam-medium: #2a2218;
+  --steam-light: #3a3020;
+  --steam-surface: #4a4030;
+
+  /* Brass Accents */
+  --brass-dark: #8b6914;
+  --brass-medium: #c9a227;
+  --brass-light: #e8c547;
+  --brass-glow: rgba(201, 162, 39, 0.4);
+
+  /* Copper Accents */
+  --copper-dark: #8b4513;
+  --copper-medium: #cd7f32;
+  --copper-light: #e8a862;
+
+  /* Success / Completion */
+  --success-green: #2ecc71;
+  --success-glow: rgba(46, 204, 113, 0.4);
+
+  /* UI Elements */
+  --ui-text: #e8e0d5;
+  --ui-muted: #8a8070;
+  --ui-border: rgba(201, 162, 39, 0.3);
+
+  /* Steam Effects */
+  --steam-color: rgba(200, 195, 185, 0.3);
 }
 
-.game-area {
-  position: relative;
-  width: 100%;
-  height: 400px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+body {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  background: var(--steam-dark);
+  background-image:
+    radial-gradient(ellipse at 50% 100%, rgba(139, 105, 20, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 20%, rgba(42, 34, 24, 0.8) 0%, transparent 40%),
+    linear-gradient(180deg, var(--steam-dark) 0%, #0f0d08 100%);
+  min-height: 100vh;
   display: flex;
   justify-content: center;
-  overflow: hidden;
-  border: 2px solid #333;
+  align-items: center;
+  padding: 1rem;
 }
 
-canvas {
+/* Animated steam/dust particles */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  background-image:
+    radial-gradient(2px 2px at 10% 80%, var(--steam-color) 0%, transparent 100%),
+    radial-gradient(2px 2px at 30% 70%, var(--steam-color) 0%, transparent 100%),
+    radial-gradient(2px 2px at 50% 85%, var(--steam-color) 0%, transparent 100%),
+    radial-gradient(2px 2px at 70% 75%, var(--steam-color) 0%, transparent 100%),
+    radial-gradient(2px 2px at 90% 80%, var(--steam-color) 0%, transparent 100%);
+  background-size: 200px 150px;
+  animation: steamRise 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+@keyframes steamRise {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-20px);
+    opacity: 0.3;
+  }
+}
+
+/* Furnace glow from bottom */
+body::after {
+  content: '';
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 40%;
+  background: linear-gradient(
+    0deg,
+    rgba(139, 105, 20, 0.1) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.game-container {
+  max-width: 700px;
+  width: 100%;
+  background: linear-gradient(135deg, rgba(42, 34, 24, 0.95) 0%, rgba(26, 21, 16, 0.98) 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  border: 3px solid var(--brass-dark);
+  box-shadow:
+    0 0 40px rgba(139, 105, 20, 0.2),
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(201, 162, 39, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+/* Brass corner rivets */
+.game-container::before,
+.game-container::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle at 40% 40%, var(--brass-light) 0%, var(--brass-dark) 70%);
+  border-radius: 50%;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.game-container::before {
+  top: 12px;
+  left: 12px;
+}
+
+.game-container::after {
+  top: 12px;
+  right: 12px;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--ui-border);
+}
+
+.game-header h1 {
+  color: var(--brass-light);
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-shadow: 0 0 20px var(--brass-glow);
+  letter-spacing: 1px;
+  font-family: 'Georgia', serif;
+}
+
+#language-select {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 2px solid var(--brass-dark);
+  background: rgba(58, 48, 32, 0.8);
+  color: var(--ui-text);
   cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+#language-select:hover {
+  background: rgba(201, 162, 39, 0.2);
+  border-color: var(--brass-medium);
+}
+
+#language-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--brass-glow);
 }
 
 .game-controls {
   display: flex;
   justify-content: center;
-  gap: 2rem;
-  margin-bottom: 1rem;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-  padding: 0.75rem 1.5rem;
-  border-radius: 10px;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  color: white;
+  background: linear-gradient(135deg, var(--steam-surface) 0%, var(--steam-medium) 100%);
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  color: var(--ui-text);
   display: flex;
   gap: 0.5rem;
-  align-items: center;
+  font-weight: 500;
+  border: 2px solid var(--brass-dark);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(139, 105, 20, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .stats-card span:first-child {
-  color: #95a5a6;
+  color: var(--ui-muted);
   font-size: 0.9rem;
 }
 
 .stats-card span:last-child {
-  color: #f39c12;
-  font-size: 1.2rem;
+  color: var(--brass-light);
+  font-size: 1.1rem;
+  text-shadow: 0 0 10px var(--brass-glow);
 }
 
-.footer-controls {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  background: linear-gradient(180deg, var(--steam-medium) 0%, var(--steam-dark) 100%);
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+  border: 3px solid var(--brass-dark);
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Metal plate rivets around game area */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border: 2px dashed rgba(201, 162, 39, 0.2);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 5;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .overlay {
@@ -64,78 +278,214 @@ canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.85);
+  background: radial-gradient(ellipse at 50% 50%, rgba(26, 21, 16, 0.95) 0%, rgba(15, 13, 8, 0.98) 100%);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 10;
+  z-index: 100;
+  border-radius: 10px;
+  backdrop-filter: blur(5px);
 }
 
 .overlay-content {
   text-align: center;
-  color: white;
-  padding: 2rem;
+  color: var(--ui-text);
+  padding: 2.5rem;
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #f39c12;
+  color: var(--brass-light);
+  text-shadow: 0 0 30px var(--brass-glow);
+  font-weight: 600;
+  letter-spacing: 2px;
+  font-family: 'Georgia', serif;
 }
 
 .overlay-msg {
-  font-size: 1rem;
-  margin-bottom: 1.5rem;
-  color: #bdc3c7;
-}
-
-.btn {
-  padding: 0.75rem 2rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: bold;
-  margin: 0.25rem;
-}
-
-.btn.primary {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  color: white;
-}
-
-.btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
-}
-
-.btn.success {
-  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-  color: white;
-}
-
-.btn.success:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
-}
-
-.btn.warning {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  color: white;
-}
-
-.btn.warning:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+  margin-bottom: 1.75rem;
+  color: var(--ui-muted);
+  font-size: 1.1rem;
+  line-height: 1.6;
 }
 
 .controls-hint {
-  margin-top: 1rem;
-  color: #7f8c8d;
-  font-size: 0.85rem;
+  margin-top: 1.25rem;
+  color: var(--ui-muted);
+  font-size: 0.9rem;
+}
+
+.btn {
+  padding: 0.8rem 2rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-family: 'Georgia', serif;
+  position: relative;
+  overflow: hidden;
+  margin: 0.25rem;
+}
+
+/* Brass button shine effect */
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--brass-medium) 0%, var(--brass-dark) 100%);
+  color: var(--steam-dark);
+  border: 2px solid var(--brass-light);
+  box-shadow:
+    0 4px 20px var(--brass-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 6px 30px var(--brass-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.btn.success {
+  background: linear-gradient(135deg, var(--success-green) 0%, #27ae60 100%);
+  color: white;
+  border: 2px solid #2ecc71;
+  box-shadow: 0 4px 20px var(--success-glow);
+}
+
+.btn.success:hover {
+  box-shadow: 0 6px 30px var(--success-glow);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, var(--copper-medium) 0%, var(--copper-dark) 100%);
+  color: white;
+  border: 2px solid var(--copper-light);
+  box-shadow: 0 4px 20px rgba(205, 127, 50, 0.4);
+}
+
+.btn.warning:hover {
+  box-shadow: 0 6px 30px rgba(205, 127, 50, 0.5);
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
 }
 
 #next-btn {
   display: none;
+}
+
+/* Gear animation for loading/processing */
+@keyframes gearSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Pressure gauge animation */
+@keyframes pressureFlutter {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+/* Steam burst animation */
+@keyframes steamBurst {
+  0% {
+    opacity: 0.8;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2) translateY(-30px);
+  }
+}
+
+/* Win state glow */
+.overlay.win .overlay-title {
+  animation: brassGlow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes brassGlow {
+  from {
+    text-shadow: 0 0 20px var(--brass-glow);
+  }
+  to {
+    text-shadow: 0 0 40px var(--brass-glow), 0 0 60px rgba(201, 162, 39, 0.3);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+  .game-container {
+    padding: 1rem;
+    border-radius: 10px;
+  }
+
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .stats-card {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.9rem;
+  }
+
+  .btn {
+    padding: 0.7rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .overlay-title {
+    font-size: 1.6rem;
+  }
+
+  .footer-controls {
+    flex-wrap: wrap;
+  }
+
+  .game-area {
+    height: 350px;
+  }
+}
+
+@media (max-width: 400px) {
+  .game-controls {
+    gap: 0.75rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  .game-area {
+    height: 300px;
+  }
 }

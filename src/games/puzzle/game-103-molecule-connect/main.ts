@@ -1,12 +1,161 @@
 /**
  * Molecule Connect Main Entry
+ * Science Lab / Chemistry Theme
  * Game #103
  */
 import { MoleculeGame, GameState, Atom, AtomType } from "./game";
 import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
+import { WebGPURenderer } from "./webgpu";
 
-// Elements
+// ============ Audio System ============
+class AudioSystem {
+  private audioContext: AudioContext | null = null;
+
+  private initContext(): void {
+    if (!this.audioContext) {
+      this.audioContext = new AudioContext();
+    }
+    if (this.audioContext.state === "suspended") {
+      this.audioContext.resume();
+    }
+  }
+
+  private createOscillator(
+    type: OscillatorType,
+    frequency: number,
+    duration: number,
+    gainValue: number = 0.3,
+    delay: number = 0
+  ): void {
+    if (!this.audioContext) return;
+
+    const oscillator = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+
+    gain.gain.setValueAtTime(0, this.audioContext.currentTime + delay);
+    gain.gain.linearRampToValueAtTime(gainValue, this.audioContext.currentTime + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + delay + duration);
+
+    oscillator.connect(gain);
+    gain.connect(this.audioContext.destination);
+
+    oscillator.start(this.audioContext.currentTime + delay);
+    oscillator.stop(this.audioContext.currentTime + delay + duration);
+  }
+
+  private createNoise(duration: number, gainValue: number = 0.1): void {
+    if (!this.audioContext) return;
+
+    const bufferSize = this.audioContext.sampleRate * duration;
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.5;
+    }
+
+    const source = this.audioContext.createBufferSource();
+    const gain = this.audioContext.createGain();
+    const filter = this.audioContext.createBiquadFilter();
+
+    source.buffer = buffer;
+    filter.type = "lowpass";
+    filter.frequency.value = 2000;
+
+    gain.gain.setValueAtTime(gainValue, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.audioContext.destination);
+
+    source.start();
+    source.stop(this.audioContext.currentTime + duration);
+  }
+
+  playBondCreate(): void {
+    this.initContext();
+    // Chemical bonding sound - ascending tone
+    this.createOscillator("sine", 440, 0.15, 0.2);
+    this.createOscillator("sine", 660, 0.12, 0.15, 0.05);
+    this.createOscillator("triangle", 880, 0.1, 0.1, 0.08);
+    // Electron zap
+    this.createNoise(0.05, 0.08);
+  }
+
+  playBondBreak(): void {
+    this.initContext();
+    // Bond dissociation - descending tone
+    this.createOscillator("sawtooth", 600, 0.1, 0.15);
+    this.createOscillator("triangle", 400, 0.12, 0.12, 0.03);
+    this.createNoise(0.08, 0.1);
+  }
+
+  playCorrectBond(): void {
+    this.initContext();
+    // Success chime
+    this.createOscillator("sine", 523, 0.2, 0.2);
+    this.createOscillator("sine", 784, 0.18, 0.15, 0.05);
+    this.createOscillator("triangle", 1047, 0.15, 0.1, 0.08);
+  }
+
+  playClear(): void {
+    this.initContext();
+    // Clear all bonds - dissolving sound
+    for (let i = 0; i < 6; i++) {
+      const freq = 800 - i * 80;
+      this.createOscillator("triangle", freq, 0.08, 0.1, i * 0.03);
+    }
+    this.createNoise(0.2, 0.08);
+  }
+
+  playWin(): void {
+    this.initContext();
+    // Chemistry success - molecular completion melody
+    const notes = [523, 659, 784, 880, 1047, 1175, 1319];
+    notes.forEach((freq, i) => {
+      this.createOscillator("sine", freq, 0.3, 0.18, i * 0.1);
+      this.createOscillator("triangle", freq * 1.5, 0.25, 0.08, i * 0.1 + 0.02);
+    });
+
+    // Bubbling effect
+    for (let i = 0; i < 10; i++) {
+      const freq = 300 + Math.random() * 400;
+      this.createOscillator("sine", freq, 0.1, 0.06, i * 0.06);
+    }
+  }
+
+  playLevelStart(): void {
+    this.initContext();
+    // Lab startup - ascending tones
+    const notes = [392, 494, 587, 698];
+    notes.forEach((freq, i) => {
+      this.createOscillator("sine", freq, 0.15, 0.15, i * 0.1);
+    });
+    this.createNoise(0.08, 0.05);
+  }
+
+  playReset(): void {
+    this.initContext();
+    // Reset - descending tones
+    const notes = [698, 587, 494, 392];
+    notes.forEach((freq, i) => {
+      this.createOscillator("triangle", freq, 0.1, 0.12, i * 0.08);
+    });
+  }
+
+  playAtomHover(): void {
+    this.initContext();
+    // Subtle electron buzz
+    this.createOscillator("sine", 1000, 0.05, 0.08);
+  }
+}
+
+// ============ Main Application ============
 const languageSelect = document.getElementById("language-select") as HTMLSelectElement;
 const levelDisplay = document.getElementById("level-display")!;
 const bondsDisplay = document.getElementById("bonds-display")!;
@@ -18,11 +167,34 @@ const overlayMsg = document.getElementById("overlay-msg")!;
 const startBtn = document.getElementById("start-btn")!;
 const resetBtn = document.getElementById("reset-btn")!;
 const clearBtn = document.getElementById("clear-btn")!;
+const webgpuCanvas = document.getElementById("webgpu-canvas") as HTMLCanvasElement;
 
 let game: MoleculeGame;
+let renderer: WebGPURenderer | null = null;
+const audio = new AudioSystem();
 let dragging = false;
 let dragStart: Atom | null = null;
 let dragEnd: { x: number; y: number } | null = null;
+
+async function initWebGPU(): Promise<void> {
+  if (!webgpuCanvas) return;
+
+  webgpuCanvas.width = window.innerWidth;
+  webgpuCanvas.height = window.innerHeight;
+
+  renderer = new WebGPURenderer(webgpuCanvas);
+  const success = await renderer.init();
+
+  if (success) {
+    window.addEventListener("resize", () => {
+      if (renderer) {
+        renderer.resize(window.innerWidth, window.innerHeight);
+      }
+    });
+  } else {
+    console.log("WebGPU not available, using CSS fallback");
+  }
+}
 
 function initI18n(): void {
   Object.entries(translations).forEach(([locale, trans]) => {
@@ -60,6 +232,8 @@ function initGame(): void {
     updateUI(state);
 
     if (state.status === "won") {
+      audio.playWin();
+      renderer?.emitVictory();
       setTimeout(() => showWinOverlay(), 500);
     }
   };
@@ -96,6 +270,14 @@ function getCanvasCoords(e: MouseEvent | Touch): { x: number; y: number } {
   };
 }
 
+function getScreenCoords(canvasX: number, canvasY: number): { x: number; y: number } {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: rect.left + (canvasX / canvas.width) * rect.width,
+    y: rect.top + (canvasY / canvas.height) * rect.height,
+  };
+}
+
 function findAtomAt(x: number, y: number): Atom | null {
   const state = game.getState();
   for (const atom of state.atoms) {
@@ -118,6 +300,9 @@ function handleMouseDown(e: MouseEvent): void {
     dragging = true;
     dragStart = atom;
     dragEnd = { x, y };
+    audio.playAtomHover();
+    const screen = getScreenCoords(atom.x, atom.y);
+    renderer?.emitElectrons(screen.x, screen.y);
   }
 }
 
@@ -141,7 +326,26 @@ function handleMouseUp(e: MouseEvent): void {
   const endAtom = findAtomAt(x, y);
 
   if (endAtom && endAtom.id !== dragStart.id) {
-    game.addBond(dragStart.id, endAtom.id);
+    const success = game.addBond(dragStart.id, endAtom.id);
+    if (success) {
+      audio.playBondCreate();
+      const screen1 = getScreenCoords(dragStart.x, dragStart.y);
+      const screen2 = getScreenCoords(endAtom.x, endAtom.y);
+      renderer?.emitBondCreate(screen1.x, screen1.y, screen2.x, screen2.y);
+
+      // Check if this is a correct bond
+      const state = game.getState();
+      const bondKey = `${Math.min(dragStart.id, endAtom.id)}-${Math.max(dragStart.id, endAtom.id)}`;
+      const isCorrect = state.targetBonds.some(
+        b => `${b.atom1}-${b.atom2}` === bondKey
+      );
+      if (isCorrect) {
+        const midX = (screen1.x + screen2.x) / 2;
+        const midY = (screen1.y + screen2.y) / 2;
+        audio.playCorrectBond();
+        renderer?.emitCorrectBond(midX, midY);
+      }
+    }
   }
 
   dragging = false;
@@ -162,6 +366,9 @@ function handleTouchStart(e: TouchEvent): void {
     dragging = true;
     dragStart = atom;
     dragEnd = { x, y };
+    audio.playAtomHover();
+    const screen = getScreenCoords(atom.x, atom.y);
+    renderer?.emitElectrons(screen.x, screen.y);
   }
 }
 
@@ -186,7 +393,13 @@ function handleTouchEnd(e: TouchEvent): void {
   const endAtom = findAtomAt(dragEnd.x, dragEnd.y);
 
   if (endAtom && endAtom.id !== dragStart.id) {
-    game.addBond(dragStart.id, endAtom.id);
+    const success = game.addBond(dragStart.id, endAtom.id);
+    if (success) {
+      audio.playBondCreate();
+      const screen1 = getScreenCoords(dragStart.x, dragStart.y);
+      const screen2 = getScreenCoords(endAtom.x, endAtom.y);
+      renderer?.emitBondCreate(screen1.x, screen1.y, screen2.x, screen2.y);
+    }
   }
 
   dragging = false;
@@ -198,7 +411,6 @@ function handleTouchEnd(e: TouchEvent): void {
 function render(state: GameState): void {
   const { width, height } = canvas;
 
-  // Clear
   ctx.fillStyle = "#16213e";
   ctx.fillRect(0, 0, width, height);
 
@@ -317,6 +529,8 @@ function showWinOverlay(): void {
     startBtn.onclick = () => {
       overlay.style.display = "none";
       game.nextLevel();
+      audio.playLevelStart();
+      renderer?.emitLevelStart();
     };
   }
 }
@@ -324,13 +538,27 @@ function showWinOverlay(): void {
 function startGame(level: number = 1): void {
   overlay.style.display = "none";
   game.start(level);
+  audio.playLevelStart();
+  renderer?.emitLevelStart();
 }
 
 // Event listeners
 startBtn.addEventListener("click", () => startGame());
-resetBtn.addEventListener("click", () => game.reset());
-clearBtn.addEventListener("click", () => game.clearBonds());
+
+resetBtn.addEventListener("click", () => {
+  game.reset();
+  audio.playReset();
+  renderer?.emitReset();
+});
+
+clearBtn.addEventListener("click", () => {
+  game.clearBonds();
+  audio.playClear();
+  const rect = canvas.getBoundingClientRect();
+  renderer?.emitClearAll(rect.left + rect.width / 2, rect.top + rect.height / 2);
+});
 
 // Initialize
 initI18n();
 initGame();
+initWebGPU();

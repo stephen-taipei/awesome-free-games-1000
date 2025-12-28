@@ -518,6 +518,13 @@ export class SkeletonPuzzleGame {
             y: pos.y - part.y,
           };
 
+          // Emit bone pickup event
+          if (this.onStateChange) {
+            this.onStateChange({
+              bonePickup: { x: part.x, y: part.y },
+            });
+          }
+
           // Move to top
           this.parts.splice(i, 1);
           this.parts.push(part);
@@ -533,6 +540,14 @@ export class SkeletonPuzzleGame {
       const pos = getPos(e);
       this.draggedPart.x = pos.x - this.dragOffset.x;
       this.draggedPart.y = pos.y - this.dragOffset.y;
+
+      // Emit drag trail event
+      if (this.onStateChange) {
+        this.onStateChange({
+          dragTrail: { x: this.draggedPart.x, y: this.draggedPart.y },
+        });
+      }
+
       this.draw();
     };
 
@@ -551,7 +566,13 @@ export class SkeletonPuzzleGame {
 
         if (this.onStateChange) {
           const placed = this.parts.filter((p) => p.placed).length;
-          this.onStateChange({ pieces: `${placed}/${this.parts.length}` });
+          this.onStateChange({
+            pieces: `${placed}/${this.parts.length}`,
+            bonePlaced: {
+              x: this.draggedPart.targetX,
+              y: this.draggedPart.targetY,
+            },
+          });
         }
 
         this.checkWin();

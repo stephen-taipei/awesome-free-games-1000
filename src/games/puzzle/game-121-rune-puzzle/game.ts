@@ -98,6 +98,13 @@ export class RunePuzzleGame {
     const duration = 200;
     const startTime = Date.now();
 
+    // Emit rune rotate event at start
+    if (this.onStateChange) {
+      this.onStateChange({
+        runeRotate: { x: rune.x, y: rune.y, color: rune.color },
+      });
+    }
+
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
@@ -113,8 +120,23 @@ export class RunePuzzleGame {
         this.animating = false;
         this.moves++;
 
+        const isAligned = rune.currentRotation % 360 === rune.targetRotation % 360;
+        const allAligned = this.runes.every(
+          (r) => r.currentRotation % 360 === r.targetRotation % 360
+        );
+
         if (this.onStateChange) {
           this.onStateChange({ moves: this.moves });
+
+          // Emit rune aligned event
+          if (isAligned) {
+            this.onStateChange({
+              runeAligned: { x: rune.x, y: rune.y },
+            });
+          }
+
+          // Emit all aligned status
+          this.onStateChange({ allAligned });
         }
 
         this.checkWin();

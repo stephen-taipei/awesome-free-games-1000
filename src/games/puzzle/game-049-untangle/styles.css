@@ -1,28 +1,111 @@
+/**
+ * Untangle Styles
+ * Constellation / Star Map Theme
+ * Game #049
+ */
+
+:root {
+  --cosmos-black: #050510;
+  --cosmos-deep: #0a0a1a;
+  --cosmos-purple: #1a1a35;
+  --nebula-purple: #3d2670;
+  --nebula-blue: #2a4a8a;
+  --star-white: #f8f8ff;
+  --star-gold: #ffd700;
+  --star-cyan: #4dd0e1;
+  --crossing-red: #e74c3c;
+  --resolved-green: #00c896;
+  --node-blue: #5090ff;
+  --node-active: #55efc4;
+  --glow-cyan: rgba(77, 208, 225, 0.5);
+  --glow-purple: rgba(61, 38, 112, 0.6);
+}
+
 .game-container {
-  max-width: 600px;
+  max-width: 650px;
+  background: linear-gradient(180deg, var(--cosmos-black) 0%, var(--cosmos-deep) 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Starfield overlay */
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 70%, rgba(255, 255, 255, 0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 20%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 60%, rgba(255, 255, 255, 0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 10% 80%, rgba(255, 255, 255, 0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 10%, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+  pointer-events: none;
+  animation: twinkle 4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Nebula corner decoration */
+.game-container::after {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, var(--nebula-purple) 0%, transparent 70%);
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(135deg, #2d3436 0%, #000000 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+  background:
+    radial-gradient(ellipse at 30% 30%, var(--cosmos-purple) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 70%, var(--nebula-blue) 0%, transparent 50%),
+    linear-gradient(180deg, var(--cosmos-deep) 0%, var(--cosmos-black) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(77, 208, 225, 0.2);
+  box-shadow:
+    0 0 40px var(--glow-purple),
+    inset 0 0 60px rgba(0, 0, 0, 0.5);
+  margin-bottom: 1.5rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
 }
 
-canvas {
+#bg-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 12px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   cursor: grab;
 }
 
-canvas:active {
+#game-canvas:active {
   cursor: grabbing;
 }
 
@@ -30,18 +113,61 @@ canvas:active {
   display: flex;
   justify-content: center;
   gap: 2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(0, 184, 148, 0.4);
+  background: linear-gradient(135deg, var(--cosmos-purple) 0%, var(--nebula-blue) 100%);
+  backdrop-filter: blur(10px);
+  color: var(--star-white);
+  padding: 0.75rem 1.75rem;
+  border-radius: 25px;
+  font-weight: 600;
+  border: 1px solid rgba(77, 208, 225, 0.3);
+  box-shadow:
+    0 4px 20px rgba(42, 74, 138, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Star sparkle effect */
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 50px;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: starSparkle 4s ease-in-out infinite;
+}
+
+@keyframes starSparkle {
+  0%, 100% { left: -100%; }
+  50% { left: 200%; }
+}
+
+.stats-card .label {
+  color: rgba(248, 248, 255, 0.7);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stats-card .value {
+  color: var(--star-cyan);
+  font-size: 1.1rem;
+  text-shadow: 0 0 10px var(--glow-cyan);
 }
 
 .footer-controls {
@@ -50,6 +176,183 @@ canvas:active {
   gap: 1rem;
 }
 
+.footer-controls button {
+  background: linear-gradient(135deg, var(--cosmos-purple) 0%, var(--nebula-purple) 100%);
+  color: var(--star-white);
+  border: 1px solid rgba(77, 208, 225, 0.3);
+  padding: 0.75rem 2rem;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(61, 38, 112, 0.3);
+}
+
+.footer-controls button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.footer-controls button:hover {
+  transform: translateY(-2px);
+  border-color: var(--star-cyan);
+  box-shadow:
+    0 6px 25px rgba(61, 38, 112, 0.5),
+    0 0 20px var(--glow-cyan);
+}
+
+.footer-controls button:hover::before {
+  left: 100%;
+}
+
+.footer-controls button:active {
+  transform: translateY(0);
+}
+
+.controls-hint {
+  text-align: center;
+  margin-top: 1rem;
+}
+
 .controls-hint small {
-  color: #a0aec0;
+  color: rgba(77, 208, 225, 0.7);
+  font-size: 0.85rem;
+  letter-spacing: 0.3px;
+}
+
+/* Game overlay - cosmic navigation style */
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse at center, rgba(26, 26, 53, 0.95) 0%, rgba(5, 5, 16, 0.98) 100%);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 12px;
+}
+
+.game-overlay h2 {
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, var(--star-cyan), var(--star-gold), var(--star-white));
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+  animation: constellationGlow 4s ease-in-out infinite;
+}
+
+@keyframes constellationGlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.game-overlay p {
+  color: rgba(248, 248, 255, 0.8);
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.game-overlay button {
+  background: linear-gradient(135deg, var(--nebula-blue) 0%, var(--nebula-purple) 100%);
+  color: var(--star-white);
+  border: 2px solid var(--star-cyan);
+  padding: 1rem 3rem;
+  border-radius: 30px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  box-shadow:
+    0 0 30px var(--glow-cyan),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+
+.game-overlay button:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, var(--star-cyan) 0%, var(--nebula-blue) 100%);
+  box-shadow:
+    0 0 50px var(--glow-cyan),
+    0 0 30px var(--star-gold);
+}
+
+/* Constellation line decorations */
+.game-overlay::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 60px;
+  height: 60px;
+  border-left: 2px solid rgba(77, 208, 225, 0.3);
+  border-top: 2px solid rgba(77, 208, 225, 0.3);
+}
+
+.game-overlay::after {
+  content: '';
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-right: 2px solid rgba(77, 208, 225, 0.3);
+  border-bottom: 2px solid rgba(77, 208, 225, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .game-container {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .game-area {
+    height: 380px;
+  }
+
+  .game-controls {
+    gap: 1rem;
+  }
+
+  .stats-card {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .footer-controls button {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .game-overlay h2 {
+    font-size: 1.8rem;
+  }
+
+  .game-overlay::before,
+  .game-overlay::after {
+    width: 40px;
+    height: 40px;
+  }
 }

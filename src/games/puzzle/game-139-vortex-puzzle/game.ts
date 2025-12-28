@@ -127,6 +127,13 @@ export class VortexPuzzleGame {
   private centerY: number = 0;
   private maxRadius: number = 0;
 
+  private pendingEvents: {
+    ringRotate?: { x: number; y: number; ringIndex: number };
+    orbMove?: { x: number; y: number; color: [number, number, number, number] };
+    gapActivate?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -163,13 +170,7 @@ export class VortexPuzzleGame {
   private loadLevel(levelIndex: number) {
     if (levelIndex >= LEVELS.length) {
       this.status = "complete";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "complete",
-          level: levelIndex + 1,
-          moves: this.moves,
-        });
-      }
+      this.notifyState();
       return;
     }
 
@@ -181,14 +182,7 @@ export class VortexPuzzleGame {
     this.animating = false;
 
     this.render();
-
-    if (this.onStateChange) {
-      this.onStateChange({
-        status: "playing",
-        level: levelIndex + 1,
-        moves: 0,
-      });
-    }
+    this.notifyState();
   }
 
   public handleClick(x: number, y: number, isRightClick: boolean = false) {
@@ -219,6 +213,16 @@ export class VortexPuzzleGame {
     this.animating = true;
     this.moves++;
 
+    // Emit ring rotate event
+    const ringWidth = this.maxRadius / (this.rings.length + 1);
+    const midR = ringWidth * (ringIndex + 1);
+    const angle = direction > 0 ? 0 : Math.PI;
+    this.pendingEvents.ringRotate = {
+      x: 0.5 + Math.cos(angle) * (midR / this.maxRadius) * 0.4,
+      y: 0.5 + Math.sin(angle) * (midR / this.maxRadius) * 0.4,
+      ringIndex,
+    };
+
     const animate = () => {
       const diff = targetRotation - ring.rotation;
       if (Math.abs(diff) < 1) {
@@ -227,14 +231,7 @@ export class VortexPuzzleGame {
         this.checkOrbMovement();
         this.render();
         this.checkWin();
-
-        if (this.onStateChange) {
-          this.onStateChange({
-            status: this.status,
-            level: this.currentLevel + 1,
-            moves: this.moves,
-          });
-        }
+        this.notifyState();
       } else {
         ring.rotation += diff * 0.2;
         this.render();
@@ -273,6 +270,22 @@ export class VortexPuzzleGame {
             );
 
             if (!occupied) {
+              // Emit orb move event
+              const ringWidth = this.maxRadius / (this.rings.length + 1);
+              const midR = ringWidth * (orb.ring - 0.5);
+              const angle = (innerSlot / innerRing.slots) * Math.PI * 2;
+              this.pendingEvents.orbMove = {
+                x: 0.5 + Math.cos(angle) * (midR / this.maxRadius) * 0.4,
+                y: 0.5 + Math.sin(angle) * (midR / this.maxRadius) * 0.4,
+                color: this.hexToRgba(orb.color),
+              };
+
+              // Emit gap activate
+              this.pendingEvents.gapActivate = {
+                x: 0.5 + Math.cos(angle) * (midR / this.maxRadius) * 0.4,
+                y: 0.5 + Math.sin(angle) * (midR / this.maxRadius) * 0.4,
+              };
+
               orb.ring--;
               orb.slot = innerSlot;
               moved = true;
@@ -299,13 +312,6 @@ export class VortexPuzzleGame {
 
     if (allAtTarget) {
       this.status = "won";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "won",
-          level: this.currentLevel + 1,
-          moves: this.moves,
-        });
-      }
     }
   }
 
@@ -435,6 +441,7 @@ export class VortexPuzzleGame {
   }
 
   public reset() {
+    this.pendingEvents.reset = true;
     this.loadLevel(this.currentLevel);
   }
 
@@ -445,6 +452,25 @@ export class VortexPuzzleGame {
 
   public setOnStateChange(cb: (state: any) => void) {
     this.onStateChange = cb;
+  }
+
+  private notifyState() {
+    if (this.onStateChange) {
+      this.onStateChange({
+        status: this.status,
+        level: this.currentLevel + 1,
+        moves: this.moves,
+        ...this.pendingEvents,
+      });
+    }
+    this.pendingEvents = {};
+  }
+
+  private hexToRgba(hex: string): [number, number, number, number] {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    return [r, g, b, 1.0];
   }
 
   public getTotalLevels(): number {

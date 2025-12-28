@@ -74,10 +74,26 @@ export class DNAMatchGame {
   private helixAngle = 0;
   private animating = false;
 
+  // Event state for WebGPU
+  private pendingEvents: {
+    baseSelect?: { x: number; y: number; base: string };
+    pairMatch?: { x: number; y: number; base1: string; base2: string };
+    wrongMatch?: { x: number; y: number };
+    helixForm?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
   onStateChange: ((state: any) => void) | null = null;
 
   private animationId: number | null = null;
+
+  private getNormalizedPos(x: number, y: number): { x: number; y: number } {
+    return {
+      x: x / this.canvas.width,
+      y: y / this.canvas.height
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -160,6 +176,16 @@ export class DNAMatchGame {
 
         if (dist < this.baseRadius && !this.leftBases[i].paired) {
           this.selectedBase = { strand: 'left', index: i };
+
+          // Emit base select event
+          const pos = this.getNormalizedPos(this.strandX.left, baseY);
+          this.pendingEvents.baseSelect = {
+            x: pos.x,
+            y: pos.y,
+            base: this.leftBases[i].type
+          };
+          this.notifyState();
+
           return;
         }
       }
@@ -174,6 +200,16 @@ export class DNAMatchGame {
 
         if (dist < this.baseRadius && !this.rightBases[i].paired) {
           this.selectedBase = { strand: 'right', index: i };
+
+          // Emit base select event
+          const pos = this.getNormalizedPos(this.strandX.right, baseY);
+          this.pendingEvents.baseSelect = {
+            x: pos.x,
+            y: pos.y,
+            base: this.rightBases[i].type
+          };
+          this.notifyState();
+
           return;
         }
       }
@@ -210,6 +246,13 @@ export class DNAMatchGame {
     const leftBase = this.leftBases[leftSel.index];
     const rightBase = this.rightBases[rightSel.index];
 
+    // Calculate center position for events
+    const leftY = this.strandStartY + leftSel.index * this.baseSpacing;
+    const rightY = this.strandStartY + rightSel.index * this.baseSpacing;
+    const centerX = (this.strandX.left + this.strandX.right) / 2;
+    const centerY = (leftY + rightY) / 2;
+    const pos = this.getNormalizedPos(centerX, centerY);
+
     // Check if correct pair
     if (BASE_PAIRS[leftBase.type] === rightBase.type) {
       leftBase.paired = true;
@@ -221,12 +264,30 @@ export class DNAMatchGame {
       });
 
       this.pairsMatched++;
+
+      // Emit pair match event
+      this.pendingEvents.pairMatch = {
+        x: pos.x,
+        y: pos.y,
+        base1: leftBase.type,
+        base2: rightBase.type
+      };
+
+      // Emit helix form event when half pairs are matched
+      if (this.pairsMatched === Math.ceil(this.totalPairs / 2)) {
+        this.pendingEvents.helixForm = { x: 0.5, y: 0.5 };
+      }
+
       this.notifyState();
 
       if (this.pairsMatched >= this.totalPairs) {
         this.status = 'won';
         this.notifyState();
       }
+    } else {
+      // Wrong match
+      this.pendingEvents.wrongMatch = { x: pos.x, y: pos.y };
+      this.notifyState();
     }
   }
 
@@ -389,6 +450,8 @@ export class DNAMatchGame {
     }
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
+    this.pendingEvents.reset = true;
+    this.notifyState();
     this.loop();
   }
 
@@ -413,8 +476,10 @@ export class DNAMatchGame {
         level: this.currentLevel + 1,
         totalLevels: LEVELS.length,
         pairsMatched: this.pairsMatched,
-        totalPairs: this.totalPairs
+        totalPairs: this.totalPairs,
+        ...this.pendingEvents
       });
+      this.pendingEvents = {};
     }
   }
 

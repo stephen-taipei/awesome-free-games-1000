@@ -125,8 +125,23 @@ export class StampPuzzleGame {
   private currentLevel = 0;
   private selectedStamp: Stamp | null = null;
 
+  // Event state for WebGPU
+  private pendingEvents: {
+    stampSelect?: { x: number; y: number; color: string };
+    stampPlace?: { x: number; y: number; color: string };
+    wrongPlace?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
   onStateChange: ((state: any) => void) | null = null;
+
+  private getNormalizedPos(x: number, y: number): { x: number; y: number } {
+    return {
+      x: x / this.canvas.width,
+      y: y / this.canvas.height
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -193,6 +208,16 @@ export class StampPuzzleGame {
       const stampClicked = this.getStampAtPosition(x, y);
       if (stampClicked !== null && !this.stamps[stampClicked].used) {
         this.selectedStamp = this.stamps[stampClicked];
+
+        // Emit stamp select event
+        const pos = this.getNormalizedPos(x, y);
+        this.pendingEvents.stampSelect = {
+          x: pos.x,
+          y: pos.y,
+          color: this.selectedStamp.color
+        };
+        this.notifyState();
+
         this.draw();
         return;
       }
@@ -251,6 +276,18 @@ export class StampPuzzleGame {
     if (startRow + patternRows > this.gridSize || startCol + patternCols > this.gridSize) {
       return;
     }
+
+    // Calculate stamp center position for particle effect
+    const stampCenterX = this.gridOffsetX + (startCol + patternCols / 2) * this.cellSize;
+    const stampCenterY = this.gridOffsetY + (startRow + patternRows / 2) * this.cellSize;
+    const pos = this.getNormalizedPos(stampCenterX, stampCenterY);
+
+    // Emit stamp place event
+    this.pendingEvents.stampPlace = {
+      x: pos.x,
+      y: pos.y,
+      color: this.selectedStamp.color
+    };
 
     // Apply stamp (toggle pattern)
     for (let r = 0; r < patternRows; r++) {
@@ -435,6 +472,8 @@ export class StampPuzzleGame {
   reset() {
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
+    this.pendingEvents.reset = true;
+    this.notifyState();
     this.draw();
   }
 
@@ -457,8 +496,10 @@ export class StampPuzzleGame {
         level: this.currentLevel + 1,
         totalLevels: LEVELS.length,
         stampsUsed: usedStamps,
-        totalStamps: this.stamps.length
+        totalStamps: this.stamps.length,
+        ...this.pendingEvents
       });
+      this.pendingEvents = {};
     }
   }
 

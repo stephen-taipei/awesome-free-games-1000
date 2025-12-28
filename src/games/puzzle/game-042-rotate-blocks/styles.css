@@ -1,25 +1,156 @@
+/**
+ * Rotate Blocks - Mechanical Workshop / Steampunk Factory Theme
+ * Game #042
+ */
+
+/* Theme Colors */
+:root {
+  --steel-dark: #1a1a2e;
+  --steel-medium: #16213e;
+  --brass-gold: #d4a846;
+  --brass-dark: #8b6914;
+  --copper-orange: #b87333;
+  --copper-dark: #6e4420;
+  --metal-gray: #4a4a52;
+  --metal-light: #7a7a82;
+  --rivet-bronze: #9a7b4f;
+  --steam-white: rgba(220, 220, 210, 0.5);
+  --spark-yellow: #ffd93d;
+}
+
 .game-container {
   max-width: 500px;
+  background: linear-gradient(
+    135deg,
+    var(--steel-dark) 0%,
+    var(--steel-medium) 50%,
+    #0f1a2e 100%
+  );
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(212, 168, 70, 0.2),
+    0 0 0 3px var(--brass-dark);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Metal plate texture overlay */
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      rgba(255, 255, 255, 0.02) 1px,
+      transparent 2px,
+      transparent 10px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      rgba(255, 255, 255, 0.02) 1px,
+      transparent 2px,
+      transparent 10px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Corner gear decorations */
+.game-container::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--brass-dark);
+  border-radius: 50%;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+  animation: gearRotate 10s linear infinite;
+}
+
+@keyframes gearRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(
+    180deg,
+    var(--steel-dark) 0%,
+    var(--steel-medium) 100%
+  );
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 -2px 0 rgba(212, 168, 70, 0.1),
+    0 0 0 2px var(--metal-gray);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  z-index: 1;
+}
+
+/* Industrial rivets on game area edges */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border: 1px solid rgba(212, 168, 70, 0.2);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Steam effect at top */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 20%;
+  background: radial-gradient(
+    ellipse at center top,
+    rgba(220, 220, 210, 0.1) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+  animation: steamPuff 4s ease-in-out infinite;
+}
+
+@keyframes steamPuff {
+  0%, 100% { opacity: 0.3; transform: translateX(-50%) scaleY(1); }
+  50% { opacity: 0.6; transform: translateX(-50%) scaleY(1.2); }
 }
 
 canvas {
   width: 100%;
   height: 100%;
   cursor: grab;
+  position: relative;
+  z-index: 2;
 }
 
 canvas:active {
@@ -31,30 +162,223 @@ canvas:active {
   justify-content: center;
   gap: 1rem;
   margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(155, 89, 182, 0.4) 0%,
+    rgba(142, 68, 173, 0.5) 100%
+  );
   color: white;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+  box-shadow:
+    0 2px 8px rgba(155, 89, 182, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(212, 168, 70, 0.3);
   display: flex;
   gap: 0.5rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 12px rgba(212, 168, 70, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 1px rgba(212, 168, 70, 0.5);
 }
 
 .stats-card span:first-child {
   opacity: 0.8;
+  color: var(--brass-gold);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.footer-controls button {
+  background: linear-gradient(
+    135deg,
+    var(--brass-gold) 0%,
+    var(--brass-dark) 100%
+  );
+  color: var(--steel-dark);
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 0 1px var(--brass-dark);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer-controls button:hover {
+  background: linear-gradient(
+    135deg,
+    var(--copper-orange) 0%,
+    var(--copper-dark) 100%
+  );
+  box-shadow:
+    0 4px 16px rgba(184, 115, 51, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 0 1px var(--copper-orange);
+  transform: translateY(-2px);
+}
+
+.footer-controls button:active {
+  transform: translateY(0);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 2px 4px rgba(0, 0, 0, 0.2),
+    0 0 0 1px var(--brass-dark);
 }
 
 .controls-hint {
   margin-top: 1rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--metal-light);
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* Spark animation for interactions */
+@keyframes sparkFlash {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Victory glow effect */
+.game-container.victory {
+  animation: victoryBrass 0.6s ease-out;
+}
+
+@keyframes victoryBrass {
+  0% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(212, 168, 70, 0.2),
+      0 0 0 3px var(--brass-dark);
+  }
+  50% {
+    box-shadow:
+      0 8px 50px rgba(212, 168, 70, 0.5),
+      inset 0 1px 0 rgba(212, 168, 70, 0.4),
+      0 0 30px rgba(212, 168, 70, 0.3),
+      0 0 0 3px var(--brass-gold);
+  }
+  100% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(212, 168, 70, 0.2),
+      0 0 0 3px var(--brass-dark);
+  }
+}
+
+/* Industrial gauge decorations */
+.game-controls::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle, var(--brass-gold) 40%, var(--brass-dark) 60%);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(212, 168, 70, 0.5);
+}
+
+.game-controls::after {
+  content: '';
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle, var(--brass-gold) 40%, var(--brass-dark) 60%);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(212, 168, 70, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .game-container {
+    padding: 1rem;
+    border-radius: 8px;
+  }
+
+  .game-area {
+    height: 400px;
+  }
+
+  .game-controls {
+    flex-wrap: wrap;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .footer-controls {
+    flex-wrap: wrap;
+  }
+
+  .footer-controls button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .game-controls::before,
+  .game-controls::after {
+    display: none;
+  }
+}
+
+/* Steam wisp animation */
+@keyframes steamWisp {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-50px) translateX(20px);
+    opacity: 0;
+  }
+}
+
+/* Text selection */
+::selection {
+  background: rgba(212, 168, 70, 0.3);
+  color: white;
 }

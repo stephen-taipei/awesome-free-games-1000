@@ -33,6 +33,7 @@ export class SolarSystemGame {
   private animationId: number | null = null;
 
   private stars: { x: number; y: number; size: number; brightness: number }[] = [];
+  private previousAlignedPlanets: Set<string> = new Set();
 
   private levels: LevelConfig[] = [
     // Level 1 - Two planets
@@ -274,6 +275,15 @@ export class SolarSystemGame {
         if (dist < planet.size + 10) {
           // Advance planet by 45 degrees (π/4)
           planet.angle = (planet.angle + Math.PI / 4) % (Math.PI * 2);
+
+          // Emit planet click event
+          if (this.onStateChange) {
+            const color = this.hexToRgbArray(planet.color);
+            this.onStateChange({
+              planetClick: { x: px, y: py, color },
+            });
+          }
+
           this.checkWin();
           this.draw();
           break;
@@ -282,21 +292,53 @@ export class SolarSystemGame {
     });
   }
 
+  private hexToRgbArray(hex: string): [number, number, number] {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (result) {
+      return [
+        parseInt(result[1], 16) / 255,
+        parseInt(result[2], 16) / 255,
+        parseInt(result[3], 16) / 255,
+      ];
+    }
+    return [1, 1, 1];
+  }
+
   private checkWin() {
     const tolerance = 0.2; // ~11 degrees tolerance
     let alignedCount = 0;
+    const currentlyAligned: Set<string> = new Set();
 
     for (const planet of this.planets) {
       const diff = Math.abs(this.normalizeAngle(planet.angle - planet.targetAngle));
-      if (diff < tolerance || diff > Math.PI * 2 - tolerance) {
+      const isAligned = diff < tolerance || diff > Math.PI * 2 - tolerance;
+
+      if (isAligned) {
         alignedCount++;
+        currentlyAligned.add(planet.name);
+
+        // Check if this planet just became aligned
+        if (!this.previousAlignedPlanets.has(planet.name)) {
+          const px = this.centerX + Math.cos(planet.angle) * planet.orbitRadius;
+          const py = this.centerY + Math.sin(planet.angle) * planet.orbitRadius;
+
+          if (this.onStateChange) {
+            this.onStateChange({
+              alignment: { x: px, y: py },
+            });
+          }
+        }
       }
     }
+
+    // Update previous aligned planets
+    this.previousAlignedPlanets = currentlyAligned;
 
     if (this.onStateChange) {
       this.onStateChange({
         aligned: alignedCount,
         total: this.planets.length,
+        sunPosition: { x: this.centerX, y: this.centerY },
       });
     }
 
@@ -574,6 +616,13 @@ export class SolarSystemGame {
   public reset() {
     this.loadLevel(this.currentLevel);
     this.status = "playing";
+    this.previousAlignedPlanets.clear();
+
+    // Emit reset event
+    if (this.onStateChange) {
+      this.onStateChange({ reset: true });
+    }
+
     this.draw();
   }
 

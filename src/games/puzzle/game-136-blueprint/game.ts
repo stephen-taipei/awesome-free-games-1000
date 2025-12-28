@@ -174,6 +174,29 @@ export class BlueprintGame {
   status: "playing" | "won" | "complete" = "playing";
   onStateChange: ((state: any) => void) | null = null;
 
+  // Event state for WebGPU
+  private pendingEvents: {
+    blockSelect?: { x: number; y: number; color: string };
+    blockPlace?: { x: number; y: number; color: string };
+    blockRemove?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
+  private getNormalizedPos(gridX: number, gridY: number): { x: number; y: number } {
+    const level = LEVELS[this.currentLevel];
+    const gridWidth = level.width * this.cellSize;
+    const startX = (this.width - gridWidth) / 2;
+    const startY = 60;
+
+    const canvasX = startX + gridX * this.cellSize + this.cellSize / 2;
+    const canvasY = startY + gridY * this.cellSize + this.cellSize / 2;
+
+    return {
+      x: canvasX / this.width,
+      y: canvasY / this.height,
+    };
+  }
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -216,13 +239,7 @@ export class BlueprintGame {
   private loadLevel(levelIndex: number) {
     if (levelIndex >= LEVELS.length) {
       this.status = "complete";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "complete",
-          level: levelIndex + 1,
-          score: this.score,
-        });
-      }
+      this.notifyState();
       return;
     }
 
@@ -246,16 +263,7 @@ export class BlueprintGame {
 
     this.calculateCellSize();
     this.render();
-
-    if (this.onStateChange) {
-      this.onStateChange({
-        status: "playing",
-        level: levelIndex + 1,
-        score: this.score,
-        blocks: this.getBlocksState(),
-        selectedBlock: this.selectedBlock,
-      });
-    }
+    this.notifyState();
   }
 
   private getBlocksState() {
@@ -268,6 +276,27 @@ export class BlueprintGame {
       });
     });
     return blocks;
+  }
+
+  private getMatchedRatio(): number {
+    const level = LEVELS[this.currentLevel];
+    if (!level) return 0;
+
+    let totalBlocks = 0;
+    let matchedBlocks = 0;
+
+    for (let y = 0; y < level.height; y++) {
+      for (let x = 0; x < level.width; x++) {
+        if (level.blueprint[y][x] !== 0) {
+          totalBlocks++;
+          if (this.buildGrid[y][x] === level.blueprint[y][x]) {
+            matchedBlocks++;
+          }
+        }
+      }
+    }
+
+    return totalBlocks > 0 ? matchedBlocks / totalBlocks : 0;
   }
 
   public handleClick(x: number, y: number) {
@@ -289,6 +318,7 @@ export class BlueprintGame {
 
   private toggleCell(x: number, y: number) {
     const currentBlock = this.buildGrid[y][x];
+    const pos = this.getNormalizedPos(x, y);
 
     if (currentBlock === 0) {
       // Place selected block if available
@@ -296,42 +326,42 @@ export class BlueprintGame {
       if (count > 0) {
         this.buildGrid[y][x] = this.selectedBlock;
         this.blockCounts.set(this.selectedBlock, count - 1);
+
+        // Emit block place event
+        this.pendingEvents.blockPlace = {
+          x: pos.x,
+          y: pos.y,
+          color: BLOCK_COLORS[this.selectedBlock].fill,
+        };
       }
     } else {
       // Remove block and return to inventory
       const count = this.blockCounts.get(currentBlock) || 0;
       this.blockCounts.set(currentBlock, count + 1);
       this.buildGrid[y][x] = 0;
+
+      // Emit block remove event
+      this.pendingEvents.blockRemove = { x: pos.x, y: pos.y };
     }
 
     this.render();
     this.checkWin();
-
-    if (this.onStateChange) {
-      this.onStateChange({
-        status: this.status,
-        level: this.currentLevel + 1,
-        score: this.score,
-        blocks: this.getBlocksState(),
-        selectedBlock: this.selectedBlock,
-      });
-    }
+    this.notifyState();
   }
 
   public selectBlock(type: BlockType) {
     if (this.blockCounts.has(type)) {
       this.selectedBlock = type;
-      this.render();
 
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: this.status,
-          level: this.currentLevel + 1,
-          score: this.score,
-          blocks: this.getBlocksState(),
-          selectedBlock: this.selectedBlock,
-        });
-      }
+      // Emit block select event (at center)
+      this.pendingEvents.blockSelect = {
+        x: 0.5,
+        y: 0.85,
+        color: BLOCK_COLORS[type].fill,
+      };
+
+      this.render();
+      this.notifyState();
     }
   }
 
@@ -352,14 +382,6 @@ export class BlueprintGame {
     if (match) {
       this.status = "won";
       this.score += 100 + this.currentLevel * 20;
-
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "won",
-          level: this.currentLevel + 1,
-          score: this.score,
-        });
-      }
     }
   }
 
@@ -520,6 +542,7 @@ export class BlueprintGame {
   }
 
   public reset() {
+    this.pendingEvents.reset = true;
     this.loadLevel(this.currentLevel);
   }
 
@@ -527,6 +550,21 @@ export class BlueprintGame {
     this.currentLevel = 0;
     this.score = 0;
     this.loadLevel(0);
+  }
+
+  private notifyState() {
+    if (this.onStateChange) {
+      this.onStateChange({
+        status: this.status,
+        level: this.currentLevel + 1,
+        score: this.score,
+        blocks: this.getBlocksState(),
+        selectedBlock: this.selectedBlock,
+        matchedRatio: this.getMatchedRatio(),
+        ...this.pendingEvents,
+      });
+      this.pendingEvents = {};
+    }
   }
 
   public setOnStateChange(cb: (state: any) => void) {

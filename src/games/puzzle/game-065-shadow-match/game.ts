@@ -137,6 +137,10 @@ export class ShadowMatchGame {
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", String(id));
     }
+
+    // Emit drag start event
+    const rect = target.getBoundingClientRect();
+    this.notifyChange({ event: 'dragStart', x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
   }
 
   private handleDragEnd(e: DragEvent) {
@@ -149,6 +153,10 @@ export class ShadowMatchGame {
     e.preventDefault();
     const target = e.currentTarget as HTMLElement;
     target.classList.add("highlight");
+
+    // Emit highlight event
+    const rect = target.getBoundingClientRect();
+    this.notifyChange({ event: 'highlight', x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
   }
 
   private handleDragLeave(e: DragEvent) {
@@ -219,6 +227,12 @@ export class ShadowMatchGame {
   private checkMatch(draggedId: number, targetId: number) {
     if (this.status !== "playing") return;
 
+    // Get target slot position for effects
+    const slot = this.shadowZone.querySelector(`[data-id="${targetId}"]`) as HTMLElement;
+    const slotRect = slot?.getBoundingClientRect();
+    const effectX = slotRect ? slotRect.left + slotRect.width / 2 : 0;
+    const effectY = slotRect ? slotRect.top + slotRect.height / 2 : 0;
+
     if (draggedId === targetId) {
       // Correct match!
       const shape = this.shapes.find((s) => s.id === draggedId);
@@ -230,7 +244,6 @@ export class ShadowMatchGame {
         this.score += 10;
 
         // Animation
-        const slot = this.shadowZone.querySelector(`[data-id="${targetId}"]`);
         if (slot) {
           slot.classList.add("match-animation");
           setTimeout(() => slot.classList.remove("match-animation"), 500);
@@ -238,8 +251,11 @@ export class ShadowMatchGame {
 
         this.render();
         this.checkWin();
-        this.notifyChange();
+        this.notifyChange({ event: 'match', x: effectX, y: effectY });
       }
+    } else {
+      // Wrong drop
+      this.notifyChange({ event: 'wrongDrop', x: effectX, y: effectY });
     }
   }
 
@@ -257,7 +273,13 @@ export class ShadowMatchGame {
     this.stopTimer();
     this.timerInterval = window.setInterval(() => {
       this.timeLeft--;
-      this.notifyChange();
+
+      // Timer warning at 10 seconds
+      if (this.timeLeft === 10) {
+        this.notifyChange({ event: 'timerWarning' });
+      } else {
+        this.notifyChange();
+      }
 
       if (this.timeLeft <= 0) {
         this.status = "failed";
@@ -288,13 +310,14 @@ export class ShadowMatchGame {
     this.onStateChange = cb;
   }
 
-  private notifyChange() {
+  private notifyChange(extra?: { event?: string; x?: number; y?: number }) {
     if (this.onStateChange) {
       this.onStateChange({
         level: this.level,
         score: this.score,
         time: this.timeLeft,
         status: this.status,
+        ...extra,
       });
     }
   }
