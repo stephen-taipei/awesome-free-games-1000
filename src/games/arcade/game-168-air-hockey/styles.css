@@ -1,22 +1,68 @@
+/**
+ * Air Hockey Styles
+ * Game #168 - Arcade / Air Hockey / Blue and Red Neon Theme
+ */
+
 .game-container {
   max-width: 600px;
+  background: linear-gradient(180deg, #0a1628 0%, #0d1f33 50%, #0a1628 100%);
+}
+
+.game-header h1 {
+  background: linear-gradient(135deg, #00d4ff 0%, #00ffcc 50%, #ff00aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+  animation: neonPulse 2s ease-in-out infinite;
+}
+
+@keyframes neonPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(180deg, #1e3a5f 0%, #0d1f33 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg,
+    #0d1f33 0%,
+    #1a3a5c 20%,
+    #0f2847 50%,
+    #1a3a5c 80%,
+    #0d1f33 100%
+  );
+  border-radius: 12px;
+  box-shadow:
+    0 0 20px rgba(0, 212, 255, 0.3),
+    0 0 40px rgba(0, 212, 255, 0.2),
+    inset 0 0 30px rgba(0, 0, 0, 0.5);
   margin-bottom: 1rem;
   box-sizing: border-box;
-  display: flex;
-  justify-content: center;
   overflow: hidden;
+  border: 2px solid rgba(0, 212, 255, 0.4);
 }
 
-canvas {
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   cursor: none;
@@ -30,23 +76,198 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
+  background: linear-gradient(135deg,
+    rgba(0, 212, 255, 0.2) 0%,
+    rgba(0, 180, 230, 0.3) 100%
+  );
+  color: #00d4ff;
+  padding: 0.6rem 1.5rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
+  box-shadow:
+    0 0 15px rgba(0, 212, 255, 0.3),
+    inset 0 0 10px rgba(0, 212, 255, 0.1);
   display: flex;
   gap: 0.5rem;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+  animation: playerGlow 2s ease-in-out infinite;
+}
+
+@keyframes playerGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(0, 212, 255, 0.3), inset 0 0 10px rgba(0, 212, 255, 0.1); }
+  50% { box-shadow: 0 0 25px rgba(0, 212, 255, 0.5), inset 0 0 15px rgba(0, 212, 255, 0.2); }
 }
 
 .stats-card.cpu {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
+  background: linear-gradient(135deg,
+    rgba(255, 51, 102, 0.2) 0%,
+    rgba(231, 76, 60, 0.3) 100%
+  );
+  color: #ff3366;
+  box-shadow:
+    0 0 15px rgba(255, 51, 102, 0.3),
+    inset 0 0 10px rgba(255, 51, 102, 0.1);
+  border: 1px solid rgba(255, 51, 102, 0.4);
+  text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+  animation: cpuGlow 2s ease-in-out infinite;
+}
+
+@keyframes cpuGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(255, 51, 102, 0.3), inset 0 0 10px rgba(255, 51, 102, 0.1); }
+  50% { box-shadow: 0 0 25px rgba(255, 51, 102, 0.5), inset 0 0 15px rgba(255, 51, 102, 0.2); }
+}
+
+.stats-card span:last-child {
+  font-size: 1.3rem;
+  min-width: 1.5rem;
+  text-align: center;
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, #33ddff 0%, #00b3e6 100%);
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, #ff3366 0%, #cc2952 100%);
+  box-shadow: 0 0 15px rgba(255, 51, 102, 0.3);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn.warning:hover {
+  background: linear-gradient(135deg, #ff4d7a 0%, #e6335c 100%);
+  box-shadow: 0 0 25px rgba(255, 51, 102, 0.5);
+  transform: translateY(-2px);
+}
+
+.overlay {
+  background: radial-gradient(ellipse at center,
+    rgba(10, 22, 40, 0.95) 0%,
+    rgba(5, 15, 30, 0.98) 100%
+  );
+  backdrop-filter: blur(8px);
+}
+
+.overlay-content {
+  text-align: center;
+  animation: overlaySlideIn 0.4s ease-out;
+}
+
+@keyframes overlaySlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.overlay-title {
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, #00d4ff 0%, #00ffcc 50%, #ff00aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  margin-bottom: 1rem;
+  animation: titleGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes titleGlow {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5)); }
+  50% { filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.8)); }
+}
+
+.overlay-msg {
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: rgba(0, 212, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.controls-hint small {
+  color: rgba(0, 212, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+/* Arcade scanline effect */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Corner neon accents */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(0, 212, 255, 0.2) 0%, transparent 20%),
+    radial-gradient(circle at 100% 0%, rgba(255, 51, 102, 0.2) 0%, transparent 20%),
+    radial-gradient(circle at 0% 100%, rgba(0, 212, 255, 0.2) 0%, transparent 20%),
+    radial-gradient(circle at 100% 100%, rgba(255, 51, 102, 0.2) 0%, transparent 20%);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Language select arcade style */
+#language-select {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: #00d4ff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#language-select:hover {
+  background: rgba(0, 212, 255, 0.2);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+#language-select option {
+  background: #0a1628;
+  color: #00d4ff;
 }

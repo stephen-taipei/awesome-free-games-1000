@@ -2,6 +2,7 @@
  * Battle City Game
  * Game #158 - Canvas Tank
  * Classic tank battle: defend your base and destroy enemy tanks
+ * Military / Tank Warfare / Olive Green Theme
  */
 
 interface Tank {
@@ -28,6 +29,17 @@ interface Bullet {
 interface Tile {
   type: 'empty' | 'brick' | 'steel' | 'water' | 'forest' | 'ice' | 'base';
   health: number;
+}
+
+interface PendingEvents {
+  muzzleFlash: Array<{ x: number; y: number; direction: 'up' | 'down' | 'left' | 'right' }>;
+  tankExplosion: Array<{ x: number; y: number; tankType: string }>;
+  playerHit: Array<{ x: number; y: number }>;
+  brickDebris: Array<{ x: number; y: number }>;
+  smoke: Array<{ x: number; y: number }>;
+  gameOver: boolean;
+  victory: boolean;
+  start: boolean;
 }
 
 export class BattleCityGame {
@@ -64,6 +76,17 @@ export class BattleCityGame {
   private animationId: number | null = null;
   private lastTime = 0;
   private frameCount = 0;
+
+  pendingEvents: PendingEvents = {
+    muzzleFlash: [],
+    tankExplosion: [],
+    playerHit: [],
+    brickDebris: [],
+    smoke: [],
+    gameOver: false,
+    victory: false,
+    start: false
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -151,6 +174,7 @@ export class BattleCityGame {
   start() {
     if (this.status === 'playing') return;
     this.status = 'playing';
+    this.pendingEvents.start = true;
     this.lastTime = performance.now();
     this.gameLoop();
     this.emitState();
@@ -314,13 +338,23 @@ export class BattleCityGame {
       case 'right': dx = 1; break;
     }
 
+    const bulletX = tank.x + 0.75 + dx * 0.5;
+    const bulletY = tank.y + 0.75 + dy * 0.5;
+
     this.bullets.push({
-      x: tank.x + 0.75 + dx * 0.5,
-      y: tank.y + 0.75 + dy * 0.5,
+      x: bulletX,
+      y: bulletY,
       dx, dy,
       speed: 0.3,
       isPlayer: tank.isPlayer,
       power: tank.type === 'power' ? 2 : 1
+    });
+
+    // Emit muzzle flash event
+    this.pendingEvents.muzzleFlash.push({
+      x: (bulletX) / this.mapWidth,
+      y: (bulletY) / this.mapHeight,
+      direction: tank.direction
     });
   }
 
@@ -344,12 +378,22 @@ export class BattleCityGame {
       if (tile) {
         if (tile.type === 'brick') {
           tile.health -= b.power;
+          // Emit brick debris
+          this.pendingEvents.brickDebris.push({
+            x: (tileX + 0.5) / this.mapWidth,
+            y: (tileY + 0.5) / this.mapHeight
+          });
           if (tile.health <= 0) {
             this.map[tileY][tileX] = { type: 'empty', health: 0 };
           }
           this.bullets.splice(i, 1);
           continue;
         } else if (tile.type === 'steel') {
+          // Emit smoke for steel hit
+          this.pendingEvents.smoke.push({
+            x: (tileX + 0.5) / this.mapWidth,
+            y: (tileY + 0.5) / this.mapHeight
+          });
           if (b.power >= 2) {
             tile.health -= b.power;
             if (tile.health <= 0) {
@@ -373,6 +417,12 @@ export class BattleCityGame {
             e.health -= b.power;
             this.bullets.splice(i, 1);
             if (e.health <= 0) {
+              // Emit tank explosion
+              this.pendingEvents.tankExplosion.push({
+                x: (e.x + 1) / this.mapWidth,
+                y: (e.y + 1) / this.mapHeight,
+                tankType: e.type
+              });
               this.enemies.splice(j, 1);
               const points = { basic: 100, fast: 200, power: 300, armor: 400 };
               this.score += points[e.type];
@@ -385,6 +435,11 @@ export class BattleCityGame {
         // Hit player
         if (Math.abs(b.x - (this.player.x + 1)) < 1 && Math.abs(b.y - (this.player.y + 1)) < 1) {
           this.bullets.splice(i, 1);
+          // Emit player hit
+          this.pendingEvents.playerHit.push({
+            x: (this.player.x + 1) / this.mapWidth,
+            y: (this.player.y + 1) / this.mapHeight
+          });
           this.loseLife();
         }
       }
@@ -420,6 +475,7 @@ export class BattleCityGame {
   private checkWinLose() {
     if (this.baseDestroyed) {
       this.status = 'lost';
+      this.pendingEvents.gameOver = true;
       if (this.animationId) cancelAnimationFrame(this.animationId);
       this.emitState();
       return;
@@ -429,6 +485,7 @@ export class BattleCityGame {
       this.level++;
       if (this.level > 10) {
         this.status = 'won';
+        this.pendingEvents.victory = true;
         if (this.animationId) cancelAnimationFrame(this.animationId);
       } else {
         this.setupLevel();
@@ -443,6 +500,7 @@ export class BattleCityGame {
 
     if (this.lives <= 0) {
       this.status = 'lost';
+      this.pendingEvents.gameOver = true;
       if (this.animationId) cancelAnimationFrame(this.animationId);
     } else {
       this.player.x = 8;
@@ -652,9 +710,23 @@ export class BattleCityGame {
     this.level = 1;
     this.status = 'paused';
     this.keys = {};
+    this.clearPendingEvents();
     this.setupLevel();
     this.draw();
     this.emitState();
+  }
+
+  clearPendingEvents() {
+    this.pendingEvents = {
+      muzzleFlash: [],
+      tankExplosion: [],
+      playerHit: [],
+      brickDebris: [],
+      smoke: [],
+      gameOver: false,
+      victory: false,
+      start: false
+    };
   }
 
   setOnStateChange(cb: (state: any) => void) {

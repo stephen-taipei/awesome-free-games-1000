@@ -1,22 +1,58 @@
+/**
+ * Slingshot Styles
+ * Game #169 - Arcade / Slingshot / Outdoor Nature Theme
+ */
+
 .game-container {
   max-width: 600px;
+  background: linear-gradient(180deg, #87ceeb 0%, #a8d4e6 50%, #7fb069 100%);
+}
+
+.game-header h1 {
+  color: #2d5a27;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(180deg, #87ceeb 0%, #4a90c2 60%, #2d5a27 60%, #1a3d1a 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg,
+    #87ceeb 0%,
+    #6ab7d4 40%,
+    #4a9bc7 60%,
+    #2d5a27 60%,
+    #1a3d1a 100%
+  );
+  border-radius: 12px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    inset 0 0 40px rgba(255, 255, 255, 0.1);
   margin-bottom: 1rem;
   box-sizing: border-box;
-  display: flex;
-  justify-content: center;
   overflow: hidden;
+  border: 3px solid #8b4513;
 }
 
-canvas {
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   cursor: crosshair;
@@ -30,23 +66,172 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #8b4513 0%, #654321 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
+  background: linear-gradient(135deg, #8b4513 0%, #a0522d 50%, #654321 100%);
+  color: #fff8e7;
+  padding: 0.6rem 1.5rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.4);
+  box-shadow:
+    0 3px 10px rgba(139, 69, 19, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   display: flex;
   gap: 0.5rem;
+  border: 2px solid #5a3a1a;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .stats-card.shots {
-  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.4);
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 50%, #1e8449 100%);
+  box-shadow:
+    0 3px 10px rgba(46, 204, 113, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 2px solid #1a5d38;
+}
+
+.stats-card span:last-child {
+  font-size: 1.3rem;
+  min-width: 2rem;
+  text-align: center;
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  box-shadow: 0 3px 10px rgba(46, 204, 113, 0.3);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, #2ecc71 0%, #3ce080 100%);
+  box-shadow: 0 5px 15px rgba(46, 204, 113, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+  box-shadow: 0 3px 10px rgba(139, 69, 19, 0.3);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn.warning:hover {
+  background: linear-gradient(135deg, #a0522d 0%, #b8653f 100%);
+  box-shadow: 0 5px 15px rgba(139, 69, 19, 0.5);
+  transform: translateY(-2px);
+}
+
+.overlay {
+  background: radial-gradient(ellipse at center,
+    rgba(135, 206, 235, 0.95) 0%,
+    rgba(45, 90, 39, 0.95) 100%
+  );
+  backdrop-filter: blur(8px);
+}
+
+.overlay-content {
+  text-align: center;
+  animation: overlayFadeIn 0.4s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.overlay-title {
+  font-size: 2.5rem;
+  color: #2d5a27;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin-bottom: 1rem;
+}
+
+.overlay-msg {
+  color: #1a3d1a;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: rgba(139, 69, 19, 0.15);
+  border-radius: 8px;
+  border: 1px solid rgba(139, 69, 19, 0.3);
+}
+
+.controls-hint small {
+  color: #5a3a1a;
+  font-size: 0.9rem;
+}
+
+/* Sun rays animation */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at 80% 10%,
+    rgba(255, 255, 200, 0.3) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+  z-index: 1;
+  animation: sunPulse 4s ease-in-out infinite;
+}
+
+@keyframes sunPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Grass texture at bottom */
+.game-area::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(45, 90, 39, 0.2) 30%,
+    rgba(26, 61, 26, 0.3) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Language select nature style */
+#language-select {
+  background: rgba(139, 69, 19, 0.2);
+  border: 1px solid #8b4513;
+  color: #2d5a27;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#language-select:hover {
+  background: rgba(139, 69, 19, 0.3);
+}
+
+#language-select option {
+  background: #f5f5dc;
+  color: #2d5a27;
 }

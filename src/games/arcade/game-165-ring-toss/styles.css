@@ -1,25 +1,129 @@
-.game-container {
-  max-width: 550px;
+/**
+ * Ring Toss Styles
+ * Carnival / Fairground / Colorful and Festive Theme
+ * Game #165
+ */
+
+:root {
+  --carnival-blue: #1a5276;
+  --carnival-deep: #154360;
+  --carnival-sky: #2980b9;
+  --grass-green: #27ae60;
+  --grass-light: #2ecc71;
+  --ring-red: #e74c3c;
+  --ring-blue: #3498db;
+  --ring-gold: #f39c12;
+  --peg-gold: #ffd700;
+  --peg-silver: #c0c0c0;
+  --peg-bronze: #cd7f32;
+  --bg-dark: #0d2840;
+  --bg-light: #1a4060;
 }
 
-.game-area {
-  position: relative;
-  width: 100%;
-  height: 450px;
-  background: linear-gradient(180deg, #1a5276 0%, #154360 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Hiragino Kaku Gothic Pro', sans-serif;
+  background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-light) 100%);
+  min-height: 100vh;
   display: flex;
   justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
   overflow: hidden;
 }
 
-canvas {
+/* Carnival atmosphere */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  touch-action: none;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 215, 0, 0.08) 0%, transparent 30%),
+    radial-gradient(circle at 80% 30%, rgba(231, 76, 60, 0.06) 0%, transparent 25%),
+    radial-gradient(circle at 50% 80%, rgba(46, 204, 113, 0.05) 0%, transparent 35%);
+  pointer-events: none;
+  z-index: 0;
+  animation: carnivalGlow 5s ease-in-out infinite;
+}
+
+@keyframes carnivalGlow {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Bunting decoration */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 30px,
+    rgba(231, 76, 60, 0.3) 30px,
+    rgba(231, 76, 60, 0.3) 32px,
+    transparent 32px,
+    transparent 60px,
+    rgba(52, 152, 219, 0.3) 60px,
+    rgba(52, 152, 219, 0.3) 62px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.game-container {
+  max-width: 550px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.15) 0%, rgba(231, 76, 60, 0.15) 100%);
+  border-radius: 8px;
+  border: 3px solid var(--peg-gold);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  color: var(--peg-gold);
+  text-shadow:
+    2px 2px 0 var(--carnival-deep),
+    0 0 10px rgba(255, 215, 0, 0.5);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 2px solid var(--ring-gold);
+  background: rgba(20, 67, 96, 0.9);
+  color: var(--peg-gold);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.header-controls select:hover {
+  box-shadow: 0 0 10px var(--ring-gold);
 }
 
 .game-controls {
@@ -31,23 +135,208 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+  background: linear-gradient(135deg, rgba(26, 82, 118, 0.9) 0%, rgba(21, 67, 96, 0.95) 100%);
+  border: 2px solid var(--carnival-sky);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 8px rgba(41, 128, 185, 0.3);
   display: flex;
   gap: 0.5rem;
-  transition: background 0.3s ease;
 }
 
 .stats-card span:first-child {
   opacity: 0.8;
+  color: var(--carnival-sky);
 }
 
 .stats-card.lives-card {
-  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  background: linear-gradient(135deg, rgba(39, 174, 96, 0.9) 0%, rgba(30, 132, 73, 0.95) 100%);
+  border-color: var(--grass-light);
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.3);
+}
+
+.stats-card.lives-card span:first-child {
+  color: var(--grass-light);
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 450px;
+  background: linear-gradient(180deg, var(--carnival-blue) 0%, var(--carnival-deep) 70%, var(--grass-green) 100%);
+  border-radius: 8px;
+  box-shadow:
+    0 0 20px rgba(255, 215, 0, 0.2),
+    0 0 40px rgba(21, 67, 96, 0.4),
+    inset 0 0 30px rgba(0, 0, 0, 0.3);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border: 4px solid var(--peg-gold);
+}
+
+/* Festival lights border */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.15) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 4px 4px 0 0;
+}
+
+/* Grass border at bottom */
+.game-area::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(0deg, rgba(46, 204, 113, 0.2) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 0 0 4px 4px;
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 4px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  touch-action: none;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(13, 40, 64, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: 4px;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--peg-gold);
+  text-shadow:
+    0 0 15px var(--peg-gold),
+    3px 3px 0 var(--carnival-deep);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  animation: carnivalTitle 2s ease-in-out infinite;
+}
+
+@keyframes carnivalTitle {
+  0%, 100% {
+    transform: scale(1);
+    text-shadow:
+      0 0 15px var(--peg-gold),
+      3px 3px 0 var(--carnival-deep);
+  }
+  50% {
+    transform: scale(1.02);
+    text-shadow:
+      0 0 25px var(--peg-gold),
+      3px 3px 0 var(--carnival-deep);
+  }
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  color: white;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+  font-size: 1.1rem;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: 3px solid var(--peg-gold);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: transparent;
+  color: var(--peg-gold);
+}
+
+.btn:hover {
+  box-shadow:
+    0 0 15px var(--peg-gold),
+    0 0 30px rgba(255, 215, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--ring-gold) 0%, #d68910 100%);
+  border-color: var(--peg-gold);
+  color: white;
+  text-shadow: 1px 1px 0 var(--carnival-deep);
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, var(--peg-gold) 0%, var(--ring-gold) 100%);
+  box-shadow:
+    0 0 20px var(--peg-gold),
+    0 0 40px rgba(255, 215, 0, 0.5);
+}
+
+.btn.warning {
+  border-color: var(--ring-red);
+  color: var(--ring-red);
+  text-shadow: 0 0 5px var(--ring-red);
+}
+
+.btn.warning:hover {
+  box-shadow:
+    0 0 15px var(--ring-red),
+    0 0 30px rgba(231, 76, 60, 0.3);
 }
 
 .footer-controls {
@@ -56,16 +345,23 @@ canvas {
   gap: 1rem;
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  color: rgba(255, 255, 255, 0.7);
-}
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+  }
 
-.overlay {
-  background: rgba(0, 0, 0, 0.9);
-}
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
 
-.overlay-title {
-  color: #ffd700;
-  text-shadow: 0 0 10px #ffd700;
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+  }
 }

@@ -19,6 +19,16 @@ interface Ball {
   speed: number;
 }
 
+export interface PendingEvents {
+  wallBounce: { x: number; y: number; isTop: boolean }[];
+  paddleHit: { x: number; y: number; isPlayer: boolean }[];
+  playerScore: { x: number; y: number }[];
+  cpuScore: { x: number; y: number }[];
+  ballTrail: { x: number; y: number }[];
+  gameOver: { x: number; y: number; playerWon: boolean }[];
+  start: boolean;
+}
+
 export class PongGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -34,7 +44,18 @@ export class PongGame {
   private animationId: number = 0;
   private targetY: number = 0;
   private particles: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
+  private trailTimer: number = 0;
   onStateChange: ((state: any) => void) | null = null;
+
+  public pendingEvents: PendingEvents = {
+    wallBounce: [],
+    paddleHit: [],
+    playerScore: [],
+    cpuScore: [],
+    ballTrail: [],
+    gameOver: [],
+    start: false,
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -42,6 +63,18 @@ export class PongGame {
     this.player = { x: 0, y: 0, width: 10, height: 80 };
     this.cpu = { x: 0, y: 0, width: 10, height: 80 };
     this.ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 8, speed: 5 };
+  }
+
+  public clearPendingEvents() {
+    this.pendingEvents = {
+      wallBounce: [],
+      paddleHit: [],
+      playerScore: [],
+      cpuScore: [],
+      ballTrail: [],
+      gameOver: [],
+      start: false,
+    };
   }
 
   public resize() {
@@ -68,9 +101,11 @@ export class PongGame {
     this.cpuScore = 0;
     this.status = "playing";
     this.particles = [];
+    this.trailTimer = 0;
     this.ball.speed = 5;
     this.resetBall(Math.random() > 0.5 ? 1 : -1);
 
+    this.pendingEvents.start = true;
     this.emitState();
     this.loop();
   }
@@ -108,16 +143,36 @@ export class PongGame {
     this.ball.x += this.ball.vx;
     this.ball.y += this.ball.vy;
 
+    // Ball trail
+    this.trailTimer += 1 / 60;
+    if (this.trailTimer > 0.03) {
+      this.trailTimer = 0;
+      this.pendingEvents.ballTrail.push({
+        x: this.ball.x / this.width,
+        y: this.ball.y / this.height,
+      });
+    }
+
     // Wall collisions (top/bottom)
     if (this.ball.y - this.ball.radius < 0) {
       this.ball.y = this.ball.radius;
       this.ball.vy *= -1;
       this.addWallParticles(this.ball.x, 0);
+      this.pendingEvents.wallBounce.push({
+        x: this.ball.x / this.width,
+        y: 0,
+        isTop: true,
+      });
     }
     if (this.ball.y + this.ball.radius > this.height) {
       this.ball.y = this.height - this.ball.radius;
       this.ball.vy *= -1;
       this.addWallParticles(this.ball.x, this.height);
+      this.pendingEvents.wallBounce.push({
+        x: this.ball.x / this.width,
+        y: 1,
+        isTop: false,
+      });
     }
 
     // Paddle collisions
@@ -125,18 +180,32 @@ export class PongGame {
       this.ball.x = this.player.x + this.player.width + this.ball.radius;
       this.reflectBall(this.player, 1);
       this.addPaddleParticles(this.player.x + this.player.width, this.ball.y);
+      this.pendingEvents.paddleHit.push({
+        x: (this.player.x + this.player.width) / this.width,
+        y: this.ball.y / this.height,
+        isPlayer: true,
+      });
     }
 
     if (this.checkPaddleCollision(this.cpu)) {
       this.ball.x = this.cpu.x - this.ball.radius;
       this.reflectBall(this.cpu, -1);
       this.addPaddleParticles(this.cpu.x, this.ball.y);
+      this.pendingEvents.paddleHit.push({
+        x: this.cpu.x / this.width,
+        y: this.ball.y / this.height,
+        isPlayer: false,
+      });
     }
 
     // Score
     if (this.ball.x < 0) {
       this.cpuScore++;
       this.addScoreParticles(0, this.height / 2);
+      this.pendingEvents.cpuScore.push({
+        x: 0,
+        y: 0.5,
+      });
       this.emitState();
       if (this.cpuScore >= this.winScore) {
         this.endGame(false);
@@ -149,6 +218,10 @@ export class PongGame {
     if (this.ball.x > this.width) {
       this.playerScore++;
       this.addScoreParticles(this.width, this.height / 2);
+      this.pendingEvents.playerScore.push({
+        x: 1,
+        y: 0.5,
+      });
       this.emitState();
       if (this.playerScore >= this.winScore) {
         this.endGame(true);
@@ -232,6 +305,14 @@ export class PongGame {
   private endGame(playerWon: boolean) {
     this.status = "over";
     if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    // Emit game over event
+    this.pendingEvents.gameOver.push({
+      x: 0.5,
+      y: 0.5,
+      playerWon,
+    });
+
     if (this.onStateChange) {
       this.onStateChange({
         playerScore: this.playerScore,

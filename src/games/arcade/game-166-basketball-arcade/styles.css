@@ -1,52 +1,367 @@
+/**
+ * Basketball Arcade Styles
+ * Stadium / Basketball / Orange and Purple Theme
+ * Game #166
+ */
+
+:root {
+  --ball-orange: #ff6b35;
+  --ball-dark: #c0392b;
+  --court-wood: #8b5a2b;
+  --court-dark: #5d3a1a;
+  --rim-orange: #ff4500;
+  --net-white: #ffffff;
+  --stadium-purple: #2d1b4e;
+  --stadium-dark: #1a1a2e;
+  --spotlight-yellow: #ffd700;
+  --score-gold: #f1c40f;
+  --bg-dark: #0f0a1a;
+  --bg-purple: #1e1030;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Hiragino Kaku Gothic Pro', sans-serif;
+  background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-purple) 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Stadium atmosphere */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 215, 0, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 20% 30%, rgba(255, 107, 53, 0.06) 0%, transparent 30%),
+    radial-gradient(circle at 80% 30%, rgba(255, 107, 53, 0.06) 0%, transparent 30%);
+  pointer-events: none;
+  z-index: 0;
+  animation: spotlightPulse 4s ease-in-out infinite;
+}
+
+@keyframes spotlightPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Stadium crowd silhouette */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 30%;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 8px,
+    rgba(100, 60, 120, 0.15) 8px,
+    rgba(100, 60, 120, 0.15) 10px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
 .game-container {
-  max-width: 600px;
+  max-width: 550px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(90deg, rgba(255, 107, 53, 0.15) 0%, rgba(45, 27, 78, 0.3) 100%);
+  border-radius: 8px;
+  border: 3px solid var(--ball-orange);
+  box-shadow: 0 0 15px rgba(255, 107, 53, 0.3);
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  color: var(--ball-orange);
+  text-shadow:
+    2px 2px 0 var(--stadium-dark),
+    0 0 10px rgba(255, 107, 53, 0.5);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 2px solid var(--ball-orange);
+  background: rgba(45, 27, 78, 0.9);
+  color: var(--ball-orange);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.header-controls select:hover {
+  box-shadow: 0 0 10px var(--ball-orange);
+}
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.stats-card {
+  background: linear-gradient(135deg, var(--ball-orange) 0%, var(--ball-dark) 100%);
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: bold;
+  box-shadow:
+    0 0 8px rgba(255, 107, 53, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  display: flex;
+  gap: 0.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.stats-card span:first-child {
+  opacity: 0.9;
+}
+
+.stats-card.time {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  box-shadow:
+    0 0 8px rgba(231, 76, 60, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  animation: timerPulse 1s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(180deg, #1a1a2e 0%, #2d1b4e 100%);
+  background: linear-gradient(180deg, var(--stadium-dark) 0%, var(--stadium-purple) 60%, var(--court-dark) 100%);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 20px rgba(255, 107, 53, 0.2),
+    0 0 40px rgba(45, 27, 78, 0.4),
+    inset 0 0 30px rgba(0, 0, 0, 0.3);
   margin-bottom: 1rem;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center;
   overflow: hidden;
+  border: 4px solid var(--ball-orange);
 }
 
-canvas {
+/* Stadium lights glow at top */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.15) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 4px 4px 0 0;
+}
+
+/* Court floor reflection */
+.game-area::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(0deg, rgba(139, 90, 43, 0.2) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 0 0 4px 4px;
+}
+
+.canvas-container {
+  position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 4px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  touch-action: none;
   cursor: crosshair;
 }
 
-.game-controls {
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 10, 26, 0.95);
   display: flex;
   justify-content: center;
-  gap: 2rem;
+  align-items: center;
+  z-index: 10;
+  border-radius: 4px;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
   margin-bottom: 1rem;
+  color: var(--ball-orange);
+  text-shadow:
+    0 0 15px var(--ball-orange),
+    3px 3px 0 var(--stadium-dark);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  animation: titleBounce 1.5s ease-in-out infinite;
 }
 
-.stats-card {
-  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+@keyframes titleBounce {
+  0%, 100% {
+    transform: translateY(0);
+    text-shadow:
+      0 0 15px var(--ball-orange),
+      3px 3px 0 var(--stadium-dark);
+  }
+  50% {
+    transform: translateY(-5px);
+    text-shadow:
+      0 0 25px var(--ball-orange),
+      3px 8px 0 var(--stadium-dark);
+  }
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
   color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
-  display: flex;
-  gap: 0.5rem;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+  font-size: 1.1rem;
 }
 
-.stats-card.time {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
+.controls-hint {
+  margin-top: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: 3px solid var(--ball-orange);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: transparent;
+  color: var(--ball-orange);
+}
+
+.btn:hover {
+  box-shadow:
+    0 0 15px var(--ball-orange),
+    0 0 30px rgba(255, 107, 53, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--ball-orange) 0%, var(--ball-dark) 100%);
+  border-color: var(--score-gold);
+  color: white;
+  text-shadow: 1px 1px 0 var(--ball-dark);
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, var(--score-gold) 0%, var(--ball-orange) 100%);
+  box-shadow:
+    0 0 20px var(--score-gold),
+    0 0 40px rgba(255, 215, 0, 0.4);
+}
+
+.btn.warning {
+  border-color: #e74c3c;
+  color: #e74c3c;
+  text-shadow: 0 0 5px #e74c3c;
+}
+
+.btn.warning:hover {
+  box-shadow:
+    0 0 15px #e74c3c,
+    0 0 30px rgba(231, 76, 60, 0.3);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+  }
 }

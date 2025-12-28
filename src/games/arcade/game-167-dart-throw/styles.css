@@ -1,52 +1,372 @@
+/**
+ * Dart Throw Styles
+ * Pub / Darts / Red and Green Theme
+ * Game #167
+ */
+
+:root {
+  --board-red: #e74c3c;
+  --board-green: #27ae60;
+  --board-black: #2c3e50;
+  --board-white: #ecf0f1;
+  --bullseye-gold: #f1c40f;
+  --pub-brown: #5d4037;
+  --pub-dark: #3e2723;
+  --pub-light: #8d6e63;
+  --pub-warm: #d7ccc8;
+  --bg-dark: #1a1410;
+  --bg-brown: #2d1f15;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Hiragino Kaku Gothic Pro', sans-serif;
+  background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-brown) 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Pub wood paneling effect */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 40px,
+      rgba(93, 64, 55, 0.1) 40px,
+      rgba(93, 64, 55, 0.1) 42px
+    ),
+    radial-gradient(circle at 30% 30%, rgba(255, 200, 150, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 70% 50%, rgba(255, 200, 150, 0.06) 0%, transparent 35%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Warm pub lighting */
+body::after {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200%;
+  height: 100%;
+  background: radial-gradient(ellipse at center top, rgba(255, 200, 150, 0.15) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+  animation: pubLightFlicker 4s ease-in-out infinite;
+}
+
+@keyframes pubLightFlicker {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+  75% { opacity: 0.85; }
+}
+
 .game-container {
-  max-width: 600px;
+  max-width: 550px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(90deg, rgba(93, 64, 55, 0.8) 0%, rgba(62, 39, 35, 0.9) 100%);
+  border-radius: 8px;
+  border: 3px solid var(--pub-brown);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  color: var(--bullseye-gold);
+  text-shadow:
+    2px 2px 0 var(--pub-dark),
+    0 0 10px rgba(241, 196, 15, 0.4);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 2px solid var(--pub-brown);
+  background: rgba(62, 39, 35, 0.9);
+  color: var(--pub-warm);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.header-controls select:hover {
+  box-shadow: 0 0 8px var(--pub-brown);
+}
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.stats-card {
+  background: linear-gradient(135deg, var(--board-red) 0%, #c0392b 100%);
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-weight: bold;
+  box-shadow:
+    0 0 8px rgba(231, 76, 60, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  display: flex;
+  gap: 0.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.stats-card span:first-child {
+  opacity: 0.9;
+}
+
+.stats-card.round {
+  background: linear-gradient(135deg, var(--board-green) 0%, #1e8449 100%);
+  box-shadow:
+    0 0 8px rgba(39, 174, 96, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
+  background: linear-gradient(180deg, var(--pub-dark) 0%, var(--pub-brown) 100%);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 20px rgba(93, 64, 55, 0.3),
+    0 0 40px rgba(0, 0, 0, 0.5),
+    inset 0 0 30px rgba(0, 0, 0, 0.4);
   margin-bottom: 1rem;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center;
   overflow: hidden;
+  border: 6px solid var(--pub-brown);
 }
 
-canvas {
+/* Wood frame around game area */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 8px solid transparent;
+  border-image: linear-gradient(135deg, var(--pub-light) 0%, var(--pub-brown) 50%, var(--pub-dark) 100%) 1;
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 4px;
+}
+
+/* Dartboard spotlight glow */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70%;
+  height: 70%;
+  background: radial-gradient(circle, rgba(255, 200, 150, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 4;
+  animation: spotlightPulse 3s ease-in-out infinite;
+}
+
+@keyframes spotlightPulse {
+  0%, 100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+.canvas-container {
+  position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 4px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  touch-action: none;
   cursor: crosshair;
 }
 
-.game-controls {
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(26, 20, 16, 0.95);
   display: flex;
   justify-content: center;
-  gap: 2rem;
+  align-items: center;
+  z-index: 10;
+  border-radius: 4px;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
   margin-bottom: 1rem;
+  color: var(--bullseye-gold);
+  text-shadow:
+    0 0 15px var(--bullseye-gold),
+    3px 3px 0 var(--pub-dark);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  animation: titleGlow 2s ease-in-out infinite;
 }
 
-.stats-card {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
+@keyframes titleGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 15px var(--bullseye-gold),
+      3px 3px 0 var(--pub-dark);
+  }
+  50% {
+    text-shadow:
+      0 0 25px var(--bullseye-gold),
+      0 0 40px rgba(241, 196, 15, 0.5),
+      3px 3px 0 var(--pub-dark);
+  }
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  color: var(--pub-warm);
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+  font-size: 1.1rem;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: rgba(215, 204, 200, 0.7);
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: 3px solid var(--board-red);
   border-radius: 8px;
+  font-size: 1rem;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
-  display: flex;
-  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: transparent;
+  color: var(--board-red);
 }
 
-.stats-card.round {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
+.btn:hover {
+  box-shadow:
+    0 0 15px var(--board-red),
+    0 0 30px rgba(231, 76, 60, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--board-red) 0%, #c0392b 100%);
+  border-color: var(--bullseye-gold);
+  color: white;
+  text-shadow: 1px 1px 0 #7b241c;
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, var(--bullseye-gold) 0%, #d4ac0d 100%);
+  color: var(--pub-dark);
+  text-shadow: none;
+  box-shadow:
+    0 0 20px var(--bullseye-gold),
+    0 0 40px rgba(241, 196, 15, 0.4);
+}
+
+.btn.warning {
+  border-color: var(--board-green);
+  color: var(--board-green);
+  text-shadow: 0 0 5px var(--board-green);
+}
+
+.btn.warning:hover {
+  box-shadow:
+    0 0 15px var(--board-green),
+    0 0 30px rgba(39, 174, 96, 0.3);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+  }
 }
