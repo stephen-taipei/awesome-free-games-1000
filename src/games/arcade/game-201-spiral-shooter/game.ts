@@ -29,6 +29,16 @@ export interface Particle {
   color: string;
 }
 
+export interface PendingEvents {
+  shoot: { x: number; y: number; angle: number }[];
+  hit: { x: number; y: number }[];
+  enemyKill: { x: number; y: number; points: number }[];
+  playerHit: { damage: number; health: number }[];
+  start: boolean;
+  won: { wave: number; score: number }[];
+  lost: { wave: number; score: number }[];
+}
+
 export class SpiralShooterGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -59,6 +69,16 @@ export class SpiralShooterGame {
   private animationId: number | null = null;
   private frameCount = 0;
 
+  public pendingEvents: PendingEvents = {
+    shoot: [],
+    hit: [],
+    enemyKill: [],
+    playerHit: [],
+    start: false,
+    won: [],
+    lost: [],
+  };
+
   private waveConfigs = [
     { enemyCount: 8, speed: 1, health: 1, spawnRate: 60 },
     { enemyCount: 12, speed: 1.2, health: 1, spawnRate: 50 },
@@ -71,6 +91,18 @@ export class SpiralShooterGame {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.setupInput();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      shoot: [],
+      hit: [],
+      enemyKill: [],
+      playerHit: [],
+      start: false,
+      won: [],
+      lost: [],
+    };
   }
 
   private setupInput() {
@@ -111,13 +143,17 @@ export class SpiralShooterGame {
     const angle = this.playerAngle;
     const speed = 8;
 
+    const bulletX = this.centerX + Math.cos(angle) * 30;
+    const bulletY = this.centerY + Math.sin(angle) * 30;
+
     this.bullets.push({
-      x: this.centerX + Math.cos(angle) * 30,
-      y: this.centerY + Math.sin(angle) * 30,
+      x: bulletX,
+      y: bulletY,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
     });
 
+    this.pendingEvents.shoot.push({ x: bulletX, y: bulletY, angle });
     this.shootCooldown = 10;
   }
 
@@ -125,6 +161,7 @@ export class SpiralShooterGame {
     this.currentWave = wave ?? this.currentWave;
     this.loadWave(this.currentWave);
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -227,6 +264,7 @@ export class SpiralShooterGame {
       const distToCenter = Math.hypot(enemy.x - this.centerX, enemy.y - this.centerY);
       if (distToCenter < this.playerRadius + enemy.size) {
         this.health -= 10;
+        this.pendingEvents.playerHit.push({ damage: 10, health: this.health });
         this.createParticles(enemy.x, enemy.y, enemy.color, 5);
         this.enemies.splice(i, 1);
 
@@ -245,9 +283,11 @@ export class SpiralShooterGame {
         if (dist < enemy.size) {
           enemy.health--;
           this.bullets.splice(j, 1);
+          this.pendingEvents.hit.push({ x: enemy.x, y: enemy.y });
 
           if (enemy.health <= 0) {
             this.score += 10;
+            this.pendingEvents.enemyKill.push({ x: enemy.x, y: enemy.y, points: 10 });
             this.createParticles(enemy.x, enemy.y, enemy.color, 10);
             this.enemies.splice(i, 1);
           } else {
@@ -295,6 +335,10 @@ export class SpiralShooterGame {
   private win() {
     this.status = "won";
     this.stopAnimation();
+    this.pendingEvents.won.push({
+      wave: this.currentWave + 1,
+      score: this.score,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "won" });
     }
@@ -303,6 +347,10 @@ export class SpiralShooterGame {
   private lose() {
     this.status = "lost";
     this.stopAnimation();
+    this.pendingEvents.lost.push({
+      wave: this.currentWave + 1,
+      score: this.score,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "lost" });
     }
