@@ -15,6 +15,14 @@ export interface GameState {
   showingIndex: number;
 }
 
+export interface PendingEvents {
+  buttonPress: { color: string; correct: boolean }[];
+  sequenceComplete: { level: number; score: number }[];
+  showButton: { color: string; index: number }[];
+  start: boolean;
+  gameOver: { score: number; level: number }[];
+}
+
 const COLORS: ButtonColor[] = ["red", "green", "blue", "yellow"];
 const COLOR_HEX: Record<ButtonColor, { normal: string; active: string }> = {
   red: { normal: "#c0392b", active: "#e74c3c" },
@@ -28,8 +36,26 @@ export class MemoryChallengeGame {
   onStateChange: ((state: GameState) => void) | null = null;
   private showTimeout: number | null = null;
 
+  public pendingEvents: PendingEvents = {
+    buttonPress: [],
+    sequenceComplete: [],
+    showButton: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      buttonPress: [],
+      sequenceComplete: [],
+      showButton: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -55,6 +81,7 @@ export class MemoryChallengeGame {
       showingIndex: 0,
     };
 
+    this.pendingEvents.start = true;
     this.addToSequence();
     this.emitState();
 
@@ -86,6 +113,7 @@ export class MemoryChallengeGame {
 
     const color = this.state.sequence[this.state.showingIndex];
     this.state.activeButton = color;
+    this.pendingEvents.showButton.push({ color, index: this.state.showingIndex });
     this.emitState();
 
     // Flash duration based on level
@@ -123,6 +151,8 @@ export class MemoryChallengeGame {
     if (color !== expectedColor) {
       // Wrong!
       this.state.phase = "wrong";
+      this.pendingEvents.buttonPress.push({ color, correct: false });
+      this.pendingEvents.gameOver.push({ score: this.state.score, level: this.state.level });
       this.emitState();
 
       setTimeout(() => {
@@ -133,12 +163,15 @@ export class MemoryChallengeGame {
       return false;
     }
 
+    this.pendingEvents.buttonPress.push({ color, correct: true });
+
     // Correct so far
     if (this.state.playerSequence.length === this.state.sequence.length) {
       // Completed the sequence!
       this.state.score += this.state.level * 100;
       this.state.level++;
       this.state.phase = "correct";
+      this.pendingEvents.sequenceComplete.push({ level: this.state.level - 1, score: (this.state.level - 1) * 100 });
       this.emitState();
 
       setTimeout(() => {
