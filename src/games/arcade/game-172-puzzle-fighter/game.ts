@@ -19,6 +19,16 @@ interface Piece {
   rotation: number;
 }
 
+export interface PendingEvents {
+  blockClear: { x: number; y: number; color: number; isPlayer: boolean }[];
+  garbageSend: { x: number; y: number; amount: number; isPlayer: boolean }[];
+  garbageReceive: { x: number; y: number; isPlayer: boolean }[];
+  combo: { x: number; y: number; count: number; isPlayer: boolean }[];
+  pieceLock: { x: number; y: number; color: number; isPlayer: boolean }[];
+  gameOver: { x: number; y: number; playerWon: boolean }[];
+  start: boolean;
+}
+
 export class PuzzleFighterGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -39,6 +49,16 @@ export class PuzzleFighterGame {
   private cpuMoveTimer: number = 0;
   onStateChange: ((state: any) => void) | null = null;
 
+  public pendingEvents: PendingEvents = {
+    blockClear: [],
+    garbageSend: [],
+    garbageReceive: [],
+    combo: [],
+    pieceLock: [],
+    gameOver: [],
+    start: false,
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -50,6 +70,18 @@ export class PuzzleFighterGame {
     return Array(ROWS)
       .fill(null)
       .map(() => Array(COLS).fill(null));
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      blockClear: [],
+      garbageSend: [],
+      garbageReceive: [],
+      combo: [],
+      pieceLock: [],
+      gameOver: [],
+      start: false,
+    };
   }
 
   public resize() {
@@ -81,6 +113,7 @@ export class PuzzleFighterGame {
     this.spawnPiece(true);
     this.spawnPiece(false);
 
+    this.pendingEvents.start = true;
     this.emitState();
     this.lastTime = performance.now();
     this.loop();
@@ -254,13 +287,27 @@ export class PuzzleFighterGame {
     positions.forEach(([px, py], i) => {
       if (py >= 0 && py < ROWS && px >= 0 && px < COLS) {
         grid[py][px] = { color: piece.blocks[i], falling: false };
+        this.pendingEvents.pieceLock.push({
+          x: px,
+          y: py,
+          color: piece.blocks[i],
+          isPlayer,
+        });
       }
     });
 
     // Check for clears
-    const cleared = this.checkClears(grid);
+    const cleared = this.checkClears(grid, isPlayer);
     if (cleared > 0) {
       const garbage = Math.floor(cleared / 2);
+      if (garbage > 0) {
+        this.pendingEvents.garbageSend.push({
+          x: Math.floor(COLS / 2),
+          y: Math.floor(ROWS / 2),
+          amount: garbage,
+          isPlayer,
+        });
+      }
       if (isPlayer) {
         this.cpuGarbage += garbage;
       } else {
@@ -271,10 +318,10 @@ export class PuzzleFighterGame {
 
     // Add garbage
     if (isPlayer && this.playerGarbage > 0) {
-      this.addGarbage(grid, this.playerGarbage);
+      this.addGarbage(grid, this.playerGarbage, isPlayer);
       this.playerGarbage = 0;
     } else if (!isPlayer && this.cpuGarbage > 0) {
-      this.addGarbage(grid, this.cpuGarbage);
+      this.addGarbage(grid, this.cpuGarbage, isPlayer);
       this.cpuGarbage = 0;
     }
 
@@ -284,9 +331,10 @@ export class PuzzleFighterGame {
     }
   }
 
-  private checkClears(grid: (Block | null)[][]): number {
+  private checkClears(grid: (Block | null)[][], isPlayer: boolean): number {
     let totalCleared = 0;
     let cleared: boolean;
+    let comboCount = 0;
 
     do {
       cleared = false;
@@ -300,6 +348,12 @@ export class PuzzleFighterGame {
 
           if (connected.length >= 3) {
             connected.forEach(([cx, cy]) => {
+              this.pendingEvents.blockClear.push({
+                x: cx,
+                y: cy,
+                color,
+                isPlayer,
+              });
               grid[cy][cx] = null;
             });
             totalCleared += connected.length;
@@ -310,9 +364,20 @@ export class PuzzleFighterGame {
 
       // Apply gravity
       if (cleared) {
+        comboCount++;
         this.applyGravity(grid);
       }
     } while (cleared);
+
+    // Track combo events (combo >= 2 is noteworthy)
+    if (comboCount >= 2) {
+      this.pendingEvents.combo.push({
+        x: Math.floor(COLS / 2),
+        y: Math.floor(ROWS / 2),
+        count: comboCount,
+        isPlayer,
+      });
+    }
 
     return totalCleared;
   }
@@ -355,7 +420,14 @@ export class PuzzleFighterGame {
     }
   }
 
-  private addGarbage(grid: (Block | null)[][], amount: number) {
+  private addGarbage(grid: (Block | null)[][], amount: number, isPlayer: boolean) {
+    // Track garbage receive event
+    this.pendingEvents.garbageReceive.push({
+      x: Math.floor(COLS / 2),
+      y: ROWS - 1,
+      isPlayer,
+    });
+
     // Shift grid up
     for (let y = 0; y < ROWS - amount; y++) {
       for (let x = 0; x < COLS; x++) {
@@ -379,6 +451,14 @@ export class PuzzleFighterGame {
   private endGame(playerWon: boolean) {
     this.status = "over";
     if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    // Track gameOver event
+    this.pendingEvents.gameOver.push({
+      x: Math.floor(COLS / 2),
+      y: Math.floor(ROWS / 2),
+      playerWon,
+    });
+
     if (this.onStateChange) {
       this.onStateChange({
         status: "over",
