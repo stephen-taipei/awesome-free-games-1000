@@ -61,6 +61,14 @@ export interface GameConfig {
   maxLives: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  slice: { combo: number; points: number }[];
+  bomb: boolean;
+  miss: { livesLeft: number }[];
+  gameOver: { score: number; bestScore: number; isNewBest: boolean; maxCombo: number }[];
+}
+
 const FRUIT_COLORS = [
   '#ff6b6b', // 紅色 (蘋果)
   '#ffd93d', // 黃色 (香蕉)
@@ -76,6 +84,24 @@ export class SliceMasterGame {
   private lastSpawnTime: number = 0;
   private objectIdCounter: number = 0;
   private onStateChange?: (state: GameState) => void;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    slice: [],
+    bomb: false,
+    miss: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      slice: [],
+      bomb: false,
+      miss: [],
+      gameOver: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -131,6 +157,7 @@ export class SliceMasterGame {
     this.state = this.createInitialState();
     this.state.isPlaying = true;
     this.lastSpawnTime = Date.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -177,6 +204,7 @@ export class SliceMasterGame {
         if (obj.type === 'fruit') {
           this.state.lives--;
           this.state.combo = 0;
+          this.pendingEvents.miss.push({ livesLeft: this.state.lives });
           if (this.state.lives <= 0) {
             this.gameOver();
           }
@@ -295,6 +323,7 @@ export class SliceMasterGame {
 
     if (obj.type === 'bomb') {
       // 切到炸彈，遊戲結束
+      this.pendingEvents.bomb = true;
       this.gameOver();
       return;
     }
@@ -303,6 +332,8 @@ export class SliceMasterGame {
     this.state.combo++;
     const points = 10 * this.state.combo;
     this.state.score += points;
+
+    this.pendingEvents.slice.push({ combo: this.state.combo, points });
 
     if (this.state.combo > this.state.maxCombo) {
       this.state.maxCombo = this.state.combo;
@@ -341,10 +372,18 @@ export class SliceMasterGame {
       this.animationId = null;
     }
 
-    if (this.state.score > this.state.bestScore) {
+    const isNewBest = this.state.score > this.state.bestScore;
+    if (isNewBest) {
       this.state.bestScore = this.state.score;
       this.saveBestScore(this.state.bestScore);
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bestScore: this.state.bestScore,
+      isNewBest,
+      maxCombo: this.state.maxCombo,
+    });
 
     this.notifyStateChange();
   }
