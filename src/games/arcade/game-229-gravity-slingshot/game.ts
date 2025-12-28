@@ -56,6 +56,14 @@ export interface GameConfig {
   launchPower: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  launch: { velocityX: number; velocityY: number }[];
+  collect: { x: number; y: number; score: number }[];
+  planetHit: boolean;
+  levelComplete: { level: number; score: number }[];
+}
+
 const PLANET_COLORS = ['#e74c3c', '#3498db', '#9b59b6', '#f39c12', '#1abc9c'];
 
 export class GravitySlingshotGame {
@@ -63,6 +71,24 @@ export class GravitySlingshotGame {
   private state: GameState;
   private animationId: number | null = null;
   private onStateChange?: (state: GameState) => void;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    launch: [],
+    collect: [],
+    planetHit: false,
+    levelComplete: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      launch: [],
+      collect: [],
+      planetHit: false,
+      levelComplete: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -120,6 +146,7 @@ export class GravitySlingshotGame {
   newGame(): void {
     this.state = this.createInitialState();
     this.state.isPlaying = true;
+    this.pendingEvents.start = true;
     this.generateLevel();
     this.gameLoop();
     this.notifyStateChange();
@@ -230,6 +257,7 @@ export class GravitySlingshotGame {
 
       // 碰撞檢測
       if (dist < planet.radius + proj.radius) {
+        this.pendingEvents.planetHit = true;
         this.resetProjectile();
         return;
       }
@@ -264,6 +292,7 @@ export class GravitySlingshotGame {
       if (dist < target.radius + proj.radius) {
         target.collected = true;
         this.state.score += 100;
+        this.pendingEvents.collect.push({ x: target.x, y: target.y, score: 100 });
       }
     });
 
@@ -271,6 +300,7 @@ export class GravitySlingshotGame {
     if (this.state.targets.every(t => t.collected)) {
       this.state.levelComplete = true;
       this.state.score += 500; // 關卡獎勵
+      this.pendingEvents.levelComplete.push({ level: this.state.level, score: this.state.score });
     }
 
     // 檢查邊界
@@ -315,15 +345,18 @@ export class GravitySlingshotGame {
 
     // 最小發射距離
     if (Math.sqrt(dx * dx + dy * dy) > 20) {
+      const velocityX = dx * this.config.launchPower;
+      const velocityY = dy * this.config.launchPower;
       this.state.projectile = {
         x: this.state.aimStart.x,
         y: this.state.aimStart.y,
-        velocityX: dx * this.config.launchPower,
-        velocityY: dy * this.config.launchPower,
+        velocityX,
+        velocityY,
         radius: 8,
         trail: [],
       };
       this.state.shots++;
+      this.pendingEvents.launch.push({ velocityX, velocityY });
     }
 
     this.state.aiming = false;

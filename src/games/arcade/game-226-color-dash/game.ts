@@ -55,6 +55,13 @@ export interface GameConfig {
   obstacleGap: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  colorSwitch: { oldColor: ColorType; newColor: ColorType }[];
+  pass: { score: number }[];
+  gameOver: { score: number; bestScore: number; isNewBest: boolean }[];
+}
+
 const COLORS: ColorType[] = ['red', 'blue', 'green', 'yellow'];
 const COLOR_VALUES: Record<ColorType, string> = {
   red: '#f44336',
@@ -69,6 +76,22 @@ export class ColorDashGame {
   private animationId: number | null = null;
   private lastTime: number = 0;
   private onStateChange?: (state: GameState) => void;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    colorSwitch: [],
+    pass: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      colorSwitch: [],
+      pass: [],
+      gameOver: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -134,6 +157,7 @@ export class ColorDashGame {
     this.generateInitialObstacles();
     this.state.isPlaying = true;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -296,6 +320,7 @@ export class ColorDashGame {
         if (!obstacle.passed) {
           this.state.score++;
           obstacle.passed = true;
+          this.pendingEvents.pass.push({ score: this.state.score });
         }
         return false;
       }
@@ -348,6 +373,7 @@ export class ColorDashGame {
         // 隨機切換顏色
         const newColor = colorSwitch.colors[Math.floor(Math.random() * colorSwitch.colors.length)];
         if (newColor !== player.color) {
+          this.pendingEvents.colorSwitch.push({ oldColor: player.color, newColor });
           player.color = newColor;
         }
         // 移除已使用的切換器
@@ -400,10 +426,17 @@ export class ColorDashGame {
       this.animationId = null;
     }
 
-    if (this.state.score > this.state.bestScore) {
+    const isNewBest = this.state.score > this.state.bestScore;
+    if (isNewBest) {
       this.state.bestScore = this.state.score;
       this.saveBestScore(this.state.bestScore);
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bestScore: this.state.bestScore,
+      isNewBest,
+    });
 
     this.notifyStateChange();
   }

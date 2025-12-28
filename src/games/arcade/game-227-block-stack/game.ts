@@ -34,6 +34,12 @@ export interface GameConfig {
   maxSpeed: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  place: { isPerfect: boolean; combo: number; width: number }[];
+  gameOver: { score: number; bestScore: number; isNewBest: boolean; perfectCount: number }[];
+}
+
 const COLORS = [
   '#ff6b6b', '#feca57', '#48dbfb', '#1dd1a1',
   '#5f27cd', '#ff9ff3', '#54a0ff', '#00d2d3',
@@ -44,6 +50,20 @@ export class BlockStackGame {
   private state: GameState;
   private animationId: number | null = null;
   private onStateChange?: (state: GameState) => void;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    place: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      place: [],
+      gameOver: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -118,6 +138,7 @@ export class BlockStackGame {
     this.createNewBlock();
 
     this.state.isPlaying = true;
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -215,6 +236,12 @@ export class BlockStackGame {
     this.state.blocks.push(currentBlock);
     this.state.score++;
 
+    this.pendingEvents.place.push({
+      isPerfect,
+      combo: this.state.combo,
+      width: currentBlock.width,
+    });
+
     // 如果方塊太寬，需要收縮視角
     // 這裡簡化處理，當方塊太小時結束遊戲
     if (currentBlock.width < 10) {
@@ -247,10 +274,18 @@ export class BlockStackGame {
       this.animationId = null;
     }
 
-    if (this.state.score > this.state.bestScore) {
+    const isNewBest = this.state.score > this.state.bestScore;
+    if (isNewBest) {
       this.state.bestScore = this.state.score;
       this.saveBestScore(this.state.bestScore);
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bestScore: this.state.bestScore,
+      isNewBest,
+      perfectCount: this.state.perfectCount,
+    });
 
     this.notifyStateChange();
   }
