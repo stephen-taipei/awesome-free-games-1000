@@ -3,6 +3,17 @@
  * Game #399 - Navigate through obstacles across three lanes
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slideStart: boolean;
+  slideEnd: boolean;
+  laneChange: { direction: string }[];
+  coinCollected: { total: number }[];
+  collision: boolean;
+  gameOver: { score: number; highScore: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   lane: number; // 0 = left, 1 = middle, 2 = right
   y: number;
@@ -49,6 +60,25 @@ export class ObstacleRunGame {
   private obstacleTimer: number = 0;
   private laneChangeTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slideStart: false,
+      slideEnd: false,
+      laneChange: [],
+      coinCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -91,6 +121,7 @@ export class ObstacleRunGame {
     this.state.player.y = this.state.groundY - PLAYER_HEIGHT;
     this.obstacleTimer = 0;
     this.laneChangeTimer = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -101,6 +132,7 @@ export class ObstacleRunGame {
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
       this.laneChangeTimer = 10;
+      this.pendingEvents.laneChange.push({ direction: "left" });
     }
   }
 
@@ -111,6 +143,7 @@ export class ObstacleRunGame {
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
       this.laneChangeTimer = 10;
+      this.pendingEvents.laneChange.push({ direction: "right" });
     }
   }
 
@@ -120,6 +153,7 @@ export class ObstacleRunGame {
     if (!this.state.player.isJumping && !this.state.player.isSliding) {
       this.state.player.vy = JUMP_FORCE;
       this.state.player.isJumping = true;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -130,6 +164,7 @@ export class ObstacleRunGame {
       this.state.player.isSliding = true;
       this.state.player.height = SLIDE_HEIGHT;
       this.state.player.y = this.state.groundY - SLIDE_HEIGHT;
+      this.pendingEvents.slideStart = true;
     }
   }
 
@@ -138,6 +173,7 @@ export class ObstacleRunGame {
       this.state.player.isSliding = false;
       this.state.player.height = PLAYER_HEIGHT;
       this.state.player.y = this.state.groundY - PLAYER_HEIGHT;
+      this.pendingEvents.slideEnd = true;
     }
   }
 
@@ -209,11 +245,13 @@ export class ObstacleRunGame {
         ) {
           obs.x = -200; // Remove coin
           this.state.coins++;
+          this.pendingEvents.coinCollected.push({ total: this.state.coins });
         }
         continue;
       }
 
       if (this.checkObstacleCollision(player, obs)) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -341,6 +379,13 @@ export class ObstacleRunGame {
       this.state.highScore = this.state.score;
       localStorage.setItem("obstacleRunHighScore", this.state.highScore.toString());
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      distance: this.state.distance,
+      coins: this.state.coins,
+    });
 
     this.emitState();
   }

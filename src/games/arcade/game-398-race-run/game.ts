@@ -3,6 +3,19 @@
  * Game #398 - Race against AI opponents to reach the finish line
  */
 
+export interface PendingEvents {
+  start: boolean;
+  countdownTick: { count: number }[];
+  raceStart: boolean;
+  laneChange: { direction: string }[];
+  boost: boolean;
+  boostCollected: boolean;
+  coinCollected: { total: number }[];
+  obstacleHit: boolean;
+  racerFinished: { name: string; rank: number; isPlayer: boolean }[];
+  raceFinished: { playerRank: number; score: number; highScore: number }[];
+}
+
 export interface Racer {
   id: string;
   name: string;
@@ -68,6 +81,27 @@ export class RaceRunGame {
   private canvasHeight: number = 500;
   private spawnTimer: number = 0;
   private countdownInterval: number | null = null;
+
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      countdownTick: [],
+      raceStart: false,
+      laneChange: [],
+      boost: false,
+      boostCollected: false,
+      coinCollected: [],
+      obstacleHit: false,
+      racerFinished: [],
+      raceFinished: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -151,11 +185,13 @@ export class RaceRunGame {
     };
 
     this.spawnTimer = 0;
+    this.pendingEvents.start = true;
     this.startCountdown();
   }
 
   private startCountdown(): void {
     this.state.countdown = 3;
+    this.pendingEvents.countdownTick.push({ count: 3 });
     this.emitState();
 
     this.countdownInterval = window.setInterval(() => {
@@ -163,10 +199,13 @@ export class RaceRunGame {
 
       if (this.state.countdown <= 0) {
         this.state.phase = "playing";
+        this.pendingEvents.raceStart = true;
         if (this.countdownInterval) {
           clearInterval(this.countdownInterval);
           this.countdownInterval = null;
         }
+      } else {
+        this.pendingEvents.countdownTick.push({ count: this.state.countdown });
       }
 
       this.emitState();
@@ -177,6 +216,7 @@ export class RaceRunGame {
     if (this.state.phase !== "playing") return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: "left" });
     }
   }
 
@@ -184,6 +224,7 @@ export class RaceRunGame {
     if (this.state.phase !== "playing") return;
     if (this.state.player.lane < LANE_COUNT - 1) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: "right" });
     }
   }
 
@@ -192,6 +233,7 @@ export class RaceRunGame {
     if (!this.state.player.isBoosting && this.state.player.boostTimer === 0) {
       this.state.player.isBoosting = true;
       this.state.player.boostTimer = BOOST_DURATION;
+      this.pendingEvents.boost = true;
     }
   }
 
@@ -219,8 +261,10 @@ export class RaceRunGame {
         if (powerUp.type === "boost") {
           this.state.player.isBoosting = true;
           this.state.player.boostTimer = BOOST_DURATION;
+          this.pendingEvents.boostCollected = true;
         } else if (powerUp.type === "coin") {
           this.state.coins++;
+          this.pendingEvents.coinCollected.push({ total: this.state.coins });
         }
       }
     }
@@ -235,6 +279,7 @@ export class RaceRunGame {
       ) {
         obstacle.active = false;
         this.state.player.speed *= OBSTACLE_SLOWDOWN;
+        this.pendingEvents.obstacleHit = true;
       }
     }
 
@@ -287,6 +332,11 @@ export class RaceRunGame {
       racer.isFinished = true;
       racer.rank = this.state.finishedRacers.length + 1;
       this.state.finishedRacers.push(racer);
+      this.pendingEvents.racerFinished.push({
+        name: racer.name,
+        rank: racer.rank,
+        isPlayer: racer.isPlayer,
+      });
     }
   }
 
@@ -406,6 +456,12 @@ export class RaceRunGame {
       this.state.highScore = this.state.score;
       localStorage.setItem("raceRunHighScore", this.state.highScore.toString());
     }
+
+    this.pendingEvents.raceFinished.push({
+      playerRank: this.state.player.rank,
+      score: this.state.score,
+      highScore: this.state.highScore,
+    });
 
     this.emitState();
   }
