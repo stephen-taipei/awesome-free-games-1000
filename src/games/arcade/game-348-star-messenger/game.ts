@@ -85,6 +85,16 @@ export interface GameConfig {
   shieldCooldownTime: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  fire: { constellation: string }[];
+  enemyKilled: { type: string; points: number }[];
+  playerHit: { healthRemaining: number }[];
+  shieldActivated: boolean;
+  waveStart: { wave: number }[];
+  gameOver: { score: number; bestScore: number; wave: number }[];
+}
+
 const CONSTELLATION_ABILITIES = {
   aries: { attackBonus: 1.5, energyCost: 15, projectileCount: 1, speed: 1.2 }, // 白羊座：高傷害
   leo: { attackBonus: 1.0, energyCost: 10, projectileCount: 3, speed: 1.0 }, // 獅子座：三重射擊
@@ -109,6 +119,28 @@ export class StarMessengerGame {
   private onStateChange?: (state: GameState) => void;
   private mousePosition: Vector = { x: 0, y: 0 };
   private isFiring: boolean = false;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    fire: [],
+    enemyKilled: [],
+    playerHit: [],
+    shieldActivated: false,
+    waveStart: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      fire: [],
+      enemyKilled: [],
+      playerHit: [],
+      shieldActivated: false,
+      waveStart: [],
+      gameOver: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -183,6 +215,7 @@ export class StarMessengerGame {
     this.lastTime = performance.now();
     this.lastFireTime = 0;
     this.isFiring = false;
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -331,6 +364,7 @@ export class StarMessengerGame {
 
     this.state.wave++;
     this.state.nextWaveTimer = 3;
+    this.pendingEvents.waveStart.push({ wave: this.state.wave });
   }
 
   private checkCollisions(): void {
@@ -353,7 +387,9 @@ export class StarMessengerGame {
           if (enemy.health <= 0) {
             this.state.enemies.splice(eIndex, 1);
             this.state.enemiesDefeated++;
-            this.state.score += ENEMY_CONFIGS[enemy.type].score;
+            const points = ENEMY_CONFIGS[enemy.type].score;
+            this.state.score += points;
+            this.pendingEvents.enemyKilled.push({ type: enemy.type, points });
             this.createExplosion(enemy.x, enemy.y, enemy.color, 20);
           }
         }
@@ -369,6 +405,7 @@ export class StarMessengerGame {
 
         if (dist < this.state.player.radius + enemy.radius) {
           this.state.player.health -= 10;
+          this.pendingEvents.playerHit.push({ healthRemaining: this.state.player.health });
           this.createExplosion(this.state.player.x, this.state.player.y, '#ffffff', 12);
 
           if (this.state.player.health <= 0) {
@@ -430,6 +467,7 @@ export class StarMessengerGame {
     if (this.state.player.starEnergy < ability.energyCost) return;
 
     this.state.player.starEnergy -= ability.energyCost;
+    this.pendingEvents.fire.push({ constellation: this.state.player.selectedConstellation });
 
     const angle = Math.atan2(
       this.mousePosition.y - this.state.player.y,
@@ -463,6 +501,7 @@ export class StarMessengerGame {
 
     this.state.player.isShieldActive = true;
     this.state.player.shieldCooldown = this.config.shieldDuration + this.config.shieldCooldownTime;
+    this.pendingEvents.shieldActivated = true;
   }
 
   selectConstellation(type: ConstellationType): void {
@@ -500,6 +539,7 @@ export class StarMessengerGame {
       this.saveBestScore(this.state.bestScore);
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, bestScore: this.state.bestScore, wave: this.state.wave });
     this.notifyStateChange();
   }
 

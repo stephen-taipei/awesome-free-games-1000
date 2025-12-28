@@ -28,6 +28,14 @@ export interface GameState {
   maxCombo: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  targetHit: { type: string; combo: number; points: number }[];
+  targetMiss: boolean;
+  dangerHit: boolean;
+  gameOver: { score: number; highScore: number; maxCombo: number }[];
+}
+
 const GAME_DURATION = 30000; // 30 seconds
 const COLORS = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6"];
 
@@ -39,6 +47,24 @@ export class TapMasterGame {
   private targetId: number = 0;
   private spawnTimer: number = 0;
   private startTime: number = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    targetHit: [],
+    targetMiss: false,
+    dangerHit: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      targetHit: [],
+      targetMiss: false,
+      dangerHit: false,
+      gameOver: [],
+    };
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -74,6 +100,7 @@ export class TapMasterGame {
     this.targetId = 0;
     this.spawnTimer = 0;
     this.startTime = Date.now();
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -99,6 +126,7 @@ export class TapMasterGame {
           this.state.combo = 0;
           this.state.score = Math.max(0, this.state.score - 50);
           this.state.misses++;
+          this.pendingEvents.dangerHit = true;
         } else {
           this.state.hits++;
           this.state.combo++;
@@ -106,7 +134,9 @@ export class TapMasterGame {
 
           const baseScore = target.type === "bonus" ? 20 : 10;
           const comboBonus = Math.floor(this.state.combo / 5);
-          this.state.score += baseScore * (1 + comboBonus);
+          const points = baseScore * (1 + comboBonus);
+          this.state.score += points;
+          this.pendingEvents.targetHit.push({ type: target.type, combo: this.state.combo, points });
         }
 
         break;
@@ -116,6 +146,7 @@ export class TapMasterGame {
     if (!hitSomething) {
       this.state.misses++;
       this.state.combo = 0;
+      this.pendingEvents.targetMiss = true;
     }
 
     this.emitState();
@@ -213,6 +244,7 @@ export class TapMasterGame {
       localStorage.setItem("tapMasterHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, highScore: this.state.highScore, maxCombo: this.state.maxCombo });
     this.emitState();
   }
 
