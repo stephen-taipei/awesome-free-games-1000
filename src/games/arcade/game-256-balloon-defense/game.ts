@@ -48,6 +48,15 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  threatDestroyed: { points: number }[];
+  balloonPopped: { livesLeft: number }[];
+  waveComplete: { wave: number; bonus: number }[];
+  victory: { score: number; wave: number }[];
+  gameOver: { score: number; wave: number }[];
+}
+
 const BALLOON_COLORS = ["#ff6b6b", "#4ecdc4", "#ffe66d", "#95e1d3", "#f38181"];
 const MAX_WAVES = 10;
 
@@ -67,6 +76,26 @@ export class BalloonDefenseGame {
   private spawnTimer = 0;
   private waveThreatsRemaining = 0;
   private threatsDestroyedThisWave = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    threatDestroyed: [],
+    balloonPopped: [],
+    waveComplete: [],
+    victory: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      threatDestroyed: [],
+      balloonPopped: [],
+      waveComplete: [],
+      victory: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -92,6 +121,7 @@ export class BalloonDefenseGame {
           this.destroyThreat(i);
           this.score += 10;
           this.threatsDestroyedThisWave++;
+          this.pendingEvents.threatDestroyed.push({ points: 10 });
           this.emitState();
           break;
         }
@@ -167,6 +197,7 @@ export class BalloonDefenseGame {
 
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -340,6 +371,7 @@ export class BalloonDefenseGame {
 
     this.balloons.splice(index, 1);
     this.lives--;
+    this.pendingEvents.balloonPopped.push({ livesLeft: this.lives });
     this.emitState();
   }
 
@@ -348,6 +380,7 @@ export class BalloonDefenseGame {
     this.waveThreatsRemaining = this.getWaveThreats();
     this.threatsDestroyedThisWave = 0;
     this.score += 50; // Wave bonus
+    this.pendingEvents.waveComplete.push({ wave: this.wave - 1, bonus: 50 });
     this.emitState();
   }
 
@@ -356,6 +389,7 @@ export class BalloonDefenseGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.victory.push({ score: this.score, wave: this.wave });
     this.emitState();
   }
 
@@ -364,6 +398,7 @@ export class BalloonDefenseGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, wave: this.wave });
     this.emitState();
   }
 

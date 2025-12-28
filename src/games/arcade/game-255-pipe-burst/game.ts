@@ -35,6 +35,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  pipeBurst: boolean;
+  pipeFixed: { points: number; fixed: number }[];
+  flooded: boolean;
+  gameOver: { score: number; fixed: number; highScore: number }[];
+}
+
 export class PipeBurstGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -53,6 +61,24 @@ export class PipeBurstGame {
   private burstTimer = 0;
   private pipeIdCounter = 0;
   private fixingPipe: Pipe | null = null;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    pipeBurst: false,
+    pipeFixed: [],
+    flooded: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      pipeBurst: false,
+      pipeFixed: [],
+      flooded: false,
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -174,6 +200,7 @@ export class PipeBurstGame {
     this.initPipes();
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -227,6 +254,7 @@ export class PipeBurstGame {
           pipe.waterLevel = 0;
           this.fixed++;
           this.score += 100;
+          this.pendingEvents.pipeFixed.push({ points: 100, fixed: this.fixed });
 
           if (this.score > this.highScore) {
             this.highScore = this.score;
@@ -246,6 +274,7 @@ export class PipeBurstGame {
 
     // Check water level
     if (this.globalWaterLevel >= 100) {
+      this.pendingEvents.flooded = true;
       this.gameOver();
     }
 
@@ -257,6 +286,7 @@ export class PipeBurstGame {
     if (intactPipes.length > 0) {
       const pipe = intactPipes[Math.floor(Math.random() * intactPipes.length)];
       pipe.burst = true;
+      this.pendingEvents.pipeBurst = true;
     }
   }
 
@@ -265,6 +295,7 @@ export class PipeBurstGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, fixed: this.fixed, highScore: this.highScore });
     this.emitState();
   }
 
