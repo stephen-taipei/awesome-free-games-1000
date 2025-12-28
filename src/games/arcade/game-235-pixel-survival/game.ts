@@ -28,6 +28,14 @@ export interface Powerup {
   collected: boolean;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  shoot: boolean;
+  kill: { type: Enemy['type']; points: number }[];
+  powerup: { type: Powerup['type'] }[];
+  gameOver: { score: number; survivalTime: number }[];
+}
+
 export class PixelSurvivalGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -68,6 +76,24 @@ export class PixelSurvivalGame {
   // Touch controls
   private touchStartPos = { x: 0, y: 0 };
   private isTouching = false;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    shoot: false,
+    kill: [],
+    powerup: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      shoot: false,
+      kill: [],
+      powerup: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -146,6 +172,7 @@ export class PixelSurvivalGame {
   public start() {
     this.reset();
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -287,8 +314,10 @@ export class PixelSurvivalGame {
 
       // Remove if health depleted
       if (enemy.health <= 0) {
+        const points = enemy.type === 'tank' ? 30 : enemy.type === 'fast' ? 20 : 10;
         this.enemies.splice(i, 1);
-        this.score += enemy.type === 'tank' ? 30 : enemy.type === 'fast' ? 20 : 10;
+        this.score += points;
+        this.pendingEvents.kill.push({ type: enemy.type, points });
         this.updateState();
       }
     }
@@ -334,6 +363,7 @@ export class PixelSurvivalGame {
 
       if (dist < 20 && !powerup.collected) {
         powerup.collected = true;
+        this.pendingEvents.powerup.push({ type: powerup.type });
         this.collectPowerup(powerup.type);
         this.powerups.splice(i, 1);
       }
@@ -492,11 +522,16 @@ export class PixelSurvivalGame {
     }
 
     this.lastShotTime = this.frameCount;
+    this.pendingEvents.shoot = true;
   }
 
   private gameOver() {
     this.status = "gameover";
     this.stopAnimation();
+    this.pendingEvents.gameOver.push({
+      score: this.score,
+      survivalTime: this.survivalTime,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "gameover" });
     }

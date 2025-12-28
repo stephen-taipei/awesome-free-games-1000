@@ -33,6 +33,15 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  fireSoundWave: boolean;
+  kill: { count: number; points: number }[];
+  waveComplete: { wave: number; hpRestored: number }[];
+  damage: { amount: number; hpLeft: number }[];
+  gameOver: { score: number; wave: number }[];
+}
+
 const PLAYER_RADIUS = 25;
 const MAX_POWER = 100;
 const POWER_REGEN = 0.5;
@@ -55,6 +64,26 @@ export class SoundWaveGame {
   private enemies: Enemy[] = [];
   private enemiesKilled = 0;
   private enemiesPerWave = 5;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    fireSoundWave: false,
+    kill: [],
+    waveComplete: [],
+    damage: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      fireSoundWave: false,
+      kill: [],
+      waveComplete: [],
+      damage: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -106,6 +135,7 @@ export class SoundWaveGame {
     this.enemiesKilled = 0;
     this.enemiesPerWave = 5;
 
+    this.pendingEvents.start = true;
     this.spawnWave();
     this.emitState();
     this.gameLoop();
@@ -153,6 +183,7 @@ export class SoundWaveGame {
       alpha: 1,
     });
 
+    this.pendingEvents.fireSoundWave = true;
     this.emitState();
   }
 
@@ -237,6 +268,7 @@ export class SoundWaveGame {
       if (dist < PLAYER_RADIUS + enemy.radius) {
         this.hp -= 10;
         enemy.hp = 0;
+        this.pendingEvents.damage.push({ amount: 10, hpLeft: this.hp });
         this.emitState();
       }
 
@@ -258,8 +290,10 @@ export class SoundWaveGame {
     const killed = beforeCount - this.enemies.length;
 
     if (killed > 0) {
-      this.score += killed * 100 * this.wave;
+      const points = killed * 100 * this.wave;
+      this.score += points;
       this.enemiesKilled += killed;
+      this.pendingEvents.kill.push({ count: killed, points });
       this.emitState();
     }
 
@@ -270,7 +304,10 @@ export class SoundWaveGame {
     ) {
       this.wave++;
       this.enemiesKilled = 0;
+      const hpBefore = this.hp;
       this.hp = Math.min(100, this.hp + 20); // Heal between waves
+      const hpRestored = this.hp - hpBefore;
+      this.pendingEvents.waveComplete.push({ wave: this.wave, hpRestored });
       this.emitState();
       this.spawnWave();
     }
@@ -289,6 +326,7 @@ export class SoundWaveGame {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+    this.pendingEvents.gameOver.push({ score: this.score, wave: this.wave });
     this.emitState();
   }
 
