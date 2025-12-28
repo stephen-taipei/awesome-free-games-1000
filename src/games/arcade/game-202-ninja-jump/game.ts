@@ -11,6 +11,16 @@ export interface LevelConfig {
   startSide: "left" | "right";
 }
 
+export interface PendingEvents {
+  jump: { x: number; y: number; direction: number }[];
+  wallLand: { x: number; y: number; side: string }[];
+  coinCollect: { x: number; y: number }[];
+  death: { x: number; y: number; cause: string }[];
+  start: boolean;
+  won: { level: number; coins: number }[];
+  lost: { level: number; coins: number }[];
+}
+
 export class NinjaJumpGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -46,6 +56,16 @@ export class NinjaJumpGame {
   private onStateChange: ((state: any) => void) | null = null;
   private animationId: number | null = null;
   private frameCount = 0;
+
+  public pendingEvents: PendingEvents = {
+    jump: [],
+    wallLand: [],
+    coinCollect: [],
+    death: [],
+    start: false,
+    won: [],
+    lost: [],
+  };
 
   private leftWallX = 0;
   private rightWallX = 460;
@@ -180,6 +200,18 @@ export class NinjaJumpGame {
     this.setupInput();
   }
 
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      jump: [],
+      wallLand: [],
+      coinCollect: [],
+      death: [],
+      start: false,
+      won: [],
+      lost: [],
+    };
+  }
+
   private setupInput() {
     window.addEventListener("keydown", (e) => {
       if ((e.key === " " || e.key === "ArrowUp") && this.status === "playing") {
@@ -202,6 +234,11 @@ export class NinjaJumpGame {
       this.ninja.vy = this.jumpForceY;
       this.ninja.onWall = false;
       this.ninja.facingRight = direction > 0;
+      this.pendingEvents.jump.push({
+        x: this.ninja.x,
+        y: this.ninja.y,
+        direction,
+      });
     }
   }
 
@@ -209,6 +246,7 @@ export class NinjaJumpGame {
     this.currentLevel = level ?? this.currentLevel;
     this.loadLevel(this.currentLevel);
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -271,12 +309,14 @@ export class NinjaJumpGame {
             this.ninja.vy = 0;
             this.ninja.onWall = true;
             this.ninja.wallSide = "left";
+            this.pendingEvents.wallLand.push({ x: this.ninja.x, y: this.ninja.y, side: "left" });
           } else if (wall.side === "right" && this.ninja.x + this.ninja.width >= wall.x && this.ninja.vx > 0) {
             this.ninja.x = wall.x - this.ninja.width;
             this.ninja.vx = 0;
             this.ninja.vy = 0;
             this.ninja.onWall = true;
             this.ninja.wallSide = "right";
+            this.pendingEvents.wallLand.push({ x: this.ninja.x, y: this.ninja.y, side: "right" });
           }
         }
       }
@@ -331,6 +371,7 @@ export class NinjaJumpGame {
         if (dist < 25) {
           coin.collected = true;
           this.collectedCoins++;
+          this.pendingEvents.coinCollect.push({ x: coin.x, y: coin.y });
           this.updateState();
         }
       }
@@ -356,6 +397,15 @@ export class NinjaJumpGame {
   private die() {
     this.status = "lost";
     this.stopAnimation();
+    this.pendingEvents.death.push({
+      x: this.ninja.x,
+      y: this.ninja.y,
+      cause: "spike",
+    });
+    this.pendingEvents.lost.push({
+      level: this.currentLevel + 1,
+      coins: this.collectedCoins,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "lost" });
     }
@@ -364,6 +414,10 @@ export class NinjaJumpGame {
   private win() {
     this.status = "won";
     this.stopAnimation();
+    this.pendingEvents.won.push({
+      level: this.currentLevel + 1,
+      coins: this.collectedCoins,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "won" });
     }

@@ -71,6 +71,17 @@ interface GameState {
   time: number;
 }
 
+export interface PendingEvents {
+  p1Jump: { x: number; y: number }[];
+  p2Jump: { x: number; y: number }[];
+  starCollect: { x: number; y: number; playerId?: number }[];
+  switchActivate: { x: number; y: number; doorId: number }[];
+  goalReach: { playerId: number }[];
+  start: boolean;
+  won: { level: number; time: number }[];
+  lost: { level: number; cause: string }[];
+}
+
 const LEVELS: Level[] = [
   // Level 1 - Introduction
   {
@@ -261,6 +272,17 @@ export class CoopChallengeGame {
   private readonly MOVE_SPEED = 4;
   private readonly PLAYER_SIZE = 24;
 
+  public pendingEvents: PendingEvents = {
+    p1Jump: [],
+    p2Jump: [],
+    starCollect: [],
+    switchActivate: [],
+    goalReach: [],
+    start: false,
+    won: [],
+    lost: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -271,6 +293,19 @@ export class CoopChallengeGame {
     this.setupInput();
     this.loadLevel(0);
     this.draw();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      p1Jump: [],
+      p2Jump: [],
+      starCollect: [],
+      switchActivate: [],
+      goalReach: [],
+      start: false,
+      won: [],
+      lost: [],
+    };
   }
 
   private createPlayer(
@@ -346,6 +381,7 @@ export class CoopChallengeGame {
     this.status = "playing";
     this.loadLevel(this.currentLevel);
     this.lastTime = Date.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -397,6 +433,10 @@ export class CoopChallengeGame {
     this.timeRemaining -= dt;
     if (this.timeRemaining <= 0) {
       this.status = "lost";
+      this.pendingEvents.lost.push({
+        level: this.currentLevel + 1,
+        cause: "time expired",
+      });
       this.onStateChange?.({ status: "lost", time: 0 });
       return;
     }
@@ -415,6 +455,7 @@ export class CoopChallengeGame {
     if (this.keys.has("w") && this.player1.onGround) {
       this.player1.vy = this.JUMP_FORCE;
       this.player1.onGround = false;
+      this.pendingEvents.p1Jump.push({ x: this.player1.x, y: this.player1.y });
     }
 
     // Player 2 controls (Arrow keys)
@@ -429,6 +470,7 @@ export class CoopChallengeGame {
     if (this.keys.has("arrowup") && this.player2.onGround) {
       this.player2.vy = this.JUMP_FORCE;
       this.player2.onGround = false;
+      this.pendingEvents.p2Jump.push({ x: this.player2.x, y: this.player2.y });
     }
 
     // Update physics
@@ -447,6 +489,10 @@ export class CoopChallengeGame {
     // Check win condition
     if (this.goals.every((g) => g.reached)) {
       this.status = "won";
+      this.pendingEvents.won.push({
+        level: this.currentLevel + 1,
+        time: Math.ceil(this.timeRemaining),
+      });
       this.onStateChange?.({ status: "won", time: Math.ceil(this.timeRemaining) });
     }
   }
@@ -529,6 +575,15 @@ export class CoopChallengeGame {
       const wasActivated = sw.activated;
       sw.activated = p1OnSwitch || p2OnSwitch;
 
+      // Trigger event when switch becomes activated
+      if (!wasActivated && sw.activated) {
+        this.pendingEvents.switchActivate.push({
+          x: sw.x,
+          y: sw.y,
+          doorId: sw.targetDoor,
+        });
+      }
+
       // Update corresponding door
       const door = this.doors.find((d) => d.id === sw.targetDoor);
       if (door) {
@@ -562,6 +617,11 @@ export class CoopChallengeGame {
 
       if (checkPlayer(this.player1) || checkPlayer(this.player2)) {
         star.collected = true;
+        this.pendingEvents.starCollect.push({
+          x: star.x,
+          y: star.y,
+          playerId: star.requiredPlayer,
+        });
       }
     }
   }
@@ -573,7 +633,11 @@ export class CoopChallengeGame {
       const dy = player.y + player.height / 2 - (goal.y + 15);
       const dist = Math.sqrt(dx * dx + dy * dy);
 
+      const wasReached = goal.reached;
       goal.reached = dist < 25;
+      if (!wasReached && goal.reached) {
+        this.pendingEvents.goalReach.push({ playerId: goal.playerId });
+      }
     }
   }
 
