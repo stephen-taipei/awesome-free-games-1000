@@ -89,6 +89,16 @@ export interface GameConfig {
   stealthCriticalRate: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  attack: { isCritical: boolean }[];
+  enemyKilled: { isCritical: boolean; points: number }[];
+  playerHit: { damage: number; healthRemaining: number }[];
+  stealthToggle: { isStealthed: boolean }[];
+  skillUsed: { skill: string }[];
+  gameOver: { score: number; bestScore: number; kills: number }[];
+}
+
 const SKILL_CONFIGS = {
   moonSlash: {
     cooldown: 8,
@@ -116,6 +126,28 @@ export class MoonShadowGame {
   private keys: Set<string> = new Set();
   private mousePosition: Vector = { x: 0, y: 0 };
   private shadowCloneTimer: number = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    attack: [],
+    enemyKilled: [],
+    playerHit: [],
+    stealthToggle: [],
+    skillUsed: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      attack: [],
+      enemyKilled: [],
+      playerHit: [],
+      stealthToggle: [],
+      skillUsed: [],
+      gameOver: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -206,6 +238,7 @@ export class MoonShadowGame {
     this.spawnEnemy();
     this.spawnEnemy();
 
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -486,6 +519,7 @@ export class MoonShadowGame {
 
   private damagePlayer(damage: number): void {
     this.state.player.health -= damage;
+    this.pendingEvents.playerHit.push({ damage, healthRemaining: this.state.player.health });
     if (this.state.player.health <= 0) {
       this.state.player.health = 0;
       this.gameOver();
@@ -507,7 +541,9 @@ export class MoonShadowGame {
 
     if (enemy.health <= 0) {
       this.state.kills++;
-      this.state.score += isCritical ? 200 : 100;
+      const points = isCritical ? 200 : 100;
+      this.state.score += points;
+      this.pendingEvents.enemyKilled.push({ isCritical, points });
       this.createParticles(enemy.x, enemy.y, '#e74c3c', 15);
     } else {
       this.createParticles(enemy.x, enemy.y, '#f39c12', 5);
@@ -552,6 +588,7 @@ export class MoonShadowGame {
       player.criticalRate = player.isStealthed
         ? this.config.stealthCriticalRate
         : this.config.baseCriticalRate;
+      this.pendingEvents.stealthToggle.push({ isStealthed: player.isStealthed });
 
       if (player.isStealthed) {
         this.createParticles(player.x, player.y, '#3498db', 10);
@@ -576,6 +613,7 @@ export class MoonShadowGame {
       if (distance < attackRange + enemy.radius) {
         const isCritical = Math.random() < player.criticalRate;
         const damage = player.damage * (isCritical ? 2 : 1);
+        this.pendingEvents.attack.push({ isCritical });
         this.damageEnemy(enemy, damage, isCritical);
       }
     });
@@ -589,6 +627,7 @@ export class MoonShadowGame {
 
     this.state.activeSkill = skill;
     this.state.skillCooldowns[skill] = this.state.skillMaxCooldowns[skill];
+    this.pendingEvents.skillUsed.push({ skill });
 
     switch (skill) {
       case 'moonSlash':
@@ -694,6 +733,7 @@ export class MoonShadowGame {
       this.saveBestScore(this.state.bestScore);
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, bestScore: this.state.bestScore, kills: this.state.kills });
     this.notifyStateChange();
   }
 

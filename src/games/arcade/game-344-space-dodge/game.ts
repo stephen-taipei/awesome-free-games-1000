@@ -47,6 +47,13 @@ export interface GameState {
   distance: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  powerUpCollected: { type: string }[];
+  collision: boolean;
+  gameOver: { score: number; highScore: number }[];
+}
+
 const INITIAL_SPEED = 3;
 
 export class SpaceDodgeGame {
@@ -56,6 +63,22 @@ export class SpaceDodgeGame {
   private canvasHeight: number = 500;
   private asteroidTimer: number = 0;
   private powerUpTimer: number = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    powerUpCollected: [],
+    collision: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      powerUpCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -100,6 +123,7 @@ export class SpaceDodgeGame {
     this.asteroidTimer = 0;
     this.powerUpTimer = 0;
     this.initStars();
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -233,6 +257,7 @@ export class SpaceDodgeGame {
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < asteroid.radius + spaceship.width / 3) {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -249,6 +274,7 @@ export class SpaceDodgeGame {
 
       if (dist < 30) {
         powerUp.collected = true;
+        this.pendingEvents.powerUpCollected.push({ type: powerUp.type });
         this.applyPowerUp(powerUp.type);
       }
     }
@@ -284,6 +310,7 @@ export class SpaceDodgeGame {
       localStorage.setItem("spaceDodgeHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, highScore: this.state.highScore });
     this.emitState();
   }
 

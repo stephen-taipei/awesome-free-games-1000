@@ -84,6 +84,15 @@ export interface GameConfig {
   comboTimeout: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  attack: { type: string }[];
+  enemyKilled: { type: string; points: number }[];
+  playerHit: { damage: number; healthRemaining: number }[];
+  waveComplete: { wave: number }[];
+  gameOver: { score: number; bestScore: number; wave: number; kills: number }[];
+}
+
 const ENEMY_CONFIGS = {
   [EnemyType.MINION]: {
     radius: 15,
@@ -120,6 +129,26 @@ export class OrderGuardianGame {
   private nextEffectId: number = 0;
   private keys: Set<string> = new Set();
   private onStateChange?: (state: GameState) => void;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    attack: [],
+    enemyKilled: [],
+    playerHit: [],
+    waveComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      attack: [],
+      enemyKilled: [],
+      playerHit: [],
+      waveComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -199,6 +228,7 @@ export class OrderGuardianGame {
     this.nextEffectId = 0;
     this.keys.clear();
     this.spawnWave();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -251,6 +281,7 @@ export class OrderGuardianGame {
     if (this.state.enemies.length === 0 && this.state.enemiesRemaining === 0) {
       this.state.waveTimer += deltaTime;
       if (this.state.waveTimer >= 2) {
+        this.pendingEvents.waveComplete.push({ wave: this.state.wave });
         this.nextWave();
       }
     }
@@ -438,6 +469,7 @@ export class OrderGuardianGame {
 
     this.state.player.isAttacking = true;
     this.state.player.attackCooldown = this.config.attackCooldown;
+    this.pendingEvents.attack.push({ type: 'slash' });
 
     // 尋找最近的敵人
     let nearestEnemy: Enemy | null = null;
@@ -514,10 +546,12 @@ export class OrderGuardianGame {
       enemy.isAlive = false;
       this.state.kills++;
       this.state.enemiesRemaining--;
-      this.state.score += enemy.worth * (1 + this.state.combo);
+      const points = enemy.worth * (1 + this.state.combo);
+      this.state.score += points;
       this.state.combo++;
       this.state.comboTimer = this.config.comboTimeout;
       this.state.maxCombo = Math.max(this.state.maxCombo, this.state.combo);
+      this.pendingEvents.enemyKilled.push({ type: enemy.type, points });
 
       // 恢復特殊能量
       this.state.player.specialEnergy = Math.min(
@@ -542,6 +576,7 @@ export class OrderGuardianGame {
     if (damage > 0) {
       this.state.combo = 0;
       this.state.comboTimer = 0;
+      this.pendingEvents.playerHit.push({ damage, healthRemaining: this.state.player.health });
     }
   }
 
@@ -559,6 +594,7 @@ export class OrderGuardianGame {
       this.saveBestScore(this.state.bestScore);
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, bestScore: this.state.bestScore, wave: this.state.wave, kills: this.state.kills });
     this.notifyStateChange();
   }
 
