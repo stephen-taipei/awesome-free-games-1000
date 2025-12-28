@@ -23,6 +23,14 @@ export interface GameState {
   selectedBlocks: { x: number; y: number }[];
 }
 
+export interface PendingEvents {
+  blockClear: { count: number; color: string; score: number }[];
+  combo: { combo: number; bonus: number }[];
+  levelUp: { level: number }[];
+  start: boolean;
+  gameOver: { score: number; level: number }[];
+}
+
 const COLORS: BlockColor[] = ["red", "blue", "green", "yellow", "purple"];
 const COLOR_HEX: Record<string, string> = {
   red: "#e74c3c",
@@ -41,8 +49,26 @@ export class ColorBlocksGame {
   onStateChange: ((state: GameState) => void) | null = null;
   private timerInterval: number | null = null;
 
+  public pendingEvents: PendingEvents = {
+    blockClear: [],
+    combo: [],
+    levelUp: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      blockClear: [],
+      combo: [],
+      levelUp: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -86,6 +112,7 @@ export class ColorBlocksGame {
       selectedBlocks: [],
     };
 
+    this.pendingEvents.start = true;
     this.startTimer();
     this.emitState();
   }
@@ -110,6 +137,10 @@ export class ColorBlocksGame {
 
   private endGame(): void {
     this.state.status = "gameOver";
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      level: this.state.level,
+    });
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
@@ -149,6 +180,19 @@ export class ColorBlocksGame {
     const comboBonus = Math.floor(baseScore * (this.state.combo * 0.5));
     this.state.score += baseScore + comboBonus;
 
+    // Track events
+    this.pendingEvents.blockClear.push({
+      count: connected.length,
+      color: block.color!,
+      score: baseScore + comboBonus,
+    });
+    if (this.state.combo > 1) {
+      this.pendingEvents.combo.push({
+        combo: this.state.combo,
+        bonus: comboBonus,
+      });
+    }
+
     // Remove blocks after short delay for visual effect
     setTimeout(() => {
       this.clearBlocks(connected);
@@ -157,8 +201,10 @@ export class ColorBlocksGame {
       this.state.selectedBlocks = [];
 
       // Check level up
+      const prevLevel = this.state.level;
       if (this.state.score >= this.state.level * 500) {
         this.state.level++;
+        this.pendingEvents.levelUp.push({ level: this.state.level });
       }
 
       this.emitState();

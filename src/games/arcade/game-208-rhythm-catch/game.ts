@@ -24,6 +24,14 @@ export interface GameState {
   bpm: number;
 }
 
+export interface PendingEvents {
+  catch: { result: string; x: number; y: number; combo: number; score: number }[];
+  miss: { x: number; y: number; lives: number }[];
+  spawn: { x: number; color: string }[];
+  start: boolean;
+  gameOver: { score: number; maxCombo: number }[];
+}
+
 const COLORS = ["#e74c3c", "#3498db", "#27ae60", "#f1c40f", "#9b59b6", "#e67e22"];
 const CATCHER_Y = 380;
 const PERFECT_THRESHOLD = 20;
@@ -37,8 +45,26 @@ export class RhythmCatchGame {
   private nextBallTime: number = 0;
   private ballIdCounter: number = 0;
 
+  public pendingEvents: PendingEvents = {
+    catch: [],
+    miss: [],
+    spawn: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      catch: [],
+      miss: [],
+      spawn: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -72,6 +98,7 @@ export class RhythmCatchGame {
     this.lastTime = performance.now();
     this.nextBallTime = this.lastTime + this.getBeatInterval();
 
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -116,10 +143,11 @@ export class RhythmCatchGame {
     // Check for missed balls
     const missedBalls = this.state.balls.filter((ball) => ball.y > CATCHER_Y + 100);
     if (missedBalls.length > 0) {
-      missedBalls.forEach(() => {
+      missedBalls.forEach((ball) => {
         this.state.lives--;
         this.state.combo = 0;
         this.state.lastResult = "miss";
+        this.pendingEvents.miss.push({ x: ball.x, y: ball.y, lives: this.state.lives });
       });
       this.state.balls = this.state.balls.filter((ball) => ball.y <= CATCHER_Y + 100);
 
@@ -133,15 +161,18 @@ export class RhythmCatchGame {
     const x = 50 + Math.random() * 300;
     const travelTime = 2000; // Time for ball to reach catcher
     const speed = CATCHER_Y / (travelTime / 16);
+    const color = COLORS[Math.floor(Math.random() * COLORS.length)];
 
     this.state.balls.push({
       id: this.ballIdCounter++,
       x,
       y: 0,
       speed,
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      color,
       targetTime: currentTime + travelTime,
     });
+
+    this.pendingEvents.spawn.push({ x, color });
   }
 
   public catch(): void {
@@ -165,15 +196,31 @@ export class RhythmCatchGame {
       // Perfect catch
       this.state.combo++;
       this.state.maxCombo = Math.max(this.state.maxCombo, this.state.combo);
-      this.state.score += 100 + this.state.combo * 10;
+      const points = 100 + this.state.combo * 10;
+      this.state.score += points;
       this.state.lastResult = "perfect";
+      this.pendingEvents.catch.push({
+        result: "perfect",
+        x: closestBall.x,
+        y: closestBall.y,
+        combo: this.state.combo,
+        score: points,
+      });
       this.state.balls = this.state.balls.filter((b) => b.id !== closestBall!.id);
     } else if (closestDistance <= GOOD_THRESHOLD) {
       // Good catch
       this.state.combo++;
       this.state.maxCombo = Math.max(this.state.maxCombo, this.state.combo);
-      this.state.score += 50 + this.state.combo * 5;
+      const points = 50 + this.state.combo * 5;
+      this.state.score += points;
       this.state.lastResult = "good";
+      this.pendingEvents.catch.push({
+        result: "good",
+        x: closestBall.x,
+        y: closestBall.y,
+        combo: this.state.combo,
+        score: points,
+      });
       this.state.balls = this.state.balls.filter((b) => b.id !== closestBall!.id);
     } else {
       // Too early or too late
@@ -186,6 +233,10 @@ export class RhythmCatchGame {
 
   private endGame(): void {
     this.state.status = "gameOver";
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      maxCombo: this.state.maxCombo,
+    });
     if (this.gameLoop) {
       cancelAnimationFrame(this.gameLoop);
       this.gameLoop = null;
