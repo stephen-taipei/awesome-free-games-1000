@@ -38,6 +38,13 @@ export interface GameState {
   coins: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  powerUpCollected: { type: string }[];
+  collision: boolean;
+  gameOver: { score: number; highScore: number; coins: number }[];
+}
+
 const LANES = 3;
 const LANE_WIDTH = 80;
 const INITIAL_SPEED = 8;
@@ -50,6 +57,22 @@ export class NeonDashGame {
   private canvasHeight: number = 500;
   private obstacleTimer: number = 0;
   private powerUpTimer: number = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    powerUpCollected: [],
+    collision: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      powerUpCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -98,6 +121,7 @@ export class NeonDashGame {
     this.updatePlayerPosition();
     this.obstacleTimer = 0;
     this.powerUpTimer = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -243,6 +267,8 @@ export class NeonDashGame {
       ) {
         pu.collected = true;
 
+        this.pendingEvents.powerUpCollected.push({ type: pu.type });
+
         switch (pu.type) {
           case "shield":
             this.state.hasShield = true;
@@ -262,12 +288,14 @@ export class NeonDashGame {
 
   private gameOver(): void {
     this.state.phase = "gameOver";
+    this.pendingEvents.collision = true;
 
     if (this.state.score > this.state.highScore) {
       this.state.highScore = this.state.score;
       localStorage.setItem("neonDashHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, highScore: this.state.highScore, coins: this.state.coins });
     this.emitState();
   }
 

@@ -28,6 +28,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  collect: { type: Collectible["type"]; points: number }[];
+  landed: { score: number; bonus: number }[];
+  crashed: { score: number }[];
+}
+
 const PLAYER_WIDTH = 40;
 const PLAYER_HEIGHT = 50;
 const GRAVITY = 0.05;
@@ -58,6 +65,22 @@ export class ParachuteDropGame {
   private wind = 0;
   private windTimer = 0;
   private parachuteOpen = true;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    collect: [],
+    landed: [],
+    crashed: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      collect: [],
+      landed: [],
+      crashed: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -153,6 +176,7 @@ export class ParachuteDropGame {
     this.clouds = [];
     this.status = "playing";
 
+    this.pendingEvents.start = true;
     this.generateItems();
     this.generateClouds();
     this.emitState();
@@ -263,6 +287,7 @@ export class ParachuteDropGame {
           }
           const points = item.type === "gem" ? 50 : item.type === "coin" ? 20 : 10;
           this.score += points;
+          this.pendingEvents.collect.push({ type: item.type, points });
         }
       }
     });
@@ -310,6 +335,7 @@ export class ParachuteDropGame {
   private land() {
     this.status = "landed";
     // Bonus for safe landing
+    const bonus = this.parachuteOpen ? 100 : 0;
     if (this.parachuteOpen) {
       this.score += 100;
     }
@@ -320,6 +346,7 @@ export class ParachuteDropGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.landed.push({ score: this.score, bonus });
     this.emitState();
   }
 
@@ -328,6 +355,7 @@ export class ParachuteDropGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.crashed.push({ score: this.score });
     this.emitState();
   }
 

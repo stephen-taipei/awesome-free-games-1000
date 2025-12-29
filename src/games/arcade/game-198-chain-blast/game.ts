@@ -31,6 +31,15 @@ export interface LevelConfig {
   ballSpeed: number;
 }
 
+export interface PendingEvents {
+  click: { x: number; y: number }[];
+  explosion: { x: number; y: number; color: string }[];
+  chainReaction: { x: number; y: number; chain: number }[];
+  start: boolean;
+  won: { level: number; score: number; chain: number }[];
+  lost: { level: number; score: number }[];
+}
+
 export class ChainBlastGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -53,6 +62,15 @@ export class ChainBlastGame {
 
   private colors = ["#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4", "#ffeaa7", "#dfe6e9", "#fd79a8", "#a29bfe"];
 
+  public pendingEvents: PendingEvents = {
+    click: [],
+    explosion: [],
+    chainReaction: [],
+    start: false,
+    won: [],
+    lost: [],
+  };
+
   private levels: LevelConfig[] = [
     { ballCount: 10, targetCount: 5, ballSpeed: 1.5 },
     { ballCount: 15, targetCount: 8, ballSpeed: 1.8 },
@@ -67,6 +85,17 @@ export class ChainBlastGame {
     this.setupInput();
   }
 
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      click: [],
+      explosion: [],
+      chainReaction: [],
+      start: false,
+      won: [],
+      lost: [],
+    };
+  }
+
   private setupInput() {
     this.canvas.addEventListener("click", (e) => {
       if (this.status !== "playing" || this.clicksLeft <= 0) return;
@@ -79,6 +108,7 @@ export class ChainBlastGame {
       const y = (e.clientY - rect.top) * scaleY;
 
       this.triggerExplosion(x, y);
+      this.pendingEvents.click.push({ x, y });
       this.clicksLeft--;
       this.status = "exploding";
     });
@@ -97,6 +127,7 @@ export class ChainBlastGame {
     this.currentLevel = level ?? this.currentLevel;
     this.loadLevel(this.currentLevel);
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -170,6 +201,7 @@ export class ChainBlastGame {
             ball.exploding = true;
             this.currentChain++;
             this.maxChain = Math.max(this.maxChain, this.currentChain);
+            this.pendingEvents.chainReaction.push({ x: ball.x, y: ball.y, chain: this.currentChain });
             break;
           }
         }
@@ -183,6 +215,7 @@ export class ChainBlastGame {
             ball.exploding = true;
             this.currentChain++;
             this.maxChain = Math.max(this.maxChain, this.currentChain);
+            this.pendingEvents.chainReaction.push({ x: ball.x, y: ball.y, chain: this.currentChain });
             break;
           }
         }
@@ -193,6 +226,7 @@ export class ChainBlastGame {
         if (ball.explosionRadius >= ball.explosionMaxRadius) {
           ball.exploded = true;
           this.score++;
+          this.pendingEvents.explosion.push({ x: ball.x, y: ball.y, color: ball.color });
           this.createParticles(ball.x, ball.y, ball.color);
           this.updateState();
         }
@@ -254,6 +288,11 @@ export class ChainBlastGame {
   private win() {
     this.status = "won";
     this.stopAnimation();
+    this.pendingEvents.won.push({
+      level: this.currentLevel + 1,
+      score: this.score,
+      chain: this.maxChain,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "won" });
     }
@@ -262,6 +301,10 @@ export class ChainBlastGame {
   private lose() {
     this.status = "lost";
     this.stopAnimation();
+    this.pendingEvents.lost.push({
+      level: this.currentLevel + 1,
+      score: this.score,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "lost" });
     }

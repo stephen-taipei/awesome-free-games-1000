@@ -124,18 +124,26 @@ export class MagicCircleGame {
         const angle = Math.atan2(y - this.centerY, x - this.centerX);
         const rotateAmount = 360 / ring.segments;
 
+        // Emit click event
+        this.notifyChange({ event: 'click', x, y });
+
         // Rotate clockwise
         ring.targetRotation = ring.rotation + rotateAmount;
         this.moves++;
-        this.animateRotation(ring);
-        this.notifyChange();
+        this.animateRotation(ring, i);
         break;
       }
     }
   }
 
-  private animateRotation(ring: Ring) {
+  private animateRotation(ring: Ring, ringIndex: number) {
     this.animating = true;
+
+    // Emit rotation event at ring position
+    const angle = ring.rotation * Math.PI / 180;
+    const rx = this.centerX + Math.cos(angle) * ring.radius;
+    const ry = this.centerY + Math.sin(angle) * ring.radius;
+    this.notifyChange({ event: 'rotation', x: rx, y: ry });
 
     const animate = () => {
       const diff = ring.targetRotation - ring.rotation;
@@ -149,6 +157,13 @@ export class MagicCircleGame {
         ring.targetRotation = ring.rotation;
         this.animating = false;
         this.draw();
+
+        // Check if this ring is aligned
+        const normalizedRotation = ((ring.rotation % 360) + 360) % 360;
+        if (normalizedRotation < 1 || normalizedRotation > 359) {
+          this.notifyChange({ event: 'alignment', x: this.centerX, y: this.centerY });
+        }
+
         this.checkWin();
       }
     };
@@ -164,7 +179,7 @@ export class MagicCircleGame {
 
     if (aligned) {
       this.status = "won";
-      this.notifyChange();
+      this.notifyChange({ event: 'circleComplete', x: this.centerX, y: this.centerY });
     }
   }
 
@@ -380,12 +395,13 @@ export class MagicCircleGame {
     this.onStateChange = cb;
   }
 
-  private notifyChange() {
+  private notifyChange(extra?: { event?: string; x?: number; y?: number }) {
     if (this.onStateChange) {
       this.onStateChange({
         level: this.level,
         moves: this.moves,
         status: this.status,
+        ...extra,
       });
     }
   }

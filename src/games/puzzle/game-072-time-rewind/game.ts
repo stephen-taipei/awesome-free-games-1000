@@ -130,6 +130,26 @@ export class TimeRewindGame {
     this.ctx = canvas.getContext("2d")!;
   }
 
+  private getPixelCoords(gx: number, gy: number): { x: number; y: number } {
+    const offsetX = (this.canvas.width - this.gridSize * this.cellSize) / 2;
+    const offsetY = (this.canvas.height - this.gridSize * this.cellSize) / 2;
+    return {
+      x: offsetX + gx * this.cellSize + this.cellSize / 2,
+      y: offsetY + gy * this.cellSize + this.cellSize / 2,
+    };
+  }
+
+  private notifyChange(extra?: { event?: string; x?: number; y?: number }): void {
+    if (this.onStateChange) {
+      this.onStateChange({
+        status: this.status,
+        level: this.currentLevel + 1,
+        rewinds: this.maxRewinds - this.rewindsUsed,
+        ...extra,
+      });
+    }
+  }
+
   public start() {
     this.loadLevel(this.currentLevel);
     this.loop();
@@ -138,9 +158,7 @@ export class TimeRewindGame {
   private loadLevel(levelIndex: number) {
     if (levelIndex >= LEVELS.length) {
       this.status = "complete";
-      if (this.onStateChange) {
-        this.onStateChange({ status: "complete", level: levelIndex + 1 });
-      }
+      this.notifyChange({ event: "gameComplete" });
       return;
     }
 
@@ -159,13 +177,11 @@ export class TimeRewindGame {
 
     this.saveState();
 
-    if (this.onStateChange) {
-      this.onStateChange({
-        status: "playing",
-        level: levelIndex + 1,
-        rewinds: this.maxRewinds - this.rewindsUsed,
-      });
-    }
+    const center = this.getPixelCoords(
+      Math.floor(this.gridSize / 2),
+      Math.floor(this.gridSize / 2)
+    );
+    this.notifyChange({ event: "levelStart", x: center.x, y: center.y });
   }
 
   private saveState() {
@@ -368,16 +384,32 @@ export class TimeRewindGame {
     // Move
     this.playerPos.x = newX;
     this.playerPos.y = newY;
+    const coords = this.getPixelCoords(newX, newY);
 
     // Check key
     if (targetCell === "key" && !this.hasKey) {
       this.hasKey = true;
       this.doorOpen = true;
+      this.notifyChange({ event: "keyCollect", x: coords.x, y: coords.y });
+
+      // Find door position and emit door open
+      for (let y = 0; y < this.gridSize; y++) {
+        for (let x = 0; x < this.gridSize; x++) {
+          if (this.grid[y][x] === "door") {
+            const doorCoords = this.getPixelCoords(x, y);
+            this.notifyChange({ event: "doorOpen", x: doorCoords.x, y: doorCoords.y });
+            break;
+          }
+        }
+      }
+      this.saveState();
+      return;
     }
 
     // Check spike
     if (targetCell === "spike") {
       this.status = "dead";
+      this.notifyChange({ event: "death", x: coords.x, y: coords.y });
       setTimeout(() => {
         this.rewind();
         this.status = "playing";
@@ -388,25 +420,12 @@ export class TimeRewindGame {
     // Check goal
     if (newX === this.goalPos.x && newY === this.goalPos.y) {
       this.status = "won";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "won",
-          level: this.currentLevel + 1,
-          rewinds: this.maxRewinds - this.rewindsUsed,
-        });
-      }
+      this.notifyChange({ event: "victory", x: coords.x, y: coords.y });
       return;
     }
 
     this.saveState();
-
-    if (this.onStateChange) {
-      this.onStateChange({
-        status: "playing",
-        level: this.currentLevel + 1,
-        rewinds: this.maxRewinds - this.rewindsUsed,
-      });
-    }
+    this.notifyChange({ event: "move", x: coords.x, y: coords.y });
   }
 
   public rewind() {
@@ -418,15 +437,13 @@ export class TimeRewindGame {
     this.isRewinding = true;
     this.rewindIndex = 0;
 
+    const coords = this.getPixelCoords(this.playerPos.x, this.playerPos.y);
+    this.notifyChange({ event: "rewindStart", x: coords.x, y: coords.y });
+
     setTimeout(() => {
       this.isRewinding = false;
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "playing",
-          level: this.currentLevel + 1,
-          rewinds: this.maxRewinds - this.rewindsUsed,
-        });
-      }
+      const endCoords = this.getPixelCoords(this.playerPos.x, this.playerPos.y);
+      this.notifyChange({ event: "rewindEnd", x: endCoords.x, y: endCoords.y });
     }, 800);
   }
 
@@ -436,6 +453,11 @@ export class TimeRewindGame {
   }
 
   public reset() {
+    const center = this.getPixelCoords(
+      Math.floor(this.gridSize / 2),
+      Math.floor(this.gridSize / 2)
+    );
+    this.notifyChange({ event: "reset", x: center.x, y: center.y });
     this.loadLevel(this.currentLevel);
   }
 

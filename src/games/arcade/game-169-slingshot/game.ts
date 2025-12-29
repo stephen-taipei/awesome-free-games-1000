@@ -19,6 +19,16 @@ interface Target {
   points: number;
   hit: boolean;
   color: string;
+  colorRGBA: number[];
+}
+
+export interface PendingEvents {
+  launch: { x: number; y: number; power: number }[];
+  trail: { x: number; y: number }[];
+  targetHit: { x: number; y: number; points: number; color: number[] }[];
+  miss: { x: number; y: number }[];
+  gameOver: { x: number; y: number; victory: boolean }[];
+  start: boolean;
 }
 
 export class SlingshotGame {
@@ -39,12 +49,33 @@ export class SlingshotGame {
   private dragY: number = 0;
   private gravity: number = 0.3;
   private animationId: number = 0;
+  private trailTimer: number = 0;
   onStateChange: ((state: any) => void) | null = null;
+
+  public pendingEvents: PendingEvents = {
+    launch: [],
+    trail: [],
+    targetHit: [],
+    miss: [],
+    gameOver: [],
+    start: false,
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.stone = { x: 0, y: 0, vx: 0, vy: 0, radius: 12, active: false };
+  }
+
+  public clearPendingEvents() {
+    this.pendingEvents = {
+      launch: [],
+      trail: [],
+      targetHit: [],
+      miss: [],
+      gameOver: [],
+      start: false,
+    };
   }
 
   public resize() {
@@ -70,20 +101,29 @@ export class SlingshotGame {
     this.generateTargets();
     this.resetStone();
 
+    this.pendingEvents.start = true;
     this.emitState();
     this.loop();
+  }
+
+  private hexToRGBA(hex: string): number[] {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    return [r, g, b, 1.0];
   }
 
   private generateTargets() {
     this.targets = [];
     const targetCount = 8;
+    const colors = ["#e74c3c", "#f39c12", "#9b59b6", "#3498db", "#1abc9c"];
 
     for (let i = 0; i < targetCount; i++) {
       const x = 200 + Math.random() * (this.width - 280);
       const y = 80 + Math.random() * (this.height * 0.5);
       const radius = 20 + Math.random() * 20;
       const points = Math.round((40 - radius) / 2) * 10;
-      const colors = ["#e74c3c", "#f39c12", "#9b59b6", "#3498db", "#1abc9c"];
+      const color = colors[Math.floor(Math.random() * colors.length)];
 
       this.targets.push({
         x,
@@ -91,7 +131,8 @@ export class SlingshotGame {
         radius,
         points,
         hit: false,
-        color: colors[Math.floor(Math.random() * colors.length)],
+        color,
+        colorRGBA: this.hexToRGBA(color),
       });
     }
   }
@@ -104,6 +145,7 @@ export class SlingshotGame {
     this.stone.active = false;
     this.dragX = this.slingshotX;
     this.dragY = this.slingshotY;
+    this.trailTimer = 0;
   }
 
   private loop = () => {
@@ -121,6 +163,16 @@ export class SlingshotGame {
     this.stone.x += this.stone.vx;
     this.stone.y += this.stone.vy;
 
+    // Stone trail
+    this.trailTimer += 1 / 60;
+    if (this.trailTimer > 0.03) {
+      this.trailTimer = 0;
+      this.pendingEvents.trail.push({
+        x: this.stone.x / this.width,
+        y: this.stone.y / this.height,
+      });
+    }
+
     // Check target collisions
     for (const target of this.targets) {
       if (target.hit) continue;
@@ -132,6 +184,14 @@ export class SlingshotGame {
       if (dist < this.stone.radius + target.radius) {
         target.hit = true;
         this.score += target.points;
+
+        this.pendingEvents.targetHit.push({
+          x: target.x / this.width,
+          y: target.y / this.height,
+          points: target.points,
+          color: target.colorRGBA,
+        });
+
         this.emitState();
       }
     }
@@ -142,6 +202,12 @@ export class SlingshotGame {
       this.stone.x > this.width + 50 ||
       this.stone.x < -50
     ) {
+      // Emit miss if no target was hit during this shot
+      this.pendingEvents.miss.push({
+        x: Math.min(Math.max(this.stone.x, 0), this.width) / this.width,
+        y: 0.9,
+      });
+
       if (this.shotsLeft > 0) {
         this.resetStone();
       } else {
@@ -153,30 +219,31 @@ export class SlingshotGame {
   private endGame() {
     this.status = "over";
     if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    const victory = this.score >= 300;
+    this.pendingEvents.gameOver.push({
+      x: 0.5,
+      y: 0.5,
+      victory,
+    });
+
     this.emitState();
   }
 
   private draw() {
     this.ctx.clearRect(0, 0, this.width, this.height);
 
-    // Draw sky gradient
-    const skyGradient = this.ctx.createLinearGradient(0, 0, 0, this.height * 0.6);
-    skyGradient.addColorStop(0, "#87ceeb");
-    skyGradient.addColorStop(1, "#4a90c2");
-    this.ctx.fillStyle = skyGradient;
-    this.ctx.fillRect(0, 0, this.width, this.height * 0.6);
-
-    // Draw grass
-    const grassGradient = this.ctx.createLinearGradient(0, this.height * 0.6, 0, this.height);
-    grassGradient.addColorStop(0, "#2d5a27");
-    grassGradient.addColorStop(1, "#1a3d1a");
-    this.ctx.fillStyle = grassGradient;
-    this.ctx.fillRect(0, this.height * 0.6, this.width, this.height * 0.4);
-
     // Draw targets
     for (const target of this.targets) {
       if (target.hit) continue;
 
+      // Target shadow
+      this.ctx.beginPath();
+      this.ctx.arc(target.x + 3, target.y + 3, target.radius, 0, Math.PI * 2);
+      this.ctx.fillStyle = "rgba(0,0,0,0.2)";
+      this.ctx.fill();
+
+      // Main target
       this.ctx.beginPath();
       this.ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
       this.ctx.fillStyle = target.color;
@@ -188,12 +255,12 @@ export class SlingshotGame {
       // Target rings
       this.ctx.beginPath();
       this.ctx.arc(target.x, target.y, target.radius * 0.6, 0, Math.PI * 2);
-      this.ctx.strokeStyle = "#fff";
+      this.ctx.strokeStyle = "rgba(255,255,255,0.6)";
       this.ctx.stroke();
 
       this.ctx.beginPath();
       this.ctx.arc(target.x, target.y, target.radius * 0.3, 0, Math.PI * 2);
-      this.ctx.fillStyle = "#fff";
+      this.ctx.fillStyle = "rgba(255,255,255,0.8)";
       this.ctx.fill();
 
       // Points text
@@ -211,25 +278,45 @@ export class SlingshotGame {
       this.drawTrajectory();
     }
 
-    // Draw stone
+    // Draw stone with shadow
+    const stoneX = this.dragging && !this.stone.active ? this.dragX : this.stone.x;
+    const stoneY = this.dragging && !this.stone.active ? this.dragY : this.stone.y;
+
+    // Shadow
     this.ctx.beginPath();
-    this.ctx.arc(
-      this.dragging && !this.stone.active ? this.dragX : this.stone.x,
-      this.dragging && !this.stone.active ? this.dragY : this.stone.y,
-      this.stone.radius,
-      0,
-      Math.PI * 2
-    );
-    this.ctx.fillStyle = "#7f8c8d";
+    this.ctx.arc(stoneX + 2, stoneY + 2, this.stone.radius, 0, Math.PI * 2);
+    this.ctx.fillStyle = "rgba(0,0,0,0.3)";
     this.ctx.fill();
-    this.ctx.strokeStyle = "#5d6d7e";
+
+    // Stone gradient
+    const stoneGradient = this.ctx.createRadialGradient(
+      stoneX - 3, stoneY - 3, 0,
+      stoneX, stoneY, this.stone.radius
+    );
+    stoneGradient.addColorStop(0, "#95a5a6");
+    stoneGradient.addColorStop(0.5, "#7f8c8d");
+    stoneGradient.addColorStop(1, "#5d6d7e");
+
+    this.ctx.beginPath();
+    this.ctx.arc(stoneX, stoneY, this.stone.radius, 0, Math.PI * 2);
+    this.ctx.fillStyle = stoneGradient;
+    this.ctx.fill();
+    this.ctx.strokeStyle = "#4a5568";
     this.ctx.lineWidth = 2;
     this.ctx.stroke();
   }
 
   private drawSlingshot() {
-    // Fork base
-    this.ctx.fillStyle = "#8b4513";
+    // Fork base with wood texture
+    const woodGradient = this.ctx.createLinearGradient(
+      this.slingshotX - 10, this.slingshotY,
+      this.slingshotX + 10, this.slingshotY
+    );
+    woodGradient.addColorStop(0, "#8b4513");
+    woodGradient.addColorStop(0.5, "#a0522d");
+    woodGradient.addColorStop(1, "#8b4513");
+
+    this.ctx.fillStyle = woodGradient;
     this.ctx.fillRect(this.slingshotX - 8, this.slingshotY, 16, 60);
 
     // Left fork
@@ -238,7 +325,7 @@ export class SlingshotGame {
     this.ctx.lineTo(this.slingshotX - 25, this.slingshotY - 40);
     this.ctx.lineTo(this.slingshotX - 15, this.slingshotY - 40);
     this.ctx.lineTo(this.slingshotX - 8, this.slingshotY - 10);
-    this.ctx.fillStyle = "#8b4513";
+    this.ctx.fillStyle = woodGradient;
     this.ctx.fill();
 
     // Right fork
@@ -247,7 +334,7 @@ export class SlingshotGame {
     this.ctx.lineTo(this.slingshotX + 25, this.slingshotY - 40);
     this.ctx.lineTo(this.slingshotX + 15, this.slingshotY - 40);
     this.ctx.lineTo(this.slingshotX + 8, this.slingshotY - 10);
-    this.ctx.fillStyle = "#8b4513";
+    this.ctx.fillStyle = woodGradient;
     this.ctx.fill();
 
     // Elastic bands
@@ -256,7 +343,8 @@ export class SlingshotGame {
     const stoneY = this.dragging && !this.stone.active ? this.dragY : this.slingshotY;
 
     this.ctx.strokeStyle = "#c0392b";
-    this.ctx.lineWidth = 4;
+    this.ctx.lineWidth = 5;
+    this.ctx.lineCap = "round";
 
     // Left band
     this.ctx.beginPath();
@@ -283,7 +371,7 @@ export class SlingshotGame {
     let y = this.dragY;
 
     this.ctx.setLineDash([5, 5]);
-    this.ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    this.ctx.strokeStyle = "rgba(255,255,255,0.6)";
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     this.ctx.moveTo(x, y);
@@ -345,6 +433,13 @@ export class SlingshotGame {
       this.stone.vy = Math.sin(angle) * power;
       this.stone.active = true;
       this.shotsLeft--;
+
+      this.pendingEvents.launch.push({
+        x: this.slingshotX / this.width,
+        y: this.slingshotY / this.height,
+        power: power / 12.5,
+      });
+
       this.emitState();
     }
 

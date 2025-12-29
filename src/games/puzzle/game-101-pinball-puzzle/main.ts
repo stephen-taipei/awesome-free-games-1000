@@ -1,10 +1,199 @@
 /**
  * Pinball Puzzle Main Entry
- * Game #101
+ * Game #101 - With WebGPU Effects
  */
 import { PinballGame, GameState } from "./game";
 import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
+import { WebGPURenderer } from "./webgpu";
+
+// Audio System for Pinball / Arcade sounds
+class AudioSystem {
+  private audioContext: AudioContext | null = null;
+  private initialized = false;
+
+  async init() {
+    if (this.initialized) return;
+    try {
+      this.audioContext = new AudioContext();
+      this.initialized = true;
+    } catch (e) {
+      console.warn("Audio initialization failed:", e);
+    }
+  }
+
+  private playTone(
+    frequency: number,
+    duration: number,
+    type: OscillatorType = "sine",
+    volume: number = 0.15
+  ) {
+    if (!this.audioContext) return;
+
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+
+    gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.001,
+      this.audioContext.currentTime + duration
+    );
+
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    oscillator.start();
+    oscillator.stop(this.audioContext.currentTime + duration);
+  }
+
+  // Ball launch - spring release
+  playLaunch() {
+    if (!this.audioContext) return;
+
+    // Spring tension release
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(100, this.audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, this.audioContext.currentTime + 0.1);
+
+    gain.gain.setValueAtTime(0.15, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.audioContext.destination);
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.2);
+
+    // Pop
+    this.playTone(600, 0.1, "square", 0.08);
+  }
+
+  // Bumper hit - boing!
+  playBumper() {
+    if (!this.audioContext) return;
+
+    // Boing sound
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(400, this.audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 0.15);
+
+    gain.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.audioContext.destination);
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.2);
+
+    // Impact
+    this.playTone(150, 0.05, "triangle", 0.1);
+  }
+
+  // Target hit - ding!
+  playTarget(points: number) {
+    if (!this.audioContext) return;
+
+    // Pitch based on points
+    const basePitch = 600 + (points / 100) * 200;
+
+    this.playTone(basePitch, 0.15, "sine", 0.12);
+    setTimeout(() => {
+      this.playTone(basePitch * 1.25, 0.1, "sine", 0.1);
+    }, 60);
+
+    // Arcade ding
+    this.playTone(1200, 0.1, "triangle", 0.08);
+  }
+
+  // Flipper action
+  playFlipper() {
+    if (!this.audioContext) return;
+
+    // Mechanical clunk
+    this.playTone(200, 0.05, "square", 0.1);
+    this.playTone(100, 0.08, "triangle", 0.08);
+  }
+
+  // Ball lost
+  playBallLost() {
+    if (!this.audioContext) return;
+
+    // Descending tone
+    for (let i = 0; i < 4; i++) {
+      setTimeout(() => {
+        this.playTone(400 - i * 80, 0.15, "sine", 0.1);
+      }, i * 80);
+    }
+
+    // Thud
+    setTimeout(() => {
+      this.playTone(80, 0.2, "triangle", 0.12);
+    }, 300);
+  }
+
+  // Victory - all targets hit!
+  playVictory() {
+    if (!this.audioContext) return;
+
+    const melody = [523, 659, 784, 1047, 1319, 1568, 1319, 1568, 2093];
+    melody.forEach((freq, i) => {
+      setTimeout(() => {
+        this.playTone(freq, 0.2, "sine", 0.12);
+        if (i > 4) {
+          this.playTone(freq * 0.5, 0.15, "triangle", 0.06);
+        }
+      }, i * 80);
+    });
+
+    // Celebration jingles
+    for (let i = 0; i < 6; i++) {
+      setTimeout(() => {
+        this.playTone(1000 + Math.random() * 1000, 0.1, "sine", 0.08);
+      }, 500 + i * 100);
+    }
+  }
+
+  // Game over
+  playGameOver() {
+    if (!this.audioContext) return;
+
+    // Sad trombone
+    const notes = [392, 370, 349, 330];
+    notes.forEach((freq, i) => {
+      setTimeout(() => {
+        this.playTone(freq, 0.4, "sine", 0.12);
+      }, i * 200);
+    });
+  }
+
+  // Level start
+  playLevelStart() {
+    if (!this.audioContext) return;
+
+    this.playTone(400, 0.1, "sine", 0.1);
+    setTimeout(() => this.playTone(500, 0.1, "sine", 0.12), 100);
+    setTimeout(() => this.playTone(600, 0.15, "sine", 0.14), 200);
+  }
+
+  // Reset
+  playReset() {
+    if (!this.audioContext) return;
+
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        this.playTone(500 - i * 100, 0.08, "triangle", 0.08);
+      }, i * 60);
+    }
+  }
+}
 
 // Elements
 const languageSelect = document.getElementById("language-select") as HTMLSelectElement;
@@ -21,8 +210,13 @@ const resetBtn = document.getElementById("reset-btn")!;
 const launchBtn = document.getElementById("launch-btn")!;
 const leftFlipperBtn = document.getElementById("left-flipper")!;
 const rightFlipperBtn = document.getElementById("right-flipper")!;
+const webgpuCanvas = document.getElementById("webgpu-canvas") as HTMLCanvasElement;
 
 let game: PinballGame;
+let webgpuRenderer: WebGPURenderer | null = null;
+const audioSystem = new AudioSystem();
+let previousScore = 0;
+let previousBalls = 3;
 
 function initI18n(): void {
   Object.entries(translations).forEach(([locale, trans]) => {
@@ -50,6 +244,27 @@ function updateTexts(): void {
   });
 }
 
+async function initWebGPU(): Promise<void> {
+  if (!webgpuCanvas) return;
+
+  webgpuRenderer = new WebGPURenderer(webgpuCanvas);
+  const success = await webgpuRenderer.init();
+
+  if (!success) {
+    console.warn("WebGPU not available, running without effects");
+    webgpuRenderer = null;
+  } else {
+    resizeWebGPU();
+  }
+}
+
+function resizeWebGPU(): void {
+  if (webgpuRenderer && webgpuCanvas.parentElement) {
+    const rect = webgpuCanvas.parentElement.getBoundingClientRect();
+    webgpuRenderer.resize(rect.width, rect.height);
+  }
+}
+
 function initGame(): void {
   resizeCanvas();
 
@@ -59,9 +274,42 @@ function initGame(): void {
     render(state);
     updateUI(state);
 
+    // Emit ball trail
+    if (state.ball.active && webgpuRenderer) {
+      webgpuRenderer.emitBallTrail(
+        state.ball.pos.x,
+        state.ball.pos.y,
+        state.ball.vel.x,
+        state.ball.vel.y
+      );
+    }
+
+    // Check for score changes (target/bumper hit)
+    if (state.score > previousScore && state.status === "playing") {
+      const diff = state.score - previousScore;
+      if (diff === 10) {
+        // Bumper hit
+        audioSystem.playBumper();
+      } else if (diff >= 100) {
+        // Target hit
+        audioSystem.playTarget(diff);
+      }
+    }
+    previousScore = state.score;
+
+    // Check for ball lost
+    if (state.balls < previousBalls && state.status === "playing") {
+      audioSystem.playBallLost();
+      webgpuRenderer?.emitBallLost(state.ball.pos.x, state.ball.pos.y);
+    }
+    previousBalls = state.balls;
+
     if (state.status === "won") {
+      audioSystem.playVictory();
+      webgpuRenderer?.emitVictory();
       setTimeout(() => showWinOverlay(), 500);
     } else if (state.status === "lost") {
+      audioSystem.playGameOver();
       setTimeout(() => showLostOverlay(), 500);
     }
   };
@@ -69,6 +317,7 @@ function initGame(): void {
   window.addEventListener("resize", () => {
     resizeCanvas();
     game.resize(canvas.width, canvas.height);
+    resizeWebGPU();
   });
 
   // Keyboard controls
@@ -77,8 +326,11 @@ function initGame(): void {
 
   // Button controls
   leftFlipperBtn.addEventListener("mousedown", () => {
+    audioSystem.init();
+    audioSystem.playFlipper();
     game.setFlipper("left", true);
     leftFlipperBtn.classList.add("active");
+    emitFlipperEffect("left");
   });
   leftFlipperBtn.addEventListener("mouseup", () => {
     game.setFlipper("left", false);
@@ -90,8 +342,11 @@ function initGame(): void {
   });
 
   rightFlipperBtn.addEventListener("mousedown", () => {
+    audioSystem.init();
+    audioSystem.playFlipper();
     game.setFlipper("right", true);
     rightFlipperBtn.classList.add("active");
+    emitFlipperEffect("right");
   });
   rightFlipperBtn.addEventListener("mouseup", () => {
     game.setFlipper("right", false);
@@ -105,8 +360,11 @@ function initGame(): void {
   // Touch support
   leftFlipperBtn.addEventListener("touchstart", (e) => {
     e.preventDefault();
+    audioSystem.init();
+    audioSystem.playFlipper();
     game.setFlipper("left", true);
     leftFlipperBtn.classList.add("active");
+    emitFlipperEffect("left");
   });
   leftFlipperBtn.addEventListener("touchend", () => {
     game.setFlipper("left", false);
@@ -115,13 +373,26 @@ function initGame(): void {
 
   rightFlipperBtn.addEventListener("touchstart", (e) => {
     e.preventDefault();
+    audioSystem.init();
+    audioSystem.playFlipper();
     game.setFlipper("right", true);
     rightFlipperBtn.classList.add("active");
+    emitFlipperEffect("right");
   });
   rightFlipperBtn.addEventListener("touchend", () => {
     game.setFlipper("right", false);
     rightFlipperBtn.classList.remove("active");
   });
+}
+
+function emitFlipperEffect(side: "left" | "right"): void {
+  const state = game.getState();
+  const flipper = state.flippers.find(f => f.side === side);
+  if (!flipper || !webgpuRenderer) return;
+
+  const endX = flipper.pos.x + Math.cos(flipper.angle) * flipper.length;
+  const endY = flipper.pos.y + Math.sin(flipper.angle) * flipper.length;
+  webgpuRenderer.emitFlipperAction(flipper.pos.x, flipper.pos.y, endX, endY);
 }
 
 function resizeCanvas(): void {
@@ -136,18 +407,24 @@ function handleKeydown(e: KeyboardEvent): void {
     case "a":
     case "z":
     case "arrowleft":
+      audioSystem.init();
+      audioSystem.playFlipper();
       game.setFlipper("left", true);
       leftFlipperBtn.classList.add("active");
+      emitFlipperEffect("left");
       break;
     case "l":
     case "/":
     case "arrowright":
+      audioSystem.init();
+      audioSystem.playFlipper();
       game.setFlipper("right", true);
       rightFlipperBtn.classList.add("active");
+      emitFlipperEffect("right");
       break;
     case " ":
       e.preventDefault();
-      game.launch();
+      handleLaunch();
       break;
   }
 }
@@ -167,6 +444,16 @@ function handleKeyup(e: KeyboardEvent): void {
       rightFlipperBtn.classList.remove("active");
       break;
   }
+}
+
+function handleLaunch(): void {
+  audioSystem.init();
+  const state = game.getState();
+  if (!state.ball.active) {
+    audioSystem.playLaunch();
+    webgpuRenderer?.emitLaunch(state.width - 30, state.height - 100);
+  }
+  game.launch();
 }
 
 function render(state: GameState): void {
@@ -299,6 +586,10 @@ function showWinOverlay(): void {
     startBtn.onclick = () => {
       overlay.style.display = "none";
       game.nextLevel();
+      previousScore = 0;
+      previousBalls = 3;
+      audioSystem.playLevelStart();
+      webgpuRenderer?.emitLevelStart();
     };
   }
 }
@@ -312,15 +603,29 @@ function showLostOverlay(): void {
 }
 
 function startGame(level: number = 1): void {
+  audioSystem.init();
   overlay.style.display = "none";
   game.start(level);
+  previousScore = 0;
+  previousBalls = 3;
+  audioSystem.playLevelStart();
+  webgpuRenderer?.emitLevelStart();
 }
 
 // Event listeners
 startBtn.addEventListener("click", () => startGame());
-resetBtn.addEventListener("click", () => game.reset());
-launchBtn.addEventListener("click", () => game.launch());
+resetBtn.addEventListener("click", () => {
+  audioSystem.init();
+  game.reset();
+  previousScore = 0;
+  previousBalls = 3;
+  audioSystem.playReset();
+  webgpuRenderer?.emitReset();
+});
+launchBtn.addEventListener("click", handleLaunch);
 
 // Initialize
 initI18n();
-initGame();
+initWebGPU().then(() => {
+  initGame();
+});

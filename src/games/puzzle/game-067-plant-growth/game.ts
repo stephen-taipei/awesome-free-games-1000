@@ -103,6 +103,9 @@ export class PlantGame {
   status: "playing" | "won" | "complete" = "playing";
   onStateChange: ((state: any) => void) | null = null;
 
+  // Track boost emissions to avoid duplicates
+  private emittedBoosts: Set<string> = new Set();
+
   colors = {
     empty: "#8fbc8f",
     soil: "#8b4513",
@@ -157,6 +160,7 @@ export class PlantGame {
     this.vinePath = [{ x: level.seedPos.x, y: level.seedPos.y }];
     this.currentGrowingIndex = 0;
     this.status = "playing";
+    this.emittedBoosts.clear();
 
     if (this.onStateChange) {
       this.onStateChange({ status: "playing", level: levelIndex + 1 });
@@ -179,9 +183,28 @@ export class PlantGame {
 
       if (tile.growthProgress < 1) {
         let speed = this.growthSpeed;
+        const boostKey = `${pos.x},${pos.y}`;
+
         // Boost from water/sun
-        if (tile.type === "water") speed *= 2;
-        if (tile.type === "sun") speed *= 1.5;
+        if (tile.type === "water") {
+          speed *= 2;
+          // Emit water boost event once when growth starts
+          if (tile.growthProgress > 0.1 && !this.emittedBoosts.has(`water-${boostKey}`)) {
+            this.emittedBoosts.add(`water-${boostKey}`);
+            const coords = this.getPixelCoords(pos.x, pos.y);
+            this.notifyChange({ event: "waterBoost", x: coords.x, y: coords.y });
+          }
+        }
+        if (tile.type === "sun") {
+          speed *= 1.5;
+          // Emit sun boost event once when growth starts
+          if (tile.growthProgress > 0.1 && !this.emittedBoosts.has(`sun-${boostKey}`)) {
+            this.emittedBoosts.add(`sun-${boostKey}`);
+            const coords = this.getPixelCoords(pos.x, pos.y);
+            this.notifyChange({ event: "sunBoost", x: coords.x, y: coords.y });
+          }
+        }
+
         tile.growthProgress = Math.min(1, tile.growthProgress + speed);
       }
     }
@@ -190,6 +213,14 @@ export class PlantGame {
     const level = LEVELS[this.currentLevel];
     const flowerTile = this.grid[level.flowerPos.y][level.flowerPos.x];
     if (flowerTile.hasVine && flowerTile.growthProgress >= 1) {
+      // Emit flower bloom before win
+      const bloomKey = `bloom-${level.flowerPos.x},${level.flowerPos.y}`;
+      if (!this.emittedBoosts.has(bloomKey)) {
+        this.emittedBoosts.add(bloomKey);
+        const coords = this.getPixelCoords(level.flowerPos.x, level.flowerPos.y);
+        this.notifyChange({ event: "flowerBloom", x: coords.x, y: coords.y });
+      }
+
       this.status = "won";
       if (this.onStateChange) {
         this.onStateChange({ status: "won", level: this.currentLevel + 1 });
@@ -436,8 +467,16 @@ export class PlantGame {
     if (gx < 0 || gx >= this.gridSize || gy < 0 || gy >= this.gridSize) return;
 
     const tile = this.grid[gy][gx];
-    if (tile.type === "rock") return;
-    if (tile.hasVine) return;
+    const coords = this.getPixelCoords(gx, gy);
+
+    if (tile.type === "rock") {
+      this.notifyChange({ event: "invalidClick", x: coords.x, y: coords.y });
+      return;
+    }
+    if (tile.hasVine) {
+      this.notifyChange({ event: "invalidClick", x: coords.x, y: coords.y });
+      return;
+    }
 
     // Check if adjacent to vine
     const lastVine = this.vinePath[this.vinePath.length - 1];
@@ -449,6 +488,12 @@ export class PlantGame {
       tile.hasVine = true;
       tile.growthProgress = 0;
       this.vinePath.push({ x: gx, y: gy });
+
+      // Emit vineGrow and tileClick events
+      this.notifyChange({ event: "vineGrow", x: coords.x, y: coords.y });
+      this.notifyChange({ event: "tileClick", x: coords.x, y: coords.y });
+    } else {
+      this.notifyChange({ event: "invalidClick", x: coords.x, y: coords.y });
     }
   }
 
@@ -481,5 +526,24 @@ export class PlantGame {
 
   public getTotalLevels(): number {
     return LEVELS.length;
+  }
+
+  private notifyChange(extra?: { event?: string; x?: number; y?: number }) {
+    if (this.onStateChange) {
+      this.onStateChange({
+        level: this.currentLevel + 1,
+        status: this.status,
+        ...extra,
+      });
+    }
+  }
+
+  private getPixelCoords(gx: number, gy: number): { x: number; y: number } {
+    const offsetX = (this.canvas.width - this.gridSize * this.tileSize) / 2;
+    const offsetY = (this.canvas.height - this.gridSize * this.tileSize) / 2;
+    return {
+      x: offsetX + gx * this.tileSize + this.tileSize / 2,
+      y: offsetY + gy * this.tileSize + this.tileSize / 2,
+    };
   }
 }

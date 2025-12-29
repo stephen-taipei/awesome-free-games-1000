@@ -1,6 +1,7 @@
 /**
  * Archaeology Game Engine
  * Game #077 - Dig and discover ancient artifacts
+ * WebGPU Enhanced
  */
 
 interface Artifact {
@@ -13,10 +14,24 @@ interface Artifact {
   depth: number; // 0-1, how deep it is
   revealed: number; // 0-1, how much is uncovered
   damaged: boolean;
+  wasRevealed: boolean; // Track if we already emitted reveal event
+  wasDiscovered: boolean; // Track if we already emitted discovery event
 }
 
 interface DirtCell {
   depth: number; // 0-1, how much dirt remains
+}
+
+interface GameState {
+  artifactsFound: number;
+  totalArtifacts: number;
+  brushHealth: number;
+  status: string;
+  damaged: number;
+  event?: string;
+  x?: number;
+  y?: number;
+  artifactType?: string;
 }
 
 export class ArchaeologyGame {
@@ -40,7 +55,7 @@ export class ArchaeologyGame {
   status: "playing" | "won" | "lost" = "playing";
   isDigging: boolean = false;
 
-  onStateChange: ((state: any) => void) | null = null;
+  onStateChange: ((state: GameState) => void) | null = null;
 
   // Artifact images (emoji-based for simplicity)
   artifactEmojis: Record<string, string> = {
@@ -64,7 +79,7 @@ export class ArchaeologyGame {
     this.artifactsDamaged = 0;
     this.status = "playing";
     this.draw();
-    this.notifyState();
+    this.notifyState({ event: "levelStart" });
   }
 
   private initGrid() {
@@ -115,6 +130,8 @@ export class ArchaeologyGame {
             depth: 0.3 + Math.random() * 0.4, // How deep to find it
             revealed: 0,
             damaged: false,
+            wasRevealed: false,
+            wasDiscovered: false,
           });
           placed = true;
         }
@@ -140,6 +157,13 @@ export class ArchaeologyGame {
     }
   }
 
+  private getScreenCoords(gridX: number, gridY: number): { x: number; y: number } {
+    return {
+      x: gridX * this.cellSize + this.cellSize / 2,
+      y: gridY * this.cellSize + this.cellSize / 2,
+    };
+  }
+
   private dig(canvasX: number, canvasY: number) {
     const cellX = Math.floor(canvasX / this.cellSize);
     const cellY = Math.floor(canvasY / this.cellSize);
@@ -150,6 +174,10 @@ export class ArchaeologyGame {
 
     const radius = this.currentTool === "brush" ? 2 : 1;
     const power = this.currentTool === "brush" ? 0.05 : 0.15;
+
+    // Emit dig event
+    const digEvent = this.currentTool === "brush" ? "brushDig" : "pickDig";
+    this.notifyState({ event: digEvent, x: canvasX, y: canvasY });
 
     // Affect surrounding cells
     for (let dy = -radius; dy <= radius; dy++) {
@@ -178,7 +206,7 @@ export class ArchaeologyGame {
     }
 
     this.draw();
-    this.notifyState();
+    this.notifyState({});
   }
 
   private checkArtifacts(cellX: number, cellY: number) {
@@ -202,15 +230,39 @@ export class ArchaeologyGame {
         }
 
         const avgDepth = totalDepth / count;
+        const prevRevealed = artifact.revealed;
         artifact.revealed = Math.max(0, 1 - avgDepth / artifact.depth);
 
-        // Check if artifact is revealed enough
-        if (artifact.revealed >= 0.8 && !artifact.damaged) {
-          // Mark as found only once
-          if (artifact.revealed < 0.85) {
-            this.artifactsFound++;
-            this.checkWinCondition();
-          }
+        // Emit reveal event when artifact first becomes visible
+        if (artifact.revealed > 0.1 && !artifact.wasRevealed) {
+          artifact.wasRevealed = true;
+          const coords = this.getScreenCoords(
+            artifact.x + artifact.width / 2,
+            artifact.y + artifact.height / 2
+          );
+          this.notifyState({
+            event: "artifactReveal",
+            x: coords.x,
+            y: coords.y,
+            artifactType: artifact.type,
+          });
+        }
+
+        // Check if artifact is fully revealed (discovered)
+        if (artifact.revealed >= 0.8 && !artifact.damaged && !artifact.wasDiscovered) {
+          artifact.wasDiscovered = true;
+          this.artifactsFound++;
+          const coords = this.getScreenCoords(
+            artifact.x + artifact.width / 2,
+            artifact.y + artifact.height / 2
+          );
+          this.notifyState({
+            event: "discovery",
+            x: coords.x,
+            y: coords.y,
+            artifactType: artifact.type,
+          });
+          this.checkWinCondition();
         }
 
         // Check for damage (using pick when artifact is close to surface)
@@ -218,6 +270,16 @@ export class ArchaeologyGame {
           if (Math.random() < 0.3) {
             artifact.damaged = true;
             this.artifactsDamaged++;
+            const coords = this.getScreenCoords(
+              artifact.x + artifact.width / 2,
+              artifact.y + artifact.height / 2
+            );
+            this.notifyState({
+              event: "artifactDamage",
+              x: coords.x,
+              y: coords.y,
+              artifactType: artifact.type,
+            });
           }
         }
       }
@@ -228,7 +290,7 @@ export class ArchaeologyGame {
     const foundCount = this.artifacts.filter((a) => a.revealed >= 0.8 && !a.damaged).length;
     if (foundCount >= this.totalArtifacts) {
       this.status = "won";
-      this.notifyState();
+      this.notifyState({ event: "victory" });
     }
   }
 
@@ -344,14 +406,15 @@ export class ArchaeologyGame {
   }
 
   public reset() {
+    this.notifyState({ event: "reset" });
     this.start();
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 
-  private notifyState() {
+  private notifyState(extra: Partial<GameState>) {
     if (this.onStateChange) {
       const found = this.artifacts.filter((a) => a.revealed >= 0.8 && !a.damaged).length;
       this.onStateChange({
@@ -360,6 +423,7 @@ export class ArchaeologyGame {
         brushHealth: Math.round(this.brushHealth),
         status: this.status,
         damaged: this.artifactsDamaged,
+        ...extra,
       });
     }
   }

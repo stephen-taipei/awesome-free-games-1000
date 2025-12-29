@@ -34,6 +34,13 @@ interface GameState {
   lives: number;
   level: number;
   status: "idle" | "playing" | "won" | "over" | "levelComplete";
+  playerShoot?: { x: number; y: number };
+  alienDeath?: { x: number; y: number; type: number };
+  playerHit?: { x: number; y: number };
+  barrierHit?: { x: number; y: number };
+  bulletTrail?: { x: number; y: number; isPlayer: boolean };
+  gameOver?: { x: number; y: number };
+  levelComplete?: boolean;
 }
 
 type StateCallback = (state: GameState) => void;
@@ -63,6 +70,17 @@ export class SpaceInvadersGame {
   private animationId: number | null = null;
   private keys: Set<string> = new Set();
   private lastShot = 0;
+  private frameCount = 0;
+
+  private pendingEvents: {
+    playerShoot?: { x: number; y: number };
+    alienDeath?: { x: number; y: number; type: number };
+    playerHit?: { x: number; y: number };
+    barrierHit?: { x: number; y: number };
+    bulletTrail?: { x: number; y: number; isPlayer: boolean };
+    gameOver?: { x: number; y: number };
+    levelComplete?: boolean;
+  } = {};
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -75,12 +93,18 @@ export class SpaceInvadersGame {
 
   private emitState() {
     if (this.onStateChange) {
-      this.onStateChange({
+      const state: GameState = {
         score: this.score,
         lives: this.lives,
         level: this.level,
         status: this.status,
-      });
+        ...this.pendingEvents,
+      };
+
+      this.onStateChange(state);
+
+      // Clear pending events after emission
+      this.pendingEvents = {};
     }
   }
 
@@ -192,12 +216,21 @@ export class SpaceInvadersGame {
     if (now - this.lastShot < 300) return;
     this.lastShot = now;
 
+    const bulletX = this.playerX + this.playerWidth / 2;
+    const bulletY = this.canvas.height - this.playerHeight - 20;
+
     this.bullets.push({
-      x: this.playerX + this.playerWidth / 2,
-      y: this.canvas.height - this.playerHeight - 20,
+      x: bulletX,
+      y: bulletY,
       speed: -8,
       isPlayer: true,
     });
+
+    // Emit shoot event
+    const nx = bulletX / this.canvas.width;
+    const ny = 1 - bulletY / this.canvas.height;
+    this.pendingEvents.playerShoot = { x: nx, y: ny };
+    this.emitState();
   }
 
   movePlayer(direction: "left" | "right") {
@@ -222,6 +255,8 @@ export class SpaceInvadersGame {
   }
 
   private update() {
+    this.frameCount++;
+
     // Handle player input
     const speed = this.canvas.width * 0.008;
     if (this.keys.has("ArrowLeft") || this.keys.has("a") || this.keys.has("A")) {
@@ -291,9 +326,17 @@ export class SpaceInvadersGame {
       }
     }
 
-    // Move bullets
+    // Move bullets and emit trails
     for (const bullet of this.bullets) {
       bullet.y += bullet.speed;
+
+      // Emit bullet trail occasionally
+      if (this.frameCount % 5 === 0) {
+        const nx = bullet.x / this.canvas.width;
+        const ny = 1 - bullet.y / this.canvas.height;
+        this.pendingEvents.bulletTrail = { x: nx, y: ny, isPlayer: bullet.isPlayer };
+        this.emitState();
+      }
     }
 
     // Remove off-screen bullets
@@ -307,6 +350,9 @@ export class SpaceInvadersGame {
     // Check if aliens reached bottom
     for (const alien of this.aliens) {
       if (alien.alive && alien.y + alien.height >= this.canvas.height - this.playerHeight - 30) {
+        const nx = (this.playerX + this.playerWidth / 2) / this.canvas.width;
+        const ny = 1 - (this.canvas.height - this.playerHeight - 15) / this.canvas.height;
+        this.pendingEvents.gameOver = { x: nx, y: ny };
         this.status = "over";
         this.emitState();
         return;
@@ -315,6 +361,7 @@ export class SpaceInvadersGame {
 
     // Check win
     if (this.aliens.every((a) => !a.alive)) {
+      this.pendingEvents.levelComplete = true;
       this.status = "levelComplete";
       this.emitState();
       return;
@@ -338,6 +385,11 @@ export class SpaceInvadersGame {
           alien.alive = false;
           bullet.y = -100;
           this.score += (3 - alien.type) * 10;
+
+          // Emit alien death
+          const nx = (alien.x + alien.width / 2) / this.canvas.width;
+          const ny = 1 - (alien.y + alien.height / 2) / this.canvas.height;
+          this.pendingEvents.alienDeath = { x: nx, y: ny, type: alien.type };
           this.emitState();
         }
       }
@@ -367,6 +419,13 @@ export class SpaceInvadersGame {
             barrier.health[row][col] > 0
           ) {
             barrier.health[row][col]--;
+
+            // Emit barrier hit
+            const nx = bullet.x / this.canvas.width;
+            const ny = 1 - bullet.y / this.canvas.height;
+            this.pendingEvents.barrierHit = { x: nx, y: ny };
+            this.emitState();
+
             bullet.y = bullet.isPlayer ? -100 : this.canvas.height + 100;
           }
         }
@@ -383,9 +442,15 @@ export class SpaceInvadersGame {
       ) {
         bullet.y = this.canvas.height + 100;
         this.lives--;
+
+        // Emit player hit
+        const nx = (this.playerX + this.playerWidth / 2) / this.canvas.width;
+        const ny = 1 - (this.canvas.height - this.playerHeight - 15) / this.canvas.height;
+        this.pendingEvents.playerHit = { x: nx, y: ny };
         this.emitState();
 
         if (this.lives <= 0) {
+          this.pendingEvents.gameOver = { x: nx, y: ny };
           this.status = "over";
           this.emitState();
         }
@@ -403,20 +468,8 @@ export class SpaceInvadersGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Background
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, w, h);
-
-    // Stars
-    ctx.fillStyle = "#fff";
-    for (let i = 0; i < 50; i++) {
-      const x = (i * 137) % w;
-      const y = (i * 251) % h;
-      const size = (i % 3) + 1;
-      ctx.beginPath();
-      ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // Clear with transparency for WebGPU background
+    ctx.clearRect(0, 0, w, h);
 
     // Draw barriers
     for (const barrier of this.barriers) {
@@ -439,16 +492,19 @@ export class SpaceInvadersGame {
       }
     }
 
-    // Draw aliens
+    // Draw aliens with glow
     for (const alien of this.aliens) {
       if (!alien.alive) continue;
       this.drawAlien(alien);
     }
 
-    // Draw bullets
+    // Draw bullets with glow
     for (const bullet of this.bullets) {
+      ctx.shadowColor = bullet.isPlayer ? "#00ff00" : "#ff0000";
+      ctx.shadowBlur = 10;
       ctx.fillStyle = bullet.isPlayer ? "#00ff00" : "#ff0000";
       ctx.fillRect(bullet.x - 2, bullet.y, 4, 10);
+      ctx.shadowBlur = 0;
     }
 
     // Draw player
@@ -461,6 +517,10 @@ export class SpaceInvadersGame {
     const y = alien.y;
     const w = alien.width;
     const h = alien.height;
+
+    // Glow effect
+    ctx.shadowColor = ALIEN_COLORS[alien.type];
+    ctx.shadowBlur = 10;
 
     ctx.fillStyle = ALIEN_COLORS[alien.type];
 
@@ -510,6 +570,8 @@ export class SpaceInvadersGame {
       ctx.arc(x + w * 0.65, y + h * 0.35, w * 0.08, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    ctx.shadowBlur = 0;
   }
 
   private drawPlayer() {
@@ -518,6 +580,10 @@ export class SpaceInvadersGame {
     const y = this.canvas.height - this.playerHeight - 15;
     const w = this.playerWidth;
     const h = this.playerHeight;
+
+    // Glow effect
+    ctx.shadowColor = "#00ff00";
+    ctx.shadowBlur = 15;
 
     // Ship body
     ctx.fillStyle = "#00ff00";
@@ -530,6 +596,8 @@ export class SpaceInvadersGame {
 
     // Cannon
     ctx.fillRect(x + w / 2 - 3, y - 8, 6, 10);
+
+    ctx.shadowBlur = 0;
 
     // Cockpit
     ctx.fillStyle = "#00cc00";

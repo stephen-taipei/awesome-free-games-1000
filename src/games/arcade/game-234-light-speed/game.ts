@@ -13,6 +13,13 @@ const COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F"
 const SYMBOLS = ["●", "■", "▲", "★", "♦", "♥"];
 const DIRECTIONS = ["↑", "↓", "←", "→"];
 
+export interface PendingEvents {
+  start: boolean;
+  respond: { correct: boolean; reactionTime: number; points: number }[];
+  levelUp: { level: number }[];
+  gameOver: { score: number; bestScore: number; isNewBest: boolean; avgReactionTime: number }[];
+}
+
 export class LightSpeedGame {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
@@ -37,6 +44,22 @@ export class LightSpeedGame {
 
   onStateChange: ((s: any) => void) | null = null;
   onChallengeReady: ((challenge: Challenge) => void) | null = null;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    respond: [],
+    levelUp: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      respond: [],
+      levelUp: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -65,6 +88,7 @@ export class LightSpeedGame {
     this.backgroundColor = "#2c3e50";
     this.targetColor = "#2c3e50";
 
+    this.pendingEvents.start = true;
     this.notify();
     this.scheduleNextChallenge();
     this.animate();
@@ -190,12 +214,14 @@ export class LightSpeedGame {
     const newLevel = Math.floor(this.score / 1000) + 1;
     if (newLevel > this.level) {
       this.level = newLevel;
+      this.pendingEvents.levelUp.push({ level: this.level });
     }
 
     // Green flash
     this.flashColor = "#2ecc71";
     this.flashOpacity = 0.6;
 
+    this.pendingEvents.respond.push({ correct: true, reactionTime, points });
     this.notify();
   }
 
@@ -205,6 +231,8 @@ export class LightSpeedGame {
     // Red flash
     this.flashColor = "#e74c3c";
     this.flashOpacity = 0.8;
+
+    this.pendingEvents.respond.push({ correct: false, reactionTime: 0, points: 0 });
 
     if (this.lives <= 0) {
       this.gameOver();
@@ -220,6 +248,8 @@ export class LightSpeedGame {
     this.flashColor = "#f39c12";
     this.flashOpacity = 0.8;
 
+    this.pendingEvents.respond.push({ correct: false, reactionTime: 0, points: 0 });
+
     if (this.lives <= 0) {
       this.gameOver();
     } else {
@@ -230,6 +260,13 @@ export class LightSpeedGame {
   private gameOver() {
     this.status = "gameover";
     this.saveBestScore();
+    const isNewBest = this.score >= this.bestScore;
+    this.pendingEvents.gameOver.push({
+      score: this.score,
+      bestScore: this.bestScore,
+      isNewBest,
+      avgReactionTime: this.getAverageReactionTime(),
+    });
     this.notify();
   }
 

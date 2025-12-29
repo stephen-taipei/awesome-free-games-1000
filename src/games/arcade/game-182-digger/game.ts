@@ -14,6 +14,15 @@ interface GameState {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  dig: { x: number; y: number }[];
+  goldCollect: { x: number; y: number; points: number }[];
+  diamondCollect: { x: number; y: number; points: number }[];
+  fuelCollect: { x: number; y: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; score: number; depth: number }[];
+}
+
 const CELL_SIZE = 30;
 const GRID_WIDTH = 15;
 const GRID_HEIGHT = 20;
@@ -37,9 +46,29 @@ export class DiggerGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  public pendingEvents: PendingEvents = {
+    dig: [],
+    goldCollect: [],
+    diamondCollect: [],
+    fuelCollect: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      dig: [],
+      goldCollect: [],
+      diamondCollect: [],
+      fuelCollect: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(callback: StateChangeCallback) {
@@ -110,12 +139,21 @@ export class DiggerGame {
 
   private getStatus(): "idle" | "playing" | "gameOver" {
     if (!this.isPlaying) return "idle";
-    if (this.fuel <= 0) return "gameOver";
+    if (this.fuel <= 0) {
+      this.pendingEvents.gameOver.push({
+        x: this.playerX,
+        y: this.playerY,
+        score: this.score,
+        depth: this.depth,
+      });
+      return "gameOver";
+    }
     return "playing";
   }
 
   start() {
     this.isPlaying = true;
+    this.pendingEvents.start = true;
     this.initGrid();
     this.draw();
   }
@@ -139,12 +177,17 @@ export class DiggerGame {
     if (targetCell === "rock") return;
 
     // Process cell
-    if (targetCell === "gold") {
+    if (targetCell === "dirt") {
+      this.pendingEvents.dig.push({ x: newX, y: newY });
+    } else if (targetCell === "gold") {
       this.score += 10;
+      this.pendingEvents.goldCollect.push({ x: newX, y: newY, points: 10 });
     } else if (targetCell === "diamond") {
       this.score += 50;
+      this.pendingEvents.diamondCollect.push({ x: newX, y: newY, points: 50 });
     } else if (targetCell === "fuel") {
       this.fuel = Math.min(MAX_FUEL, this.fuel + 20);
+      this.pendingEvents.fuelCollect.push({ x: newX, y: newY });
     }
 
     // Move player

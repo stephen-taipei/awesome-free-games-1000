@@ -13,10 +13,11 @@ interface Tower {
   isTarget: boolean;
   active: boolean;
   range: number;
+  wasActive?: boolean; // Track previous state for connection events
 }
 
 interface Level {
-  towers: Omit<Tower, "active">[];
+  towers: Omit<Tower, "active" | "wasActive">[];
 }
 
 interface GameState {
@@ -24,6 +25,11 @@ interface GameState {
   maxLevel: number;
   signalStrength: number;
   status: "idle" | "playing" | "won";
+  towerRotate?: { x: number; y: number };
+  signalConnect?: { x: number; y: number };
+  signalDisconnect?: { x: number; y: number };
+  dataPulse?: { x: number; y: number; direction: number };
+  reset?: boolean;
 }
 
 type StateCallback = (state: GameState) => void;
@@ -106,6 +112,14 @@ export class SignalPuzzleGame {
   private wavePhase = 0;
   private signalPath: Tower[] = [];
 
+  private pendingEvents: {
+    towerRotate?: { x: number; y: number };
+    signalConnect?: { x: number; y: number };
+    signalDisconnect?: { x: number; y: number };
+    dataPulse?: { x: number; y: number; direction: number };
+    reset?: boolean;
+  } = {};
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -119,12 +133,19 @@ export class SignalPuzzleGame {
     if (this.onStateChange) {
       const target = this.towers.find((t) => t.isTarget);
       const strength = target && target.active ? 100 : this.calculateSignalStrength();
-      this.onStateChange({
+
+      const state: GameState = {
         level: this.level,
         maxLevel: LEVELS.length,
         signalStrength: strength,
         status: this.status,
-      });
+        ...this.pendingEvents,
+      };
+
+      this.onStateChange(state);
+
+      // Clear pending events after emission
+      this.pendingEvents = {};
     }
   }
 
@@ -149,6 +170,7 @@ export class SignalPuzzleGame {
       y: t.y * this.canvas.height,
       range: t.range * Math.min(this.canvas.width, this.canvas.height),
       active: t.isSource,
+      wasActive: t.isSource,
     }));
   }
 
@@ -161,6 +183,7 @@ export class SignalPuzzleGame {
   }
 
   reset() {
+    this.pendingEvents.reset = true;
     this.loadLevel();
     this.status = "playing";
     this.emitState();
@@ -198,9 +221,32 @@ export class SignalPuzzleGame {
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist < 30) {
+        // Store previous active states
+        const prevActiveStates = this.towers.map((t) => t.active);
+
         // Rotate tower
         tower.direction = (tower.direction + 1) % 8;
+
+        // Emit tower rotate event
+        this.pendingEvents.towerRotate = { x: tower.x, y: tower.y };
+
+        // Propagate signal and check for connection changes
         this.propagateSignal();
+
+        // Check for connection/disconnection events
+        for (let i = 0; i < this.towers.length; i++) {
+          const t = this.towers[i];
+          const wasActive = prevActiveStates[i];
+
+          if (!wasActive && t.active && !t.isSource) {
+            // Tower just connected
+            this.pendingEvents.signalConnect = { x: t.x, y: t.y };
+          } else if (wasActive && !t.active && !t.isSource) {
+            // Tower just disconnected
+            this.pendingEvents.signalDisconnect = { x: t.x, y: t.y };
+          }
+        }
+
         this.emitState();
 
         // Check win
@@ -313,20 +359,8 @@ export class SignalPuzzleGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Dark background with stars
-    ctx.fillStyle = "#1e272e";
-    ctx.fillRect(0, 0, w, h);
-
-    // Draw stars
-    ctx.fillStyle = "#dfe6e9";
-    for (let i = 0; i < 50; i++) {
-      const sx = ((i * 137) % w);
-      const sy = ((i * 97) % h);
-      const size = (i % 3) + 1;
-      ctx.beginPath();
-      ctx.arc(sx, sy, size, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // Clear with transparent to show WebGPU background
+    ctx.clearRect(0, 0, w, h);
 
     // Draw signal connections
     this.drawSignalPaths();

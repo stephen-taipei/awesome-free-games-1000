@@ -19,6 +19,16 @@ interface Puck {
   radius: number;
 }
 
+export interface PendingEvents {
+  playerHit: { x: number; y: number; force: number }[];
+  cpuHit: { x: number; y: number; force: number }[];
+  wallBounce: { x: number; y: number; nx: number; ny: number }[];
+  goalScored: { x: number; y: number; isPlayer: boolean }[];
+  puckTrail: { x: number; y: number }[];
+  gameOver: { x: number; y: number; victory: boolean }[];
+  start: boolean;
+}
+
 export class AirHockeyGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -36,7 +46,18 @@ export class AirHockeyGame {
   private friction: number = 0.995;
   private targetX: number = 0;
   private targetY: number = 0;
+  private trailTimer: number = 0;
   onStateChange: ((state: any) => void) | null = null;
+
+  public pendingEvents: PendingEvents = {
+    playerHit: [],
+    cpuHit: [],
+    wallBounce: [],
+    goalScored: [],
+    puckTrail: [],
+    gameOver: [],
+    start: false,
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -44,6 +65,18 @@ export class AirHockeyGame {
     this.player = { x: 0, y: 0, radius: 30, vx: 0, vy: 0 };
     this.cpu = { x: 0, y: 0, radius: 30, vx: 0, vy: 0 };
     this.puck = { x: 0, y: 0, vx: 0, vy: 0, radius: 15 };
+  }
+
+  public clearPendingEvents() {
+    this.pendingEvents = {
+      playerHit: [],
+      cpuHit: [],
+      wallBounce: [],
+      goalScored: [],
+      puckTrail: [],
+      gameOver: [],
+      start: false,
+    };
   }
 
   public resize() {
@@ -91,6 +124,7 @@ export class AirHockeyGame {
     this.puck.vx = Math.sin(angle) * 3;
     this.puck.vy = dir * Math.cos(angle) * 3;
 
+    this.pendingEvents.start = true;
     this.emitState();
     this.loop();
   }
@@ -131,14 +165,37 @@ export class AirHockeyGame {
     this.puck.vx *= this.friction;
     this.puck.vy *= this.friction;
 
+    // Puck trail
+    this.trailTimer += 1 / 60;
+    const puckSpeed = Math.sqrt(this.puck.vx ** 2 + this.puck.vy ** 2);
+    if (this.trailTimer > 0.05 && puckSpeed > 1) {
+      this.trailTimer = 0;
+      this.pendingEvents.puckTrail.push({
+        x: this.puck.x / this.width,
+        y: this.puck.y / this.height,
+      });
+    }
+
     // Wall collisions
     if (this.puck.x - this.puck.radius < 0) {
       this.puck.x = this.puck.radius;
       this.puck.vx *= -0.9;
+      this.pendingEvents.wallBounce.push({
+        x: this.puck.x / this.width,
+        y: this.puck.y / this.height,
+        nx: 1,
+        ny: 0,
+      });
     }
     if (this.puck.x + this.puck.radius > this.width) {
       this.puck.x = this.width - this.puck.radius;
       this.puck.vx *= -0.9;
+      this.pendingEvents.wallBounce.push({
+        x: this.puck.x / this.width,
+        y: this.puck.y / this.height,
+        nx: -1,
+        ny: 0,
+      });
     }
 
     // Goal detection
@@ -149,6 +206,11 @@ export class AirHockeyGame {
     if (this.puck.y - this.puck.radius < 0) {
       if (this.puck.x > goalLeft && this.puck.x < goalRight) {
         this.playerScore++;
+        this.pendingEvents.goalScored.push({
+          x: this.puck.x / this.width,
+          y: 0.02,
+          isPlayer: true,
+        });
         this.emitState();
         if (this.playerScore >= this.winScore) {
           this.endGame(true);
@@ -159,6 +221,12 @@ export class AirHockeyGame {
       } else {
         this.puck.y = this.puck.radius;
         this.puck.vy *= -0.9;
+        this.pendingEvents.wallBounce.push({
+          x: this.puck.x / this.width,
+          y: this.puck.y / this.height,
+          nx: 0,
+          ny: 1,
+        });
       }
     }
 
@@ -166,6 +234,11 @@ export class AirHockeyGame {
     if (this.puck.y + this.puck.radius > this.height) {
       if (this.puck.x > goalLeft && this.puck.x < goalRight) {
         this.cpuScore++;
+        this.pendingEvents.goalScored.push({
+          x: this.puck.x / this.width,
+          y: 0.98,
+          isPlayer: false,
+        });
         this.emitState();
         if (this.cpuScore >= this.winScore) {
           this.endGame(false);
@@ -176,12 +249,18 @@ export class AirHockeyGame {
       } else {
         this.puck.y = this.height - this.puck.radius;
         this.puck.vy *= -0.9;
+        this.pendingEvents.wallBounce.push({
+          x: this.puck.x / this.width,
+          y: this.puck.y / this.height,
+          nx: 0,
+          ny: -1,
+        });
       }
     }
 
     // Paddle-puck collisions
-    this.checkPaddleCollision(this.player);
-    this.checkPaddleCollision(this.cpu);
+    this.checkPaddleCollision(this.player, true);
+    this.checkPaddleCollision(this.cpu, false);
   }
 
   private updateCPU() {
@@ -215,7 +294,7 @@ export class AirHockeyGame {
     );
   }
 
-  private checkPaddleCollision(paddle: Paddle) {
+  private checkPaddleCollision(paddle: Paddle, isPlayer: boolean) {
     const dx = this.puck.x - paddle.x;
     const dy = this.puck.y - paddle.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -255,6 +334,17 @@ export class AirHockeyGame {
         this.puck.vx = (this.puck.vx / speed) * maxSpeed;
         this.puck.vy = (this.puck.vy / speed) * maxSpeed;
       }
+
+      // Emit hit event
+      const force = Math.min(speed / maxSpeed, 1);
+      const hitX = this.puck.x / this.width;
+      const hitY = this.puck.y / this.height;
+
+      if (isPlayer) {
+        this.pendingEvents.playerHit.push({ x: hitX, y: hitY, force });
+      } else {
+        this.pendingEvents.cpuHit.push({ x: hitX, y: hitY, force });
+      }
     }
   }
 
@@ -270,6 +360,13 @@ export class AirHockeyGame {
   private endGame(playerWon: boolean) {
     this.status = "over";
     if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    this.pendingEvents.gameOver.push({
+      x: 0.5,
+      y: 0.5,
+      victory: playerWon,
+    });
+
     this.emitState();
     if (this.onStateChange) {
       this.onStateChange({
@@ -284,8 +381,8 @@ export class AirHockeyGame {
   private draw() {
     this.ctx.clearRect(0, 0, this.width, this.height);
 
-    // Draw table
-    this.ctx.fillStyle = "#1e5f8a";
+    // Draw table (transparent for WebGPU background)
+    this.ctx.fillStyle = "rgba(30, 95, 138, 0.3)";
     this.ctx.fillRect(0, 0, this.width, this.height);
 
     // Center line
@@ -305,50 +402,63 @@ export class AirHockeyGame {
 
     // Goals
     const goalLeft = (this.width - this.goalWidth) / 2;
-    this.ctx.fillStyle = "#2c3e50";
+    this.ctx.fillStyle = "rgba(44, 62, 80, 0.8)";
     this.ctx.fillRect(goalLeft, 0, this.goalWidth, 10);
     this.ctx.fillRect(goalLeft, this.height - 10, this.goalWidth, 10);
 
-    // Goal edges
+    // Goal edges with neon glow
+    this.ctx.shadowBlur = 15;
+    this.ctx.shadowColor = "#e74c3c";
     this.ctx.fillStyle = "#e74c3c";
     this.ctx.fillRect(goalLeft - 10, 0, 10, 20);
     this.ctx.fillRect(goalLeft + this.goalWidth, 0, 10, 20);
+
+    this.ctx.shadowColor = "#3498db";
     this.ctx.fillRect(goalLeft - 10, this.height - 20, 10, 20);
     this.ctx.fillRect(goalLeft + this.goalWidth, this.height - 20, 10, 20);
+    this.ctx.shadowBlur = 0;
 
-    // Draw CPU paddle
+    // Draw CPU paddle with glow
+    this.ctx.shadowBlur = 20;
+    this.ctx.shadowColor = "#ff3366";
     this.ctx.beginPath();
     this.ctx.arc(this.cpu.x, this.cpu.y, this.cpu.radius, 0, Math.PI * 2);
     this.ctx.fillStyle = "#e74c3c";
     this.ctx.fill();
-    this.ctx.strokeStyle = "#c0392b";
+    this.ctx.strokeStyle = "#ff6666";
     this.ctx.lineWidth = 3;
     this.ctx.stroke();
+    this.ctx.shadowBlur = 0;
 
     // CPU paddle inner circle
     this.ctx.beginPath();
     this.ctx.arc(this.cpu.x, this.cpu.y, this.cpu.radius * 0.5, 0, Math.PI * 2);
-    this.ctx.strokeStyle = "#fff";
+    this.ctx.strokeStyle = "rgba(255,255,255,0.8)";
     this.ctx.lineWidth = 2;
     this.ctx.stroke();
 
-    // Draw player paddle
+    // Draw player paddle with glow
+    this.ctx.shadowBlur = 20;
+    this.ctx.shadowColor = "#00ffff";
     this.ctx.beginPath();
     this.ctx.arc(this.player.x, this.player.y, this.player.radius, 0, Math.PI * 2);
     this.ctx.fillStyle = "#3498db";
     this.ctx.fill();
-    this.ctx.strokeStyle = "#2980b9";
+    this.ctx.strokeStyle = "#66ccff";
     this.ctx.lineWidth = 3;
     this.ctx.stroke();
+    this.ctx.shadowBlur = 0;
 
     // Player paddle inner circle
     this.ctx.beginPath();
     this.ctx.arc(this.player.x, this.player.y, this.player.radius * 0.5, 0, Math.PI * 2);
-    this.ctx.strokeStyle = "#fff";
+    this.ctx.strokeStyle = "rgba(255,255,255,0.8)";
     this.ctx.lineWidth = 2;
     this.ctx.stroke();
 
-    // Draw puck
+    // Draw puck with glow
+    this.ctx.shadowBlur = 10;
+    this.ctx.shadowColor = "rgba(255,255,255,0.5)";
     this.ctx.beginPath();
     this.ctx.arc(this.puck.x, this.puck.y, this.puck.radius, 0, Math.PI * 2);
     this.ctx.fillStyle = "#2c3e50";
@@ -356,6 +466,7 @@ export class AirHockeyGame {
     this.ctx.strokeStyle = "#1a252f";
     this.ctx.lineWidth = 2;
     this.ctx.stroke();
+    this.ctx.shadowBlur = 0;
   }
 
   public handleMouseMove(x: number, y: number) {

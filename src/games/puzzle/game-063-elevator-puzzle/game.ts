@@ -124,9 +124,18 @@ export class ElevatorGame {
       return;
     }
 
+    const direction = floor > this.elevatorFloor ? 1 : -1;
     this.targetFloor = floor;
     this.moves++;
     this.status = "moving";
+
+    // Emit elevator start event
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const floorHeight = h / (this.currentLevel.floors + 1);
+    const elevatorY = h - this.elevatorFloor * floorHeight;
+    this.notifyChange({ event: 'elevatorStart', x: 140, y: elevatorY, direction });
+
     this.animateElevator();
   }
 
@@ -135,6 +144,8 @@ export class ElevatorGame {
     const endFloor = this.targetFloor;
     const duration = Math.abs(endFloor - startFloor) * 300;
     const startTime = Date.now();
+    const h = this.canvas.height;
+    const floorHeight = h / (this.currentLevel.floors + 1);
 
     const animate = () => {
       const elapsed = Date.now() - startTime;
@@ -154,6 +165,11 @@ export class ElevatorGame {
         this.elevatorFloor = endFloor;
         this.animationProgress = endFloor;
         this.status = "playing";
+
+        // Emit arrival event
+        const arrivalY = h - endFloor * floorHeight;
+        this.notifyChange({ event: 'arrival', x: 140, y: arrivalY });
+
         this.handlePassengers();
         this.draw();
         this.notifyChange();
@@ -164,12 +180,18 @@ export class ElevatorGame {
   }
 
   private handlePassengers() {
+    const h = this.canvas.height;
+    const floorHeight = h / (this.currentLevel.floors + 1);
+    const elevatorY = h - this.elevatorFloor * floorHeight;
+
     // Drop off passengers at their destination
     this.passengers.forEach((p) => {
       if (p.inElevator && p.targetFloor === this.elevatorFloor) {
         p.inElevator = false;
         p.delivered = true;
         p.currentFloor = this.elevatorFloor;
+        // Emit delivered event
+        this.notifyChange({ event: 'delivered', x: 200, y: elevatorY - floorHeight / 2 });
       }
     });
 
@@ -183,6 +205,8 @@ export class ElevatorGame {
         this.passengers.filter((x) => x.inElevator).length < this.elevatorCapacity
       ) {
         p.inElevator = true;
+        // Emit pickup event
+        this.notifyChange({ event: 'pickup', x: 140, y: elevatorY - floorHeight / 2 });
       }
     });
 
@@ -209,6 +233,8 @@ export class ElevatorGame {
         y >= buttonY - 15 &&
         y <= buttonY + 15
       ) {
+        // Emit button press event
+        this.notifyChange({ event: 'buttonPress', x: buttonX + buttonWidth / 2, y: buttonY });
         this.goToFloor(i);
         return;
       }
@@ -423,13 +449,14 @@ export class ElevatorGame {
     this.onStateChange = cb;
   }
 
-  private notifyChange() {
+  private notifyChange(extra?: { event?: string; x?: number; y?: number; direction?: number }) {
     if (this.onStateChange) {
       this.onStateChange({
         level: this.level,
         moves: this.moves,
         delivered: this.getDeliveredCount(),
         status: this.status,
+        ...extra,
       });
     }
   }

@@ -5,8 +5,10 @@
 import { YinYangGame } from "./game";
 import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
+import { WebGPURenderer } from "./webgpu";
 
 const canvas = document.getElementById("game-canvas") as HTMLCanvasElement;
+const webgpuCanvas = document.getElementById("webgpu-canvas") as HTMLCanvasElement;
 const languageSelect = document.getElementById("language-select") as HTMLSelectElement;
 const levelDisplay = document.getElementById("level-display")!;
 const balanceDisplay = document.getElementById("balance-display")!;
@@ -24,6 +26,141 @@ const yinCount = document.getElementById("yin-count")!;
 const yangCount = document.getElementById("yang-count")!;
 
 let game: YinYangGame;
+let renderer: WebGPURenderer | null = null;
+let animationId: number;
+
+// Audio System
+class AudioSystem {
+  private ctx: AudioContext | null = null;
+
+  private init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return this.ctx;
+  }
+
+  playPlace(isYin: boolean) {
+    const ctx = this.init();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = isYin ? "sine" : "triangle";
+    osc.frequency.setValueAtTime(isYin ? 220 : 440, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(isYin ? 110 : 880, ctx.currentTime + 0.2);
+
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  }
+
+  playBalance() {
+    const ctx = this.init();
+    // Harmonious chord
+    [261.63, 329.63, 392.00].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+
+      osc.start(ctx.currentTime + i * 0.05);
+      osc.stop(ctx.currentTime + 0.5);
+    });
+  }
+
+  playImbalance() {
+    const ctx = this.init();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(150, ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(100, ctx.currentTime + 0.15);
+
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.15);
+  }
+
+  playSelect() {
+    const ctx = this.init();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
+
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.1);
+  }
+
+  playVictory() {
+    const ctx = this.init();
+    // Ascending harmony
+    [261.63, 329.63, 392.00, 523.25].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, ctx.currentTime + 0.3);
+
+      gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+
+      osc.start(ctx.currentTime + i * 0.1);
+      osc.stop(ctx.currentTime + 0.6);
+    });
+  }
+
+  playReset() {
+    const ctx = this.init();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(400, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.2);
+
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+  }
+}
+
+const audio = new AudioSystem();
 
 function initI18n() {
   Object.entries(translations).forEach(([locale, trans]) => {
@@ -57,6 +194,30 @@ function updateTexts() {
     const key = el.getAttribute("data-i18n");
     if (key) el.textContent = i18n.t(key);
   });
+}
+
+async function initWebGPU() {
+  if (!webgpuCanvas) return;
+
+  renderer = new WebGPURenderer();
+  const success = await renderer.initialize(webgpuCanvas);
+
+  if (success) {
+    function animate() {
+      renderer?.render();
+      animationId = requestAnimationFrame(animate);
+    }
+    animate();
+  }
+}
+
+function getCanvasCoords(clientX: number, clientY: number): { x: number; y: number } {
+  const rect = webgpuCanvas?.getBoundingClientRect() || canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio, 2);
+  return {
+    x: (clientX - rect.left) * dpr,
+    y: (clientY - rect.top) * dpr,
+  };
 }
 
 function initGame() {
@@ -95,6 +256,11 @@ function initGame() {
       balanceDisplay.style.color = "#e74c3c";
     }
 
+    // Update renderer balance
+    if (renderer) {
+      renderer.setBalance(state.balance || 0);
+    }
+
     // Update element counts
     if (state.availableYin !== undefined) {
       yinCount.textContent = `${state.placedYin || 0}/${state.availableYin}`;
@@ -108,6 +274,51 @@ function initGame() {
     } else {
       yangBtn.classList.add("selected");
       yinBtn.classList.remove("selected");
+    }
+
+    // Handle events for WebGPU effects
+    if (state.event && renderer) {
+      const centerX = webgpuCanvas?.width / 2 || 200;
+      const centerY = webgpuCanvas?.height / 2 || 200;
+
+      switch (state.event) {
+        case "elementPlace": {
+          const isYin = state.elementType === "yin";
+          const pos = getCanvasCoords(state.clientX || 0, state.clientY || 0);
+          renderer.emitElementPlace(state.x || pos.x, state.y || pos.y, isYin);
+          audio.playPlace(isYin);
+          break;
+        }
+        case "balanceAchieved":
+          renderer.emitBalanceAchieved(centerX, centerY);
+          audio.playBalance();
+          break;
+        case "imbalance":
+          renderer.emitImbalance(centerX, centerY);
+          audio.playImbalance();
+          break;
+        case "typeSelect": {
+          const isYin = state.selectedType === "yin";
+          renderer.emitTypeSelect(centerX, centerY, isYin);
+          audio.playSelect();
+          break;
+        }
+        case "victory":
+          renderer.emitVictory();
+          audio.playVictory();
+          break;
+        case "levelStart":
+          renderer.emitLevelStart();
+          break;
+        case "reset":
+          renderer.emitReset();
+          audio.playReset();
+          break;
+        case "gameComplete":
+          renderer.emitGameComplete();
+          audio.playVictory();
+          break;
+      }
     }
 
     if (state.status === "won") {
@@ -164,3 +375,4 @@ yangBtn.addEventListener("click", () => game.selectType("yang"));
 
 initI18n();
 initGame();
+initWebGPU();

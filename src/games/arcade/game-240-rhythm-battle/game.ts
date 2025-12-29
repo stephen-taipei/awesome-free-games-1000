@@ -29,6 +29,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  hit: { accuracy: string; points: number; combo: number }[];
+  miss: boolean;
+  victory: { score: number; playerHp: number }[];
+  gameOver: { score: number; maxCombo: number }[];
+}
+
 const LANE_COUNT = 4;
 const NOTE_SPEED = 5;
 const HIT_ZONE_Y = 0.85;
@@ -56,6 +64,24 @@ export class RhythmBattleGame {
 
   private playerHp = 100;
   private enemyHp = 100;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    hit: [],
+    miss: false,
+    victory: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      hit: [],
+      miss: false,
+      victory: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -102,6 +128,7 @@ export class RhythmBattleGame {
     this.beatInterval = (60 / this.bpm) * 1000;
     this.lastBeat = Date.now();
 
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -166,6 +193,7 @@ export class RhythmBattleGame {
         color,
       });
 
+      this.pendingEvents.hit.push({ accuracy, points: scoreAdd, combo: this.combo });
       this.emitState();
 
       if (this.enemyHp <= 0) {
@@ -180,6 +208,7 @@ export class RhythmBattleGame {
         text: "Miss",
         color: "#ff6b6b",
       });
+      this.pendingEvents.miss = true;
     }
   }
 
@@ -262,6 +291,7 @@ export class RhythmBattleGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.victory.push({ score: this.score, playerHp: this.playerHp });
     this.emitState();
   }
 
@@ -270,6 +300,7 @@ export class RhythmBattleGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, maxCombo: this.maxCombo });
     this.emitState();
   }
 

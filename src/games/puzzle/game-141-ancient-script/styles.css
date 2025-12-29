@@ -1,25 +1,133 @@
-.game-container {
-  max-width: 500px;
+/**
+ * Ancient Script Styles
+ * Ancient Runes / Mystical Scrolls / Archaeology Theme
+ * Game #141
+ */
+
+:root {
+  --deep-parchment: #1a140e;
+  --old-paper: #2e2318;
+  --rune-gold: #d4a574;
+  --rune-bronze: #8c6638;
+  --rune-copper: #b87333;
+  --scroll-brown: #8b4513;
+  --mystic-green: #27ae60;
+  --ink-black: #1e1916;
+  --torch-orange: #ff8c26;
+  --torch-yellow: #ffcc4d;
+  --glass-bg: rgba(212, 165, 116, 0.12);
+  --glass-border: rgba(212, 165, 116, 0.25);
 }
 
-.game-area {
-  position: relative;
-  width: 100%;
-  height: 380px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #2d1f1f 100%);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(ellipse at center, var(--old-paper) 0%, var(--deep-parchment) 100%);
+  min-height: 100vh;
   display: flex;
   justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
   overflow: hidden;
-  border: 2px solid #8b4513;
 }
 
-canvas {
+/* Ancient texture background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  background-image:
+    radial-gradient(1px 1px at 40px 60px, rgba(212, 165, 116, 0.3), transparent),
+    radial-gradient(2px 2px at 120px 100px, rgba(212, 165, 116, 0.2), transparent),
+    radial-gradient(1px 1px at 200px 40px, rgba(212, 165, 116, 0.4), transparent),
+    radial-gradient(1px 1px at 280px 150px, rgba(212, 165, 116, 0.3), transparent),
+    radial-gradient(2px 2px at 360px 80px, rgba(212, 165, 116, 0.2), transparent);
+  background-repeat: repeat;
+  background-size: 400px 200px;
+  pointer-events: none;
+  animation: dustFloat 8s ease-in-out infinite;
+}
+
+@keyframes dustFloat {
+  0%, 100% { opacity: 0.5; transform: translateY(0); }
+  50% { opacity: 0.8; transform: translateY(-3px); }
+}
+
+/* Torch glow corners */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(255, 140, 38, 0.08) 0%, transparent 30%),
+    radial-gradient(ellipse at 100% 0%, rgba(255, 140, 38, 0.08) 0%, transparent 30%),
+    radial-gradient(ellipse at 0% 100%, rgba(255, 140, 38, 0.06) 0%, transparent 25%),
+    radial-gradient(ellipse at 100% 100%, rgba(255, 140, 38, 0.06) 0%, transparent 25%);
+  pointer-events: none;
+  animation: torchFlicker 4s ease-in-out infinite;
+}
+
+@keyframes torchFlicker {
+  0%, 100% { opacity: 0.6; }
+  25% { opacity: 0.9; }
+  50% { opacity: 0.7; }
+  75% { opacity: 1; }
+}
+
+.game-container {
+  max-width: 500px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  font-family: Georgia, serif;
+  background: linear-gradient(135deg, var(--rune-gold) 0%, var(--rune-bronze) 50%, var(--rune-copper) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(212, 165, 116, 0.5);
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: white;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  background: rgba(212, 165, 116, 0.2);
+  border-color: var(--rune-gold);
 }
 
 .game-controls {
@@ -31,16 +139,29 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #8b4513 0%, #654321 100%);
+  background: linear-gradient(135deg, rgba(139, 69, 19, 0.9) 0%, rgba(101, 67, 33, 0.9) 100%);
   padding: 0.5rem 1rem;
   border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+  box-shadow:
+    0 4px 15px rgba(139, 69, 19, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 20px rgba(139, 69, 19, 0.2);
   color: white;
   display: flex;
   gap: 0.5rem;
   align-items: center;
   font-size: 0.9rem;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(212, 165, 116, 0.3);
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(139, 69, 19, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 30px rgba(139, 69, 19, 0.3);
 }
 
 .stats-card span:first-child {
@@ -49,14 +170,56 @@ canvas {
 }
 
 .stats-card span:last-child {
-  color: #d4a574;
+  color: var(--rune-gold);
   font-size: 1.1rem;
 }
 
-.footer-controls {
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  background: linear-gradient(135deg, var(--old-paper) 0%, var(--deep-parchment) 100%);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 12px;
+  box-shadow:
+    0 0 50px rgba(139, 69, 19, 0.2),
+    inset 0 0 30px rgba(212, 165, 116, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--scroll-brown);
+  margin-bottom: 1rem;
+  overflow: hidden;
   display: flex;
   justify-content: center;
-  gap: 1rem;
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 10px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border-radius: 10px;
 }
 
 .overlay {
@@ -65,12 +228,18 @@ canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.9);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(46, 35, 24, 0.95) 0%,
+    rgba(26, 20, 14, 0.98) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .overlay-content {
@@ -82,15 +251,25 @@ canvas {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #d4a574;
-  text-shadow: 0 0 20px rgba(139, 69, 19, 0.5);
-  font-family: serif;
+  font-family: Georgia, serif;
+  background: linear-gradient(135deg, var(--rune-gold) 0%, var(--rune-bronze) 50%, var(--torch-yellow) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(212, 165, 116, 0.5));
 }
 
 .overlay-msg {
   font-size: 1rem;
   margin-bottom: 1.5rem;
-  color: #bdc3c7;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: var(--rune-gold);
+  font-size: 0.85rem;
+  opacity: 0.8;
 }
 
 .btn {
@@ -101,55 +280,101 @@ canvas {
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: bold;
+  font-family: inherit;
   margin: 0.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #8b4513 0%, #654321 100%);
+  background: linear-gradient(135deg, var(--scroll-brown) 0%, #654321 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(139, 69, 19, 0.4);
 }
 
 .btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(139, 69, 19, 0.5);
+  box-shadow: 0 6px 25px rgba(139, 69, 19, 0.6);
 }
 
 .btn.success {
-  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  background: linear-gradient(135deg, var(--mystic-green) 0%, #1e8449 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
 }
 
 .btn.success:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.5);
+  box-shadow: 0 6px 25px rgba(39, 174, 96, 0.6);
 }
 
 .btn.warning {
   background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
 }
 
 .btn.warning:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.5);
+  box-shadow: 0 6px 25px rgba(231, 76, 60, 0.6);
 }
 
 .btn.submit {
-  background: linear-gradient(135deg, #d4a574 0%, #8b4513 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--rune-gold) 0%, var(--scroll-brown) 100%);
+  color: var(--deep-parchment);
+  box-shadow: 0 4px 15px rgba(212, 165, 116, 0.4);
 }
 
 .btn.submit:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(212, 165, 116, 0.5);
+  box-shadow: 0 6px 25px rgba(212, 165, 116, 0.6);
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  color: #8b4513;
-  font-size: 0.85rem;
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
 }
 
 #next-btn {
   display: none;
+}
+
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .game-controls {
+    gap: 0.5rem;
+  }
 }

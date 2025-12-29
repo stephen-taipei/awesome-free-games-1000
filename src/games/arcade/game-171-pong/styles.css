@@ -1,5 +1,17 @@
+/**
+ * Pong Styles
+ * Game #171 - Retro Arcade Theme
+ */
+
 .game-container {
   max-width: 600px;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+}
+
+.game-header h1 {
+  color: #00ff88;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+  font-family: 'Courier New', monospace;
 }
 
 .game-area {
@@ -7,16 +19,36 @@
   width: 100%;
   height: 450px;
   background: #000;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(0, 255, 136, 0.1),
+    inset 0 0 60px rgba(0, 0, 0, 0.8);
   margin-bottom: 1rem;
   box-sizing: border-box;
-  display: flex;
-  justify-content: center;
   overflow: hidden;
+  border: 3px solid #222;
 }
 
-canvas {
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   cursor: none;
@@ -30,24 +62,174 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
+  background: linear-gradient(135deg, #27ae60 0%, #1e8449 50%, #145a32 100%);
+  color: #fff;
+  padding: 0.6rem 1.5rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.4);
+  font-family: 'Courier New', monospace;
+  box-shadow:
+    0 3px 10px rgba(39, 174, 96, 0.4),
+    0 0 15px rgba(39, 174, 96, 0.2);
   display: flex;
   gap: 0.5rem;
-  font-family: 'Courier New', monospace;
+  border: 2px solid #2ecc71;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .stats-card.cpu {
-  background: linear-gradient(135deg, #c0392b 0%, #962d22 100%);
-  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.4);
+  background: linear-gradient(135deg, #c0392b 0%, #962d22 50%, #6e201a 100%);
+  box-shadow:
+    0 3px 10px rgba(192, 57, 43, 0.4),
+    0 0 15px rgba(192, 57, 43, 0.2);
+  border: 2px solid #e74c3c;
+}
+
+.stats-card span:last-child {
+  font-size: 1.5rem;
+  min-width: 2rem;
+  text-align: center;
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3);
+  border: none;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  box-shadow: 0 0 20px rgba(39, 174, 96, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  box-shadow: 0 3px 10px rgba(231, 76, 60, 0.3);
+  border: none;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+}
+
+.btn.warning:hover {
+  background: linear-gradient(135deg, #ff6b5b 0%, #e74c3c 100%);
+  box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
+  transform: translateY(-2px);
+}
+
+.overlay {
+  background: radial-gradient(ellipse at center,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(10, 10, 10, 0.95) 100%
+  );
+  backdrop-filter: blur(8px);
+}
+
+.overlay-content {
+  text-align: center;
+  animation: overlayFadeIn 0.4s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.overlay-title {
+  font-size: 2.5rem;
+  font-family: 'Courier New', monospace;
+  color: #00ff88;
+  text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+  margin-bottom: 1rem;
+}
+
+.overlay-msg {
+  color: #aaa;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  font-family: 'Courier New', monospace;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: rgba(0, 255, 136, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.controls-hint small {
+  color: #00cc6a;
+  font-size: 0.9rem;
+  font-family: 'Courier New', monospace;
+}
+
+/* CRT scanline effect */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Neon glow borders */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-shadow:
+    inset 0 0 30px rgba(0, 255, 136, 0.05),
+    inset 0 0 60px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Language select retro style */
+#language-select {
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid #00ff88;
+  color: #00ff88;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+}
+
+#language-select:hover {
+  background: rgba(0, 255, 136, 0.2);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+}
+
+#language-select option {
+  background: #0a0a0a;
+  color: #00ff88;
 }

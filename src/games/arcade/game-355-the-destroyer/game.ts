@@ -96,6 +96,19 @@ export interface GameConfig {
   doomshockEnergyCost: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  destructionBeamFired: boolean;
+  destructionBeamStopped: boolean;
+  doomshockFired: boolean;
+  objectDestroyed: { type: string; points: number }[];
+  enemyDestroyed: { type: string; points: number }[];
+  playerHit: { healthRemaining: number }[];
+  chainBonus: { chain: number }[];
+  waveAdvance: { wave: number }[];
+  gameOver: { score: number; bestScore: number; wave: number; destroyed: number }[];
+}
+
 const OBJECT_COLORS = {
   building: '#666666',
   obstacle: '#888888',
@@ -117,6 +130,19 @@ export class DestroyerGame {
   private spawnTimer: number = 0;
   private onStateChange?: (state: GameState) => void;
   private keys: Set<string> = new Set();
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    destructionBeamFired: false,
+    destructionBeamStopped: false,
+    doomshockFired: false,
+    objectDestroyed: [],
+    enemyDestroyed: [],
+    playerHit: [],
+    chainBonus: [],
+    waveAdvance: [],
+    gameOver: [],
+  };
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -188,12 +214,28 @@ export class DestroyerGame {
     return { ...this.state };
   }
 
+  clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      destructionBeamFired: false,
+      destructionBeamStopped: false,
+      doomshockFired: false,
+      objectDestroyed: [],
+      enemyDestroyed: [],
+      playerHit: [],
+      chainBonus: [],
+      waveAdvance: [],
+      gameOver: [],
+    };
+  }
+
   newGame(): void {
     this.state = this.createInitialState();
     this.state.isPlaying = true;
     this.lastTime = performance.now();
     this.spawnTimer = 0;
     this.spawnInitialObjects();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -271,6 +313,7 @@ export class DestroyerGame {
     // 檢查波次
     if (this.state.destroyedCount >= this.state.wave * 10) {
       this.state.wave++;
+      this.pendingEvents.waveAdvance.push({ wave: this.state.wave });
     }
   }
 
@@ -562,6 +605,7 @@ export class DestroyerGame {
 
       if (dist < this.state.player.radius + enemy.radius) {
         this.state.player.health -= 0.5; // 每幀傷害
+        this.pendingEvents.playerHit.push({ healthRemaining: this.state.player.health });
         if (this.state.player.health <= 0) {
           this.gameOver();
           return;
@@ -582,6 +626,11 @@ export class DestroyerGame {
     const chainBonus = Math.floor(baseScore * (this.state.destructionChain - 1) * 0.5);
     this.state.score += baseScore + chainBonus;
 
+    this.pendingEvents.objectDestroyed.push({ type: obj.type, points: baseScore + chainBonus });
+    if (this.state.destructionChain > 1) {
+      this.pendingEvents.chainBonus.push({ chain: this.state.destructionChain });
+    }
+
     // 能量恢復
     if (obj.type === 'crystal') {
       this.state.player.energy = Math.min(
@@ -601,6 +650,11 @@ export class DestroyerGame {
     const baseScore = enemy.type === 'tank' ? 150 : enemy.type === 'turret' ? 100 : 80;
     const chainBonus = Math.floor(baseScore * (this.state.destructionChain - 1) * 0.5);
     this.state.score += baseScore + chainBonus;
+
+    this.pendingEvents.enemyDestroyed.push({ type: enemy.type, points: baseScore + chainBonus });
+    if (this.state.destructionChain > 1) {
+      this.pendingEvents.chainBonus.push({ chain: this.state.destructionChain });
+    }
 
     this.createExplosion(enemy.x, enemy.y, enemy.radius * 2.5, enemy.color);
   }
@@ -624,11 +678,13 @@ export class DestroyerGame {
     this.state.destructionBeam.targetX = targetX;
     this.state.destructionBeam.targetY = targetY;
     this.state.player.energy -= this.config.beamEnergyCost;
+    this.pendingEvents.destructionBeamFired = true;
   }
 
   stopDestructionBeam(): void {
     this.state.destructionBeam.active = false;
     this.state.destructionBeam.particles = [];
+    this.pendingEvents.destructionBeamStopped = true;
   }
 
   fireDoomshock(): void {
@@ -671,6 +727,7 @@ export class DestroyerGame {
 
     // 衝擊波視覺效果
     this.createExplosion(this.state.player.x, this.state.player.y, shockRadius, '#ff0000');
+    this.pendingEvents.doomshockFired = true;
   }
 
   setKeyDown(key: string): void {
@@ -694,6 +751,13 @@ export class DestroyerGame {
       this.state.bestScore = this.state.score;
       this.saveBestScore(this.state.bestScore);
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bestScore: this.state.bestScore,
+      wave: this.state.wave,
+      destroyed: this.state.destroyedCount,
+    });
 
     this.notifyStateChange();
   }

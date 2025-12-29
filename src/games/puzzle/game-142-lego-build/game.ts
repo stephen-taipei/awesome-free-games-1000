@@ -7,6 +7,7 @@ interface Block {
   id: number;
   shape: number[][];
   color: string;
+  colorIndex: number;
   x: number;
   y: number;
   targetX: number;
@@ -17,7 +18,7 @@ interface Block {
 
 interface Level {
   grid: number[][];
-  blocks: { shape: number[][]; color: string; targetX: number; targetY: number }[];
+  blocks: { shape: number[][]; color: string; colorIndex: number; targetX: number; targetY: number }[];
 }
 
 interface GameState {
@@ -27,7 +28,13 @@ interface GameState {
   totalPieces: number;
 }
 
-type StateChangeCallback = (state: GameState) => void;
+type StateChangeCallback = (state: GameState & {
+  blockPickup?: { x: number; y: number; colorIndex: number };
+  blockPlace?: { x: number; y: number; colorIndex: number };
+  blockRotate?: { x: number; y: number; colorIndex: number };
+  blockSnap?: { x: number; y: number };
+  reset?: boolean;
+}) => void;
 
 const COLORS = ["#e74c3c", "#3498db", "#f1c40f", "#2ecc71", "#9b59b6", "#e67e22"];
 
@@ -39,7 +46,7 @@ const LEVELS: Level[] = [
       [0, 0, 0],
     ],
     blocks: [
-      { shape: [[1, 1], [1, 1]], color: COLORS[0], targetX: 0, targetY: 0 },
+      { shape: [[1, 1], [1, 1]], color: COLORS[0], colorIndex: 0, targetX: 0, targetY: 0 },
     ],
   },
   {
@@ -49,8 +56,8 @@ const LEVELS: Level[] = [
       [0, 1, 0],
     ],
     blocks: [
-      { shape: [[1, 1, 1]], color: COLORS[1], targetX: 0, targetY: 0 },
-      { shape: [[1], [1]], color: COLORS[2], targetX: 1, targetY: 1 },
+      { shape: [[1, 1, 1]], color: COLORS[1], colorIndex: 1, targetX: 0, targetY: 0 },
+      { shape: [[1], [1]], color: COLORS[2], colorIndex: 2, targetX: 1, targetY: 1 },
     ],
   },
   {
@@ -60,9 +67,9 @@ const LEVELS: Level[] = [
       [1, 0, 1],
     ],
     blocks: [
-      { shape: [[1], [1], [1]], color: COLORS[0], targetX: 0, targetY: 0 },
-      { shape: [[1], [1], [1]], color: COLORS[1], targetX: 2, targetY: 0 },
-      { shape: [[1, 1, 1]], color: COLORS[2], targetX: 0, targetY: 1 },
+      { shape: [[1], [1], [1]], color: COLORS[0], colorIndex: 0, targetX: 0, targetY: 0 },
+      { shape: [[1], [1], [1]], color: COLORS[1], colorIndex: 1, targetX: 2, targetY: 0 },
+      { shape: [[1, 1, 1]], color: COLORS[2], colorIndex: 2, targetX: 0, targetY: 1 },
     ],
   },
   {
@@ -73,10 +80,10 @@ const LEVELS: Level[] = [
       [1, 1, 1, 1],
     ],
     blocks: [
-      { shape: [[1, 1, 1, 1]], color: COLORS[0], targetX: 0, targetY: 0 },
-      { shape: [[1, 1, 1, 1]], color: COLORS[1], targetX: 0, targetY: 3 },
-      { shape: [[1], [1]], color: COLORS[2], targetX: 0, targetY: 1 },
-      { shape: [[1], [1]], color: COLORS[3], targetX: 3, targetY: 1 },
+      { shape: [[1, 1, 1, 1]], color: COLORS[0], colorIndex: 0, targetX: 0, targetY: 0 },
+      { shape: [[1, 1, 1, 1]], color: COLORS[1], colorIndex: 1, targetX: 0, targetY: 3 },
+      { shape: [[1], [1]], color: COLORS[2], colorIndex: 2, targetX: 0, targetY: 1 },
+      { shape: [[1], [1]], color: COLORS[3], colorIndex: 3, targetX: 3, targetY: 1 },
     ],
   },
   {
@@ -87,10 +94,10 @@ const LEVELS: Level[] = [
       [0, 1, 1, 0],
     ],
     blocks: [
-      { shape: [[1, 1], [1, 1]], color: COLORS[0], targetX: 1, targetY: 0 },
-      { shape: [[1, 1], [1, 1]], color: COLORS[1], targetX: 1, targetY: 2 },
-      { shape: [[1], [1]], color: COLORS[2], targetX: 0, targetY: 1 },
-      { shape: [[1], [1]], color: COLORS[3], targetX: 3, targetY: 1 },
+      { shape: [[1, 1], [1, 1]], color: COLORS[0], colorIndex: 0, targetX: 1, targetY: 0 },
+      { shape: [[1, 1], [1, 1]], color: COLORS[1], colorIndex: 1, targetX: 1, targetY: 2 },
+      { shape: [[1], [1]], color: COLORS[2], colorIndex: 2, targetX: 0, targetY: 1 },
+      { shape: [[1], [1]], color: COLORS[3], colorIndex: 3, targetX: 3, targetY: 1 },
     ],
   },
   {
@@ -100,11 +107,11 @@ const LEVELS: Level[] = [
       [1, 1, 1, 1, 1],
     ],
     blocks: [
-      { shape: [[1, 1, 1, 1, 1]], color: COLORS[0], targetX: 0, targetY: 0 },
-      { shape: [[1, 1, 1, 1, 1]], color: COLORS[1], targetX: 0, targetY: 2 },
-      { shape: [[1]], color: COLORS[2], targetX: 0, targetY: 1 },
-      { shape: [[1]], color: COLORS[3], targetX: 2, targetY: 1 },
-      { shape: [[1]], color: COLORS[4], targetX: 4, targetY: 1 },
+      { shape: [[1, 1, 1, 1, 1]], color: COLORS[0], colorIndex: 0, targetX: 0, targetY: 0 },
+      { shape: [[1, 1, 1, 1, 1]], color: COLORS[1], colorIndex: 1, targetX: 0, targetY: 2 },
+      { shape: [[1]], color: COLORS[2], colorIndex: 2, targetX: 0, targetY: 1 },
+      { shape: [[1]], color: COLORS[3], colorIndex: 3, targetX: 2, targetY: 1 },
+      { shape: [[1]], color: COLORS[4], colorIndex: 4, targetX: 4, targetY: 1 },
     ],
   },
 ];
@@ -130,6 +137,14 @@ export class LegoBuildGame {
   private dragOffsetY: number = 0;
 
   private onStateChange: StateChangeCallback | null = null;
+
+  private pendingEvents: {
+    blockPickup?: { x: number; y: number; colorIndex: number };
+    blockPlace?: { x: number; y: number; colorIndex: number };
+    blockRotate?: { x: number; y: number; colorIndex: number };
+    blockSnap?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -172,6 +187,7 @@ export class LegoBuildGame {
         id: i,
         shape: blockDef.shape.map((row) => [...row]),
         color: blockDef.color,
+        colorIndex: blockDef.colorIndex,
         x: paletteX,
         y: paletteY,
         targetX: blockDef.targetX,
@@ -194,7 +210,10 @@ export class LegoBuildGame {
         status: this.getStatus(),
         placedCount,
         totalPieces: this.blocks.length,
+        ...this.pendingEvents,
       });
+
+      this.pendingEvents = {};
     }
   }
 
@@ -215,6 +234,7 @@ export class LegoBuildGame {
   }
 
   reset() {
+    this.pendingEvents.reset = true;
     this.initLevel();
     this.draw();
   }
@@ -252,6 +272,14 @@ export class LegoBuildGame {
         const idx = this.blocks.indexOf(block);
         this.blocks.splice(idx, 1);
         this.blocks.push(block);
+
+        // Emit pickup event
+        this.pendingEvents.blockPickup = {
+          x: block.x + bw / 2,
+          y: block.y + bh / 2,
+          colorIndex: block.colorIndex,
+        };
+        this.emitState();
         break;
       }
     }
@@ -290,6 +318,21 @@ export class LegoBuildGame {
         }
       }
 
+      // Emit place event
+      const bw = block.shape[0].length * CELL_SIZE;
+      const bh = block.shape.length * CELL_SIZE;
+      this.pendingEvents.blockPlace = {
+        x: block.x + bw / 2,
+        y: block.y + bh / 2,
+        colorIndex: block.colorIndex,
+      };
+
+      // Also emit snap event
+      this.pendingEvents.blockSnap = {
+        x: block.x + bw / 2,
+        y: block.y + bh / 2,
+      };
+
       this.emitState();
     }
 
@@ -325,6 +368,15 @@ export class LegoBuildGame {
 
       if (x >= block.x && x <= block.x + bw && y >= block.y && y <= block.y + bh) {
         this.rotateBlock(block);
+
+        // Emit rotate event
+        this.pendingEvents.blockRotate = {
+          x: block.x + bw / 2,
+          y: block.y + bh / 2,
+          colorIndex: block.colorIndex,
+        };
+        this.emitState();
+
         this.draw();
         break;
       }
@@ -352,7 +404,7 @@ export class LegoBuildGame {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
 
-    ctx.fillStyle = "#1a1a2e";
+    ctx.fillStyle = "#1a2a4a";
     ctx.fillRect(0, 0, this.width, this.height);
 
     if (!this.isPlaying) {
@@ -382,9 +434,9 @@ export class LegoBuildGame {
           if (placedBlock) {
             this.drawCell(x, y, placedBlock.color, true);
           } else {
-            ctx.fillStyle = "#2d2d4d";
+            ctx.fillStyle = "#2d3a5d";
             ctx.fillRect(x, y, CELL_SIZE - 2, CELL_SIZE - 2);
-            ctx.strokeStyle = "#3d3d6d";
+            ctx.strokeStyle = "#3d4a7d";
             ctx.lineWidth = 1;
             ctx.strokeRect(x, y, CELL_SIZE - 2, CELL_SIZE - 2);
           }
@@ -416,11 +468,11 @@ export class LegoBuildGame {
     ctx.fillStyle = color;
     ctx.fillRect(x, y, size, size);
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
     ctx.fillRect(x, y, size, 4);
     ctx.fillRect(x, y, 4, size);
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
     ctx.fillRect(x, y + size - 4, size, 4);
     ctx.fillRect(x + size - 4, y, 4, size);
 
@@ -434,12 +486,12 @@ export class LegoBuildGame {
 
     ctx.beginPath();
     ctx.arc(studX - 2, studY - 2, STUD_RADIUS - 2, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
     ctx.fill();
 
     if (!placed) {
       ctx.shadowColor = color;
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 12;
       ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
       ctx.lineWidth = 2;
       ctx.strokeRect(x, y, size, size);

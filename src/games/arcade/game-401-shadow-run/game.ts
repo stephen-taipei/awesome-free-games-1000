@@ -3,6 +3,15 @@
  * Game #401 - Light and shadow world parkour runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  worldSwitch: { world: string }[];
+  obstacleAvoided: boolean;
+  collision: boolean;
+  gameOver: { distance: number }[];
+}
+
 export interface Obstacle {
   x: number;
   width: number;
@@ -14,6 +23,23 @@ export interface Obstacle {
 export class ShadowRunGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      worldSwitch: [],
+      obstacleAvoided: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   private player = {
     x: 100,
@@ -99,6 +125,7 @@ export class ShadowRunGame {
       this.player.vy = this.jumpForce;
       this.player.isJumping = true;
       this.player.isGrounded = false;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -110,6 +137,7 @@ export class ShadowRunGame {
     this.currentWorld = this.currentWorld === 'light' ? 'shadow' : 'light';
     this.isTransitioning = true;
     this.worldTransition = 0;
+    this.pendingEvents.worldSwitch.push({ world: this.currentWorld });
 
     this.updateState();
   }
@@ -117,6 +145,7 @@ export class ShadowRunGame {
   public start() {
     this.reset();
     this.status = 'playing';
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -197,6 +226,7 @@ export class ShadowRunGame {
       if (obstacle.world !== this.currentWorld) continue;
 
       if (this.checkCollision(obstacle)) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -308,6 +338,7 @@ export class ShadowRunGame {
   private gameOver() {
     this.status = 'lost';
     this.stopAnimation();
+    this.pendingEvents.gameOver.push({ distance: Math.floor(this.distance / 10) });
     if (this.onStateChange) {
       this.onStateChange({ status: 'lost' });
     }

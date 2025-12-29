@@ -1,9 +1,17 @@
 /**
- * 俄羅斯方塊遊戲主程式
+ * 俄羅斯方塊 - WebGPU 3A 級視覺體驗版
  * Game #002 - Awesome Free Games 1000
+ *
+ * 特色：
+ * - WebGPU 硬體加速 3D 渲染
+ * - 霓虹發光方塊效果
+ * - 消行爆炸粒子特效
+ * - 相機震動回饋
+ * - 合成音效系統
  */
 
 import { TetrisGame, TETROMINOES, TETROMINO_COLORS, type TetrominoType, type GameState } from './game';
+import { WebGPURenderer, type BlockData } from './webgpu';
 import { translations } from './i18n';
 import { analytics } from '../../../shared/analytics';
 import { formatNumber, isTouchDevice } from '../../../shared/utils';
@@ -18,6 +26,11 @@ const GAME_CATEGORY = 'puzzle';
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
 const CELL_SIZE = 28;
+
+// WebGPU 渲染器
+let renderer: WebGPURenderer | null = null;
+let webgpuCanvas: HTMLCanvasElement;
+let useWebGPU = false;
 
 // DOM 元素
 const gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -37,6 +50,7 @@ const helpModal = document.getElementById('help-modal')!;
 const modalClose = document.getElementById('modal-close')!;
 const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
 const touchControls = document.getElementById('touch-controls')!;
+const gameContainer = document.getElementById('game-container')!;
 
 // Canvas contexts
 const ctx = gameCanvas.getContext('2d')!;
@@ -45,21 +59,160 @@ const holdCtx = holdCanvas.getContext('2d')!;
 
 // 遊戲實例
 let game: TetrisGame;
+let lastFrameTime = 0;
+let animationId: number;
+
+// 音效
+let audioContext: AudioContext | null = null;
+const sounds = {
+  move: null as AudioBuffer | null,
+  rotate: null as AudioBuffer | null,
+  drop: null as AudioBuffer | null,
+  clear: null as AudioBuffer | null,
+  tetris: null as AudioBuffer | null,
+  gameOver: null as AudioBuffer | null
+};
 
 /**
- * 初始化畫布尺寸
+ * 初始化音效
+ */
+async function initAudio() {
+  try {
+    audioContext = new AudioContext();
+    sounds.move = createMoveSound();
+    sounds.rotate = createRotateSound();
+    sounds.drop = createDropSound();
+    sounds.clear = createClearSound();
+    sounds.tetris = createTetrisSound();
+    sounds.gameOver = createGameOverSound();
+  } catch (e) {
+    console.warn('Audio initialization failed:', e);
+  }
+}
+
+function createMoveSound(): AudioBuffer {
+  const ctx = audioContext!;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    data[i] = Math.sin(200 * 2 * Math.PI * t) * Math.exp(-t * 40) * 0.3;
+  }
+  return buffer;
+}
+
+function createRotateSound(): AudioBuffer {
+  const ctx = audioContext!;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    const freq = 400 + t * 200;
+    data[i] = Math.sin(freq * 2 * Math.PI * t) * Math.exp(-t * 15) * 0.3;
+  }
+  return buffer;
+}
+
+function createDropSound(): AudioBuffer {
+  const ctx = audioContext!;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    const freq = 150 - t * 100;
+    data[i] = Math.sin(freq * 2 * Math.PI * t) * Math.exp(-t * 10) * 0.5;
+  }
+  return buffer;
+}
+
+function createClearSound(): AudioBuffer {
+  const ctx = audioContext!;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    const freq = 300 + Math.sin(t * 20) * 100;
+    data[i] = Math.sin(freq * 2 * Math.PI * t) * Math.exp(-t * 5) * 0.4;
+  }
+  return buffer;
+}
+
+function createTetrisSound(): AudioBuffer {
+  const ctx = audioContext!;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.8, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  const notes = [523.25, 659.25, 783.99, 1046.50];
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    const noteIndex = Math.floor(t * 5) % 4;
+    const freq = notes[noteIndex];
+    data[i] = Math.sin(freq * 2 * Math.PI * t) * Math.exp(-((t * 5) % 1) * 3) * 0.4;
+  }
+  return buffer;
+}
+
+function createGameOverSound(): AudioBuffer {
+  const ctx = audioContext!;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.8, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    const freq = 400 - t * 300;
+    data[i] = Math.sin(freq * 2 * Math.PI * t) * Math.exp(-t * 2) * 0.4;
+  }
+  return buffer;
+}
+
+function playSound(buffer: AudioBuffer | null, volume = 1) {
+  if (!audioContext || !buffer) return;
+  const source = audioContext.createBufferSource();
+  const gainNode = audioContext.createGain();
+  source.buffer = buffer;
+  gainNode.gain.value = volume;
+  source.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  source.start();
+}
+
+/**
+ * 初始化 WebGPU
+ */
+async function initWebGPU(): Promise<boolean> {
+  try {
+    webgpuCanvas = document.createElement('canvas');
+    webgpuCanvas.id = 'webgpu-canvas';
+    webgpuCanvas.width = 500;
+    webgpuCanvas.height = 700;
+
+    renderer = new WebGPURenderer(webgpuCanvas);
+    const success = await renderer.init();
+
+    if (success) {
+      gameCanvas.style.display = 'none';
+      gameContainer.insertBefore(webgpuCanvas, gameContainer.firstChild);
+      gameContainer.classList.add('webgpu-mode');
+      useWebGPU = true;
+      console.log('🚀 WebGPU 3D 渲染已啟用！');
+      return true;
+    }
+  } catch (e) {
+    console.warn('WebGPU initialization failed:', e);
+  }
+  return false;
+}
+
+/**
+ * 初始化畫布尺寸 (Canvas2D 備用)
  */
 function initCanvas(): void {
   const dpr = window.devicePixelRatio || 1;
 
-  // 主遊戲畫布
   gameCanvas.width = BOARD_WIDTH * CELL_SIZE * dpr;
   gameCanvas.height = BOARD_HEIGHT * CELL_SIZE * dpr;
   gameCanvas.style.width = `${BOARD_WIDTH * CELL_SIZE}px`;
   gameCanvas.style.height = `${BOARD_HEIGHT * CELL_SIZE}px`;
   ctx.scale(dpr, dpr);
 
-  // 預覽畫布
   const previewSize = 80;
   nextCanvas.width = previewSize * dpr;
   nextCanvas.height = previewSize * dpr;
@@ -81,23 +234,15 @@ function initI18n(): void {
   Object.entries(translations).forEach(([locale, trans]) => {
     i18n.loadTranslations(locale as Locale, trans);
   });
-
   languageSelect.value = i18n.getLocale();
   updateI18nTexts();
-
   languageSelect.addEventListener('change', () => {
     i18n.setLocale(languageSelect.value as Locale);
     updateI18nTexts();
   });
-
-  i18n.onLocaleChange(() => {
-    updateI18nTexts();
-  });
+  i18n.onLocaleChange(() => updateI18nTexts());
 }
 
-/**
- * 更新所有 i18n 文字
- */
 function updateI18nTexts(): void {
   document.querySelectorAll('[data-i18n]').forEach((element) => {
     const key = element.getAttribute('data-i18n')!;
@@ -118,19 +263,39 @@ function initGame(): void {
 
   game.setOnStateChange((state) => {
     updateUI(state);
-    render(state);
+    if (useWebGPU) {
+      updateWebGPUBlocks(state);
+    } else {
+      render(state);
+    }
   });
 
   game.setOnLineClear((lines) => {
+    if (useWebGPU && renderer) {
+      const state = game.getState();
+      // 找出被消除的行
+      const clearedRows: number[] = [];
+      for (let y = 0; y < BOARD_HEIGHT; y++) {
+        if (state.board[y].every(cell => cell !== null)) {
+          clearedRows.push(y);
+        }
+      }
+      if (clearedRows.length > 0) {
+        renderer.triggerLineClear(clearedRows);
+      }
+    }
+
     showLineClearEffect(lines);
 
-    // 追蹤消行事件
     if (lines === 4) {
+      playSound(sounds.tetris);
       analytics.custom('tetris_clear', {
         game_id: GAME_ID,
         game_name: GAME_NAME,
         lines: 4,
       });
+    } else {
+      playSound(sounds.clear);
     }
   });
 
@@ -144,6 +309,88 @@ function initGame(): void {
 }
 
 /**
+ * 更新 WebGPU 方塊資料
+ */
+function updateWebGPUBlocks(state: GameState) {
+  const blocks: BlockData[] = [];
+  const config = game.getConfig();
+
+  // 已放置的方塊
+  for (let y = 0; y < config.height; y++) {
+    for (let x = 0; x < config.width; x++) {
+      const cell = state.board[y][x];
+      if (cell) {
+        blocks.push({ x, y, type: cell });
+      }
+    }
+  }
+
+  // 影子方塊
+  if (state.currentPiece) {
+    const ghostPos = game.getGhostPosition();
+    if (ghostPos) {
+      const shape = TETROMINOES[state.currentPiece.type][state.currentPiece.rotation];
+      for (let py = 0; py < shape.length; py++) {
+        for (let px = 0; px < shape[py].length; px++) {
+          if (shape[py][px]) {
+            blocks.push({
+              x: ghostPos.x + px,
+              y: ghostPos.y + py,
+              type: state.currentPiece.type,
+              isGhost: true
+            });
+          }
+        }
+      }
+    }
+
+    // 當前方塊
+    const piece = state.currentPiece;
+    const shape = TETROMINOES[piece.type][piece.rotation];
+    for (let py = 0; py < shape.length; py++) {
+      for (let px = 0; px < shape[py].length; px++) {
+        if (shape[py][px]) {
+          blocks.push({
+            x: piece.position.x + px,
+            y: piece.position.y + py,
+            type: piece.type,
+            isCurrent: true
+          });
+        }
+      }
+    }
+  }
+
+  if (renderer) {
+    renderer.updateBlocks(blocks);
+  }
+}
+
+/**
+ * WebGPU 渲染循環
+ */
+function renderLoop(currentTime: number) {
+  const deltaTime = Math.min((currentTime - lastFrameTime) / 1000, 0.1);
+  lastFrameTime = currentTime;
+
+  if (renderer && !game.getState().isPaused) {
+    renderer.render(deltaTime);
+  }
+
+  // 更新預覽 (仍使用 Canvas2D)
+  const state = game.getState();
+  renderPreview(nextCtx, state.nextPiece);
+  if (state.holdPiece) {
+    renderPreview(holdCtx, state.holdPiece, !state.canHold);
+  } else {
+    holdCtx.fillStyle = '#0a0a15';
+    holdCtx.fillRect(0, 0, 80, 80);
+  }
+
+  animationId = requestAnimationFrame(renderLoop);
+}
+
+/**
  * 更新 UI
  */
 function updateUI(state: GameState): void {
@@ -151,12 +398,11 @@ function updateUI(state: GameState): void {
   levelElement.textContent = state.level.toString();
   linesElement.textContent = formatNumber(state.lines);
 
-  // 更新暫停按鈕文字
   pauseBtn.textContent = state.isPaused ? i18n.t('game.resume') : i18n.t('game.pause');
 
-  // 處理遊戲結束或暫停
   if (state.gameOver) {
     showOverlay('gameover', state.score);
+    playSound(sounds.gameOver);
 
     analytics.gameEnd({
       game_id: GAME_ID,
@@ -172,16 +418,14 @@ function updateUI(state: GameState): void {
 }
 
 /**
- * 渲染遊戲
+ * Canvas2D 渲染 (備用)
  */
 function render(state: GameState): void {
   const config = game.getConfig();
 
-  // 清除畫布
   ctx.fillStyle = '#0a0a15';
   ctx.fillRect(0, 0, config.width * CELL_SIZE, config.height * CELL_SIZE);
 
-  // 繪製網格線
   ctx.strokeStyle = '#1a1a30';
   ctx.lineWidth = 1;
   for (let x = 0; x <= config.width; x++) {
@@ -197,7 +441,6 @@ function render(state: GameState): void {
     ctx.stroke();
   }
 
-  // 繪製已放置的方塊
   for (let y = 0; y < config.height; y++) {
     for (let x = 0; x < config.width; x++) {
       const cell = state.board[y][x];
@@ -207,7 +450,6 @@ function render(state: GameState): void {
     }
   }
 
-  // 繪製影子（預覽落點）
   if (state.currentPiece) {
     const ghostPos = game.getGhostPosition();
     if (ghostPos) {
@@ -223,7 +465,6 @@ function render(state: GameState): void {
       ctx.globalAlpha = 1;
     }
 
-    // 繪製當前方塊
     const piece = state.currentPiece;
     const shape = TETROMINOES[piece.type][piece.rotation];
     for (let py = 0; py < shape.length; py++) {
@@ -235,10 +476,7 @@ function render(state: GameState): void {
     }
   }
 
-  // 繪製下一個方塊預覽
   renderPreview(nextCtx, state.nextPiece);
-
-  // 繪製暫存方塊預覽
   if (state.holdPiece) {
     renderPreview(holdCtx, state.holdPiece, !state.canHold);
   } else {
@@ -247,9 +485,6 @@ function render(state: GameState): void {
   }
 }
 
-/**
- * 繪製單個方塊格子
- */
 function drawCell(context: CanvasRenderingContext2D, x: number, y: number, color: string): void {
   const padding = 2;
   const size = CELL_SIZE - padding * 2;
@@ -257,20 +492,15 @@ function drawCell(context: CanvasRenderingContext2D, x: number, y: number, color
   context.fillStyle = color;
   context.fillRect(x * CELL_SIZE + padding, y * CELL_SIZE + padding, size, size);
 
-  // 高光效果
-  context.fillStyle = 'rgba(255, 255, 255, 0.3)';
-  context.fillRect(x * CELL_SIZE + padding, y * CELL_SIZE + padding, size, 4);
-  context.fillRect(x * CELL_SIZE + padding, y * CELL_SIZE + padding, 4, size);
+  context.fillStyle = 'rgba(255, 255, 255, 0.4)';
+  context.fillRect(x * CELL_SIZE + padding, y * CELL_SIZE + padding, size, 3);
+  context.fillRect(x * CELL_SIZE + padding, y * CELL_SIZE + padding, 3, size);
 
-  // 陰影效果
   context.fillStyle = 'rgba(0, 0, 0, 0.3)';
-  context.fillRect(x * CELL_SIZE + padding, y * CELL_SIZE + CELL_SIZE - padding - 4, size, 4);
-  context.fillRect(x * CELL_SIZE + CELL_SIZE - padding - 4, y * CELL_SIZE + padding, 4, size);
+  context.fillRect(x * CELL_SIZE + padding, y * CELL_SIZE + CELL_SIZE - padding - 3, size, 3);
+  context.fillRect(x * CELL_SIZE + CELL_SIZE - padding - 3, y * CELL_SIZE + padding, 3, size);
 }
 
-/**
- * 渲染預覽方塊
- */
 function renderPreview(context: CanvasRenderingContext2D, type: TetrominoType, dimmed = false): void {
   const shape = TETROMINOES[type][0];
   const previewCellSize = 18;
@@ -282,9 +512,7 @@ function renderPreview(context: CanvasRenderingContext2D, type: TetrominoType, d
   const offsetX = (canvasSize - shape[0].length * previewCellSize) / 2;
   const offsetY = (canvasSize - shape.length * previewCellSize) / 2;
 
-  if (dimmed) {
-    context.globalAlpha = 0.4;
-  }
+  if (dimmed) context.globalAlpha = 0.4;
 
   for (let y = 0; y < shape.length; y++) {
     for (let x = 0; x < shape[y].length; x++) {
@@ -296,6 +524,12 @@ function renderPreview(context: CanvasRenderingContext2D, type: TetrominoType, d
 
         context.fillStyle = TETROMINO_COLORS[type];
         context.fillRect(px + padding, py + padding, size, size);
+
+        // 發光效果
+        context.shadowColor = TETROMINO_COLORS[type];
+        context.shadowBlur = 8;
+        context.fillRect(px + padding, py + padding, size, size);
+        context.shadowBlur = 0;
       }
     }
   }
@@ -303,9 +537,6 @@ function renderPreview(context: CanvasRenderingContext2D, type: TetrominoType, d
   context.globalAlpha = 1;
 }
 
-/**
- * 顯示消行特效
- */
 function showLineClearEffect(lines: number): void {
   const messages: Record<number, string> = {
     1: i18n.t('game.single'),
@@ -317,41 +548,28 @@ function showLineClearEffect(lines: number): void {
   const message = messages[lines] || `${lines} Lines!`;
   const effect = document.createElement('div');
   effect.className = 'line-clear-effect';
+  if (lines === 4) effect.classList.add('tetris');
   effect.textContent = message;
   document.body.appendChild(effect);
 
-  setTimeout(() => effect.remove(), 800);
+  setTimeout(() => effect.remove(), 1000);
 }
 
-/**
- * 顯示覆蓋層
- */
 function showOverlay(type: 'gameover' | 'paused', score: number): void {
   gameOverlay.style.display = 'flex';
   finalScoreElement.textContent = formatNumber(score);
-
-  if (type === 'gameover') {
-    overlayTitle.textContent = i18n.t('game.gameOver');
-  } else {
-    overlayTitle.textContent = i18n.t('game.paused');
-  }
+  overlayTitle.textContent = type === 'gameover' ? i18n.t('game.gameOver') : i18n.t('game.paused');
 }
 
-/**
- * 隱藏覆蓋層
- */
 function hideOverlay(): void {
   gameOverlay.style.display = 'none';
 }
 
 /**
- * 處理鍵盤輸入
+ * 鍵盤處理
  */
 function handleKeyDown(event: KeyboardEvent): void {
-  // 防止在輸入框中觸發
-  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) {
-    return;
-  }
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return;
 
   switch (event.key) {
     case 'ArrowLeft':
@@ -359,12 +577,14 @@ function handleKeyDown(event: KeyboardEvent): void {
     case 'A':
       event.preventDefault();
       game.move('left');
+      playSound(sounds.move, 0.3);
       break;
     case 'ArrowRight':
     case 'd':
     case 'D':
       event.preventDefault();
       game.move('right');
+      playSound(sounds.move, 0.3);
       break;
     case 'ArrowDown':
     case 's':
@@ -377,20 +597,35 @@ function handleKeyDown(event: KeyboardEvent): void {
     case 'W':
       event.preventDefault();
       game.rotate(true);
+      playSound(sounds.rotate, 0.4);
       break;
     case 'z':
     case 'Z':
       event.preventDefault();
       game.rotate(false);
+      playSound(sounds.rotate, 0.4);
       break;
     case ' ':
       event.preventDefault();
+      const state = game.getState();
+      if (state.currentPiece && renderer) {
+        const ghostPos = game.getGhostPosition();
+        if (ghostPos) {
+          renderer.triggerHardDrop(
+            state.currentPiece.position.x,
+            ghostPos.y,
+            state.currentPiece.type
+          );
+        }
+      }
       game.hardDrop();
+      playSound(sounds.drop, 0.6);
       break;
     case 'c':
     case 'C':
       event.preventDefault();
       game.hold();
+      playSound(sounds.rotate, 0.3);
       break;
     case 'p':
     case 'P':
@@ -401,27 +636,46 @@ function handleKeyDown(event: KeyboardEvent): void {
   }
 }
 
-/**
- * 初始化觸控控制
- */
 function initTouchControls(): void {
   if (isTouchDevice()) {
     touchControls.style.display = 'flex';
   }
 
-  document.getElementById('touch-left')?.addEventListener('click', () => game.move('left'));
-  document.getElementById('touch-right')?.addEventListener('click', () => game.move('right'));
+  document.getElementById('touch-left')?.addEventListener('click', () => {
+    game.move('left');
+    playSound(sounds.move, 0.3);
+  });
+  document.getElementById('touch-right')?.addEventListener('click', () => {
+    game.move('right');
+    playSound(sounds.move, 0.3);
+  });
   document.getElementById('touch-down')?.addEventListener('click', () => game.move('down'));
-  document.getElementById('touch-rotate')?.addEventListener('click', () => game.rotate(true));
-  document.getElementById('touch-drop')?.addEventListener('click', () => game.hardDrop());
-  document.getElementById('touch-hold')?.addEventListener('click', () => game.hold());
+  document.getElementById('touch-rotate')?.addEventListener('click', () => {
+    game.rotate(true);
+    playSound(sounds.rotate, 0.4);
+  });
+  document.getElementById('touch-drop')?.addEventListener('click', () => {
+    game.hardDrop();
+    playSound(sounds.drop, 0.6);
+  });
+  document.getElementById('touch-hold')?.addEventListener('click', () => {
+    game.hold();
+    playSound(sounds.rotate, 0.3);
+  });
 }
 
-/**
- * 初始化事件監聽
- */
 function initEventListeners(): void {
   document.addEventListener('keydown', handleKeyDown);
+
+  const enableAudio = () => {
+    if (audioContext?.state === 'suspended') {
+      audioContext.resume();
+    }
+    document.removeEventListener('click', enableAudio);
+    document.removeEventListener('touchstart', enableAudio);
+  };
+  document.addEventListener('click', enableAudio);
+  document.addEventListener('touchstart', enableAudio);
 
   newGameBtn.addEventListener('click', () => {
     game.destroy();
@@ -429,9 +683,7 @@ function initEventListeners(): void {
     initGame();
   });
 
-  pauseBtn.addEventListener('click', () => {
-    game.togglePause();
-  });
+  pauseBtn.addEventListener('click', () => game.togglePause());
 
   retryBtn.addEventListener('click', () => {
     game.destroy();
@@ -465,18 +717,31 @@ function initEventListeners(): void {
 /**
  * 主程式入口
  */
-function main(): void {
+async function main(): Promise<void> {
   const measurementId = import.meta.env?.VITE_GA_MEASUREMENT_ID;
   if (measurementId) {
     analytics.init(measurementId);
   }
+
+  await initAudio();
+
+  const webgpuReady = await initWebGPU();
 
   initCanvas();
   initI18n();
   initEventListeners();
   initGame();
 
-  console.log('🎮 俄羅斯方塊遊戲已載入！');
+  if (webgpuReady) {
+    lastFrameTime = performance.now();
+    animationId = requestAnimationFrame(renderLoop);
+
+    console.log('🎮 俄羅斯方塊 WebGPU 3A 版已載入！');
+    console.log('✨ 享受 3D 霓虹方塊、消行粒子特效！');
+  } else {
+    console.log('🎮 俄羅斯方塊已載入 (Canvas2D 模式)');
+  }
+
   console.log('🕹️ 使用方向鍵控制，空白鍵硬降，C 暫存');
 }
 

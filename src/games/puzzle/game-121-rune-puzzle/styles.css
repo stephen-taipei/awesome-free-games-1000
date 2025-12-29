@@ -1,3 +1,18 @@
+/* Rune Puzzle - Mystical / Ancient Runes Theme */
+/* Game #121 */
+
+:root {
+  --mystic-purple: #9b59b6;
+  --deep-purple: #8e44ad;
+  --violet: #6c3483;
+  --dark-bg: #0d0d1a;
+  --darker-bg: #080812;
+  --crystal: #a29bfe;
+  --energy-green: #2ecc71;
+  --arcane-blue: #3498db;
+  --fire-red: #e74c3c;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,8 +20,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg, #0d0d1a 0%, #1a1a3e 100%);
+  font-family: "Cinzel", "Times New Roman", Georgia, serif;
+  background: linear-gradient(160deg, #0d0d1a 0%, #1a1a3e 50%, #0d0d1a 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -24,21 +39,27 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  color: #9b59b6;
+  color: var(--mystic-purple);
 }
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 0 0 10px rgba(155, 89, 182, 0.5);
+  font-weight: 600;
+  text-shadow:
+    0 0 10px rgba(155, 89, 182, 0.5),
+    0 0 30px rgba(155, 89, 182, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.1em;
 }
 
 .header-controls select {
   padding: 0.5rem;
   border-radius: 8px;
-  border: none;
-  background: #1a1a3e;
-  color: #9b59b6;
+  border: 1px solid rgba(155, 89, 182, 0.3);
+  background: linear-gradient(180deg, #1a1a3e 0%, #0d0d1a 100%);
+  color: var(--mystic-purple);
   cursor: pointer;
+  font-family: inherit;
 }
 
 .game-controls {
@@ -49,35 +70,64 @@ body {
 }
 
 .stats-card {
-  background: rgba(155, 89, 182, 0.1);
-  color: #9b59b6;
+  background: linear-gradient(145deg,
+    rgba(155, 89, 182, 0.15) 0%,
+    rgba(108, 52, 131, 0.1) 100%);
+  color: var(--mystic-purple);
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: bold;
   display: flex;
   gap: 0.5rem;
   border: 1px solid rgba(155, 89, 182, 0.3);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(155, 89, 182, 0.1);
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  background: #0d0d1a;
+  background: radial-gradient(ellipse at center,
+    rgba(155, 89, 182, 0.05) 0%,
+    rgba(13, 13, 26, 0.95) 70%);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 60px rgba(155, 89, 182, 0.15);
   overflow: hidden;
+  border: 1px solid rgba(155, 89, 182, 0.3);
 }
 
 .canvas-container {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
 }
 
-canvas {
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
   max-width: 100%;
   border-radius: 8px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(155, 89, 182, 0.1);
 }
 
 .overlay {
@@ -86,11 +136,14 @@ canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(13, 13, 26, 0.95);
+  background: radial-gradient(ellipse at center,
+    rgba(13, 13, 26, 0.9) 0%,
+    rgba(8, 8, 18, 0.98) 100%);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
+  backdrop-filter: blur(4px);
 }
 
 .overlay-content {
@@ -102,43 +155,71 @@ canvas {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #9b59b6;
-  text-shadow: 0 0 20px rgba(155, 89, 182, 0.5);
+  color: var(--mystic-purple);
+  font-weight: 600;
+  text-shadow:
+    0 0 30px rgba(155, 89, 182, 0.6),
+    0 0 60px rgba(155, 89, 182, 0.4);
+  letter-spacing: 0.15em;
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
   opacity: 0.9;
+  color: var(--crystal);
 }
 
 .controls-hint {
   margin-top: 1rem;
   opacity: 0.7;
+  color: rgba(162, 155, 254, 0.7);
+  font-style: italic;
 }
 
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 20px;
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: inherit;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+  background: linear-gradient(135deg, var(--mystic-purple) 0%, var(--violet) 100%);
   color: white;
+  box-shadow:
+    0 4px 15px rgba(155, 89, 182, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 6px 25px rgba(155, 89, 182, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 30px rgba(155, 89, 182, 0.3);
 }
 
 .btn.warning {
-  background: #e74c3c;
+  background: linear-gradient(135deg, var(--fire-red) 0%, #c0392b 100%);
   color: white;
+  box-shadow:
+    0 4px 15px rgba(231, 76, 60, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn.warning:hover {
+  box-shadow:
+    0 6px 20px rgba(231, 76, 60, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .footer-controls {
@@ -148,6 +229,50 @@ canvas {
   margin-top: 1rem;
 }
 
+/* Mystical glow animation */
+@keyframes mysticGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(155, 89, 182, 0.3),
+      inset 0 0 20px rgba(155, 89, 182, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 40px rgba(155, 89, 182, 0.5),
+      inset 0 0 30px rgba(155, 89, 182, 0.2);
+  }
+}
+
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(155, 89, 182, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(52, 152, 219, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+  animation: mysticGlow 4s ease-in-out infinite;
+}
+
+/* Rune circle decoration */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80%;
+  height: 80%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(155, 89, 182, 0.1);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
 @media (max-width: 500px) {
   .game-header h1 {
     font-size: 1.2rem;
@@ -155,6 +280,15 @@ canvas {
 
   .stats-card {
     padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
     font-size: 0.9rem;
   }
 }

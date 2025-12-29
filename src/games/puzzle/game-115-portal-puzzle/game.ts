@@ -219,12 +219,25 @@ export class PortalPuzzleGame {
     if (!isPortalWall) return;
 
     // Place portal
+    const portalX = this.offsetX + (gx + 0.5) * this.cellSize;
+    const portalY = this.offsetY + (gy + 0.5) * this.cellSize;
+
     if (this.nextPortalColor === "orange") {
       this.portalA = { x: gx, y: gy, color: "orange" };
       this.nextPortalColor = "blue";
+      if (this.onStateChange) {
+        this.onStateChange({
+          portalPlaced: { x: portalX, y: portalY, color: "orange" },
+        });
+      }
     } else {
       this.portalB = { x: gx, y: gy, color: "blue" };
       this.nextPortalColor = "orange";
+      if (this.onStateChange) {
+        this.onStateChange({
+          portalPlaced: { x: portalX, y: portalY, color: "blue" },
+        });
+      }
     }
   }
 
@@ -269,14 +282,38 @@ export class PortalPuzzleGame {
       if (this.portalA && this.portalB) {
         if (this.portalA.x === newX && this.portalA.y === newY) {
           // Teleport to portal B
+          const fromX = this.offsetX + (this.portalA.x + 0.5) * this.cellSize;
+          const fromY = this.offsetY + (this.portalA.y + 0.5) * this.cellSize;
+          const toX = this.offsetX + (this.portalB.x + 0.5) * this.cellSize;
+          const toY = this.offsetY + (this.portalB.y + 0.5) * this.cellSize;
+
           this.playerX = this.portalB.x;
           this.playerY = this.portalB.y;
           this.moves++;
+
+          if (this.onStateChange) {
+            this.onStateChange({
+              moves: this.moves,
+              teleport: { fromX, fromY, toX, toY },
+            });
+          }
         } else if (this.portalB.x === newX && this.portalB.y === newY) {
           // Teleport to portal A
+          const fromX = this.offsetX + (this.portalB.x + 0.5) * this.cellSize;
+          const fromY = this.offsetY + (this.portalB.y + 0.5) * this.cellSize;
+          const toX = this.offsetX + (this.portalA.x + 0.5) * this.cellSize;
+          const toY = this.offsetY + (this.portalA.y + 0.5) * this.cellSize;
+
           this.playerX = this.portalA.x;
           this.playerY = this.portalA.y;
           this.moves++;
+
+          if (this.onStateChange) {
+            this.onStateChange({
+              moves: this.moves,
+              teleport: { fromX, fromY, toX, toY },
+            });
+          }
         }
       }
     } else {
@@ -284,10 +321,16 @@ export class PortalPuzzleGame {
       this.playerX = newX;
       this.playerY = newY;
       this.moves++;
-    }
 
-    if (this.onStateChange) {
-      this.onStateChange({ moves: this.moves });
+      const playerScreenX = this.offsetX + (this.playerX + 0.5) * this.cellSize;
+      const playerScreenY = this.offsetY + (this.playerY + 0.5) * this.cellSize;
+
+      if (this.onStateChange) {
+        this.onStateChange({
+          moves: this.moves,
+          playerMove: { x: playerScreenX, y: playerScreenY },
+        });
+      }
     }
 
     // Check win

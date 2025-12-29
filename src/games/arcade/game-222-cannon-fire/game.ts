@@ -32,6 +32,14 @@ export interface GameState {
   targets: Target[];
 }
 
+export interface PendingEvents {
+  fire: { angle: number; power: number }[];
+  hit: { type: string; points: number; chain: boolean }[];
+  levelComplete: { level: number; score: number; shotsBonus: number }[];
+  start: boolean;
+  gameOver: { score: number; level: number }[];
+}
+
 const GRAVITY = 0.25;
 const CANNON_X = 60;
 const CANNON_Y_OFFSET = 100;
@@ -42,8 +50,26 @@ export class CannonFireGame {
   private canvasWidth: number = 400;
   private canvasHeight: number = 500;
 
+  public pendingEvents: PendingEvents = {
+    fire: [],
+    hit: [],
+    levelComplete: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      fire: [],
+      hit: [],
+      levelComplete: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -69,6 +95,7 @@ export class CannonFireGame {
       ...this.createInitialState(),
       phase: "aiming",
     };
+    this.pendingEvents.start = true;
     this.loadLevel(1);
     this.emitState();
   }
@@ -125,6 +152,7 @@ export class CannonFireGame {
 
     this.state.shotsLeft--;
     this.state.phase = "firing";
+    this.pendingEvents.fire.push({ angle: this.state.cannonAngle, power: this.state.cannonPower });
     this.emitState();
   }
 
@@ -147,6 +175,7 @@ export class CannonFireGame {
       if (this.checkCollision(ball, target)) {
         target.destroyed = true;
         this.state.score += target.points;
+        this.pendingEvents.hit.push({ type: target.type, points: target.points, chain: false });
 
         // Chain reaction for barrels
         if (target.type === "barrel") {
@@ -201,6 +230,7 @@ export class CannonFireGame {
       if (dist < 80) {
         target.destroyed = true;
         this.state.score += target.points;
+        this.pendingEvents.hit.push({ type: target.type, points: target.points, chain: true });
       }
     }
   }
@@ -213,9 +243,12 @@ export class CannonFireGame {
 
     if (remaining === 0) {
       this.state.phase = "levelComplete";
-      this.state.score += this.state.shotsLeft * 50; // Bonus for remaining shots
+      const shotsBonus = this.state.shotsLeft * 50;
+      this.state.score += shotsBonus; // Bonus for remaining shots
+      this.pendingEvents.levelComplete.push({ level: this.state.level, score: this.state.score, shotsBonus });
     } else if (this.state.shotsLeft <= 0) {
       this.state.phase = "gameOver";
+      this.pendingEvents.gameOver.push({ score: this.state.score, level: this.state.level });
     } else {
       this.state.phase = "aiming";
     }

@@ -1,22 +1,136 @@
+/**
+ * Paper Plane Puzzle Styles
+ * Origami Workshop / Japanese Zen Garden Theme
+ * Game #053
+ */
+
+:root {
+  --washi-cream: #f8f5f0;
+  --washi-warm: #f5f0e8;
+  --washi-shadow: #e8e0d5;
+  --tatami-light: #c9b896;
+  --tatami-dark: #a89570;
+  --sakura-pink: #ffb7c5;
+  --sakura-deep: #ff8fa3;
+  --sakura-pale: #ffeef2;
+  --bamboo-green: #7ba05b;
+  --bamboo-dark: #5a7a40;
+  --sky-soft: #d4e5f7;
+  --sky-pale: #e8f1f8;
+  --ink-black: #2c2c2c;
+  --ink-soft: #4a4a4a;
+  --wood-frame: #8b7355;
+  --wood-dark: #6b5545;
+  --gold-accent: #c9a227;
+}
+
 .game-container {
-  max-width: 600px;
+  max-width: 650px;
+  background: linear-gradient(180deg, var(--washi-cream) 0%, var(--washi-warm) 100%);
+  border-radius: 4px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  border: 3px solid var(--wood-frame);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.15),
+    inset 0 0 50px rgba(255, 255, 255, 0.3);
+}
+
+/* Wood frame corners */
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 8px solid transparent;
+  border-image: linear-gradient(135deg, var(--wood-dark) 0%, var(--wood-frame) 50%, var(--wood-dark) 100%) 1;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* Decorative corner symbol */
+.game-container::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  background:
+    radial-gradient(circle at center, var(--sakura-pink) 30%, transparent 30%),
+    radial-gradient(circle at 0% 50%, var(--sakura-pale) 20%, transparent 20%),
+    radial-gradient(circle at 100% 50%, var(--sakura-pale) 20%, transparent 20%),
+    radial-gradient(circle at 50% 0%, var(--sakura-pale) 20%, transparent 20%),
+    radial-gradient(circle at 50% 100%, var(--sakura-pale) 20%, transparent 20%);
+  opacity: 0.6;
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 500px;
-  background: linear-gradient(135deg, #74b9ff 0%, #a29bfe 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+  background:
+    linear-gradient(180deg, var(--sky-pale) 0%, var(--sky-soft) 60%, var(--washi-cream) 100%);
+  border-radius: 3px;
+  border: 2px solid var(--wood-frame);
+  box-shadow:
+    inset 0 0 60px rgba(255, 183, 197, 0.1),
+    inset 0 -30px 60px rgba(201, 184, 150, 0.2),
+    0 4px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
 }
 
-canvas {
+/* Shoji screen texture */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(90deg, rgba(139, 115, 85, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(139, 115, 85, 0.03) 1px, transparent 1px);
+  background-size: 60px 80px;
+  pointer-events: none;
+}
+
+/* Cherry blossom branch hint */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 15px;
+  width: 80px;
+  height: 60px;
+  background: radial-gradient(circle at 30% 40%, var(--sakura-pink) 3px, transparent 3px),
+              radial-gradient(circle at 50% 30%, var(--sakura-pale) 4px, transparent 4px),
+              radial-gradient(circle at 70% 50%, var(--sakura-pink) 3px, transparent 3px),
+              radial-gradient(circle at 45% 60%, var(--sakura-deep) 2px, transparent 2px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#bg-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   cursor: pointer;
@@ -26,18 +140,47 @@ canvas {
   display: flex;
   justify-content: center;
   gap: 2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(232, 67, 147, 0.4);
+  background: linear-gradient(135deg, var(--washi-cream) 0%, var(--washi-shadow) 100%);
+  color: var(--ink-black);
+  padding: 0.75rem 1.75rem;
+  border-radius: 3px;
+  font-weight: 600;
+  border: 1px solid var(--tatami-dark);
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  position: relative;
+  font-family: 'Georgia', 'Hiragino Mincho Pro', serif;
+}
+
+/* Ink brush accent */
+.stats-card::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ink-soft), transparent);
+  opacity: 0.2;
+}
+
+.stats-card .label {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+}
+
+.stats-card .value {
+  color: var(--ink-black);
+  font-size: 1.1rem;
 }
 
 .footer-controls {
@@ -46,6 +189,205 @@ canvas {
   gap: 1rem;
 }
 
+.footer-controls button {
+  background: linear-gradient(135deg, var(--washi-cream) 0%, var(--washi-shadow) 100%);
+  color: var(--ink-black);
+  border: 1px solid var(--tatami-dark);
+  padding: 0.75rem 2rem;
+  border-radius: 3px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Georgia', 'Hiragino Mincho Pro', serif;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+
+.footer-controls button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 183, 197, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.footer-controls button:hover {
+  transform: translateY(-2px);
+  border-color: var(--sakura-deep);
+  box-shadow:
+    0 5px 15px rgba(0, 0, 0, 0.15),
+    0 0 20px rgba(255, 183, 197, 0.2);
+}
+
+.footer-controls button:hover::before {
+  left: 100%;
+}
+
+.footer-controls button:active {
+  transform: translateY(0);
+}
+
+.controls-hint {
+  text-align: center;
+  margin-top: 1rem;
+}
+
 .controls-hint small {
-  color: #a0aec0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-family: 'Georgia', 'Hiragino Mincho Pro', serif;
+  font-style: italic;
+  letter-spacing: 0.5px;
+}
+
+/* Game overlay - zen garden style */
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse at center, rgba(248, 245, 240, 0.95) 0%, rgba(232, 224, 213, 0.97) 100%);
+  backdrop-filter: blur(5px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 2px;
+}
+
+.game-overlay h2 {
+  font-size: 2.2rem;
+  font-family: 'Georgia', 'Hiragino Mincho Pro', serif;
+  color: var(--ink-black);
+  margin-bottom: 0.5rem;
+  letter-spacing: 4px;
+  position: relative;
+}
+
+/* Decorative underline */
+.game-overlay h2::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--sakura-pink), var(--sakura-deep), var(--sakura-pink), transparent);
+}
+
+.game-overlay p {
+  color: var(--ink-soft);
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  font-family: 'Georgia', 'Hiragino Mincho Pro', serif;
+  font-style: italic;
+}
+
+.game-overlay button {
+  background: linear-gradient(135deg, var(--sakura-pale) 0%, var(--sakura-pink) 50%, var(--sakura-pale) 100%);
+  color: var(--ink-black);
+  border: 1px solid var(--sakura-deep);
+  padding: 1rem 3rem;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 2px;
+  font-family: 'Georgia', 'Hiragino Mincho Pro', serif;
+  box-shadow:
+    0 4px 15px rgba(255, 143, 163, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4);
+}
+
+.game-overlay button:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 6px 25px rgba(255, 143, 163, 0.4),
+    0 0 30px rgba(255, 183, 197, 0.3);
+}
+
+/* Corner decorations - ink brush strokes */
+.game-overlay::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 50px;
+  height: 50px;
+  border-left: 2px solid var(--ink-soft);
+  border-top: 2px solid var(--ink-soft);
+  opacity: 0.3;
+}
+
+.game-overlay::after {
+  content: '';
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-right: 2px solid var(--ink-soft);
+  border-bottom: 2px solid var(--ink-soft);
+  opacity: 0.3;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .game-container {
+    padding: 1rem;
+  }
+
+  .game-area {
+    height: 420px;
+  }
+
+  .game-area::after {
+    width: 50px;
+    height: 40px;
+  }
+
+  .game-controls {
+    gap: 1rem;
+  }
+
+  .stats-card {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .footer-controls button {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.85rem;
+  }
+
+  .game-overlay h2 {
+    font-size: 1.7rem;
+    letter-spacing: 2px;
+  }
+
+  .game-overlay button {
+    padding: 0.8rem 2rem;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+  }
+
+  .game-overlay::before,
+  .game-overlay::after {
+    width: 35px;
+    height: 35px;
+  }
 }

@@ -1,12 +1,15 @@
 /**
  * Claw Machine Main Entry
  * Game #164
+ * Arcade / UFO Catcher / Purple and Neon Theme
  */
 import { ClawMachineGame } from './game';
+import { WebGPURenderer } from './webgpu';
 import { translations } from './i18n';
 import { i18n, type Locale } from '../../../shared/i18n';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+const webgpuCanvas = document.getElementById('webgpu-canvas') as HTMLCanvasElement;
 const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
 const scoreDisplay = document.getElementById('score-display')!;
 const livesDisplay = document.getElementById('lives-display')!;
@@ -19,6 +22,145 @@ const startBtn = document.getElementById('start-btn')!;
 const resetBtn = document.getElementById('reset-btn')!;
 
 let game: ClawMachineGame;
+let renderer: WebGPURenderer | null = null;
+let audioSystem: AudioSystem | null = null;
+
+// Audio System
+class AudioSystem {
+  private ctx: AudioContext | null = null;
+
+  private init() {
+    if (!this.ctx) {
+      this.ctx = new AudioContext();
+    }
+  }
+
+  private playTone(frequency: number, duration: number, type: OscillatorType = 'sine', gain: number = 0.1) {
+    this.init();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gainNode = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    filter.type = 'lowpass';
+    filter.frequency.value = 3000;
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequency, this.ctx.currentTime);
+    gainNode.gain.setValueAtTime(gain, this.ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+    osc.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  }
+
+  private playNoise(duration: number, gain: number = 0.1, freq: number = 1000) {
+    this.init();
+    if (!this.ctx) return;
+
+    const bufferSize = this.ctx.sampleRate * duration;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const output = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+
+    const source = this.ctx.createBufferSource();
+    const gainNode = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    filter.type = 'bandpass';
+    filter.frequency.value = freq;
+    filter.Q.value = 1;
+
+    source.buffer = buffer;
+    gainNode.gain.setValueAtTime(gain, this.ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+    source.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(this.ctx.destination);
+
+    source.start();
+  }
+
+  clawDrop() {
+    // Mechanical whir sound
+    this.playTone(150, 0.05, 'sawtooth', 0.04);
+    this.playNoise(0.04, 0.03, 800);
+  }
+
+  grab() {
+    // Claw closing - mechanical click
+    this.playTone(400, 0.1, 'square', 0.06);
+    setTimeout(() => this.playTone(500, 0.08, 'square', 0.05), 50);
+    this.playNoise(0.08, 0.04, 1200);
+  }
+
+  grabSuccess() {
+    // Positive chime
+    this.playTone(523, 0.1, 'sine', 0.08);
+    setTimeout(() => this.playTone(659, 0.1, 'sine', 0.08), 80);
+    setTimeout(() => this.playTone(784, 0.15, 'sine', 0.1), 160);
+  }
+
+  sparkle() {
+    // Magical sparkle
+    const freq = 800 + Math.random() * 400;
+    this.playTone(freq, 0.08, 'sine', 0.04);
+  }
+
+  success() {
+    // Prize collected - victory fanfare
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((freq, i) => {
+      setTimeout(() => {
+        this.playTone(freq, 0.15, 'sine', 0.1);
+        this.playTone(freq * 1.5, 0.1, 'triangle', 0.05);
+      }, i * 80);
+    });
+  }
+
+  fail() {
+    // Sad descending tone
+    this.playTone(300, 0.15, 'sine', 0.06);
+    setTimeout(() => this.playTone(220, 0.2, 'sine', 0.05), 100);
+  }
+
+  gameOver() {
+    // Arcade game over sound
+    const notes = [400, 350, 300, 250, 200, 150];
+    notes.forEach((freq, i) => {
+      setTimeout(() => {
+        this.playTone(freq, 0.2, 'sawtooth', 0.07);
+      }, i * 120);
+    });
+  }
+
+  victory() {
+    // Triumphant arcade fanfare
+    const notes = [262, 330, 392, 523, 659, 784, 880, 1047];
+    notes.forEach((freq, i) => {
+      setTimeout(() => {
+        this.playTone(freq, 0.12, 'sine', 0.1);
+        this.playTone(freq * 1.25, 0.08, 'triangle', 0.05);
+      }, i * 70);
+    });
+  }
+
+  start() {
+    // Arcade startup - coin insert sound
+    this.playTone(800, 0.08, 'sine', 0.08);
+    setTimeout(() => this.playTone(1000, 0.08, 'sine', 0.08), 80);
+    setTimeout(() => this.playTone(1200, 0.12, 'sine', 0.1), 160);
+  }
+}
 
 function initI18n() {
   Object.entries(translations).forEach(([locale, trans]) => {
@@ -28,6 +170,7 @@ function initI18n() {
   const browserLang = navigator.language;
   if (browserLang.includes('zh')) i18n.setLocale('zh-TW');
   else if (browserLang.includes('ja')) i18n.setLocale('ja');
+  else if (browserLang.includes('ko')) i18n.setLocale('ko');
   else i18n.setLocale('en');
 
   languageSelect.value = i18n.getLocale();
@@ -46,9 +189,20 @@ function updateTexts() {
   });
 }
 
-function initGame() {
+async function initGame() {
   game = new ClawMachineGame(canvas);
   game.resize();
+
+  // Initialize WebGPU
+  renderer = new WebGPURenderer(webgpuCanvas);
+  const gpuReady = await renderer.initialize();
+  if (gpuReady) {
+    resizeWebGPU();
+    startRenderLoop();
+  }
+
+  // Initialize Audio
+  audioSystem = new AudioSystem();
 
   const handlePointer = (e: MouseEvent | TouchEvent, type: 'down' | 'move' | 'up') => {
     const rect = canvas.getBoundingClientRect();
@@ -79,6 +233,12 @@ function initGame() {
     livesDisplay.textContent = state.lives.toString();
     levelDisplay.textContent = state.level.toString();
 
+    // Update renderer level
+    renderer?.setLevel(state.level);
+
+    // Process pending events
+    processPendingEvents();
+
     if (state.status === 'lost') {
       showGameOver(state.score);
     } else if (state.status === 'won') {
@@ -86,7 +246,98 @@ function initGame() {
     }
   });
 
-  window.addEventListener('resize', () => game.resize());
+  window.addEventListener('resize', () => {
+    game.resize();
+    resizeWebGPU();
+  });
+}
+
+function processPendingEvents() {
+  const events = game.pendingEvents;
+
+  // Claw drop sparks
+  for (const d of events.clawDrop) {
+    audioSystem?.clawDrop();
+    renderer?.emitClawDrop(d.x, d.y);
+  }
+
+  // Grab events
+  for (const g of events.grab) {
+    audioSystem?.grab();
+    if (g.success) {
+      audioSystem?.grabSuccess();
+    }
+    renderer?.emitGrab(g.x, g.y, g.success);
+  }
+
+  // Sparkle events
+  for (const s of events.sparkle) {
+    if (Math.random() < 0.3) {
+      audioSystem?.sparkle();
+    }
+    renderer?.emitSparkle(s.x, s.y, s.prizeType);
+  }
+
+  // Success events
+  for (const s of events.success) {
+    audioSystem?.success();
+    renderer?.emitSuccess(s.x, s.y, s.points);
+  }
+
+  // Fail events
+  for (const f of events.fail) {
+    audioSystem?.fail();
+    renderer?.emitFail(f.x, f.y);
+  }
+
+  // Game over
+  if (events.gameOver) {
+    audioSystem?.gameOver();
+    renderer?.emitGameOver(0.5, 0.5, false);
+  }
+
+  // Victory
+  if (events.victory) {
+    audioSystem?.victory();
+    renderer?.emitGameOver(0.5, 0.5, true);
+  }
+
+  // Start
+  if (events.start) {
+    audioSystem?.start();
+  }
+
+  // Clear events
+  game.clearPendingEvents();
+}
+
+function resizeWebGPU() {
+  if (!renderer) return;
+  const container = canvas.parentElement;
+  if (container) {
+    const rect = container.getBoundingClientRect();
+    const size = Math.min(rect.width, 450);
+    webgpuCanvas.width = size;
+    webgpuCanvas.height = size;
+    webgpuCanvas.style.width = `${size}px`;
+    webgpuCanvas.style.height = `${size}px`;
+    renderer.resize(size, size);
+  }
+}
+
+function startRenderLoop() {
+  let lastTime = performance.now();
+
+  function loop() {
+    const now = performance.now();
+    const delta = (now - lastTime) / 1000;
+    lastTime = now;
+
+    renderer?.render(delta);
+    requestAnimationFrame(loop);
+  }
+
+  loop();
 }
 
 function showGameOver(score: number) {
@@ -116,6 +367,7 @@ startBtn.addEventListener('click', () => {
 
 resetBtn.addEventListener('click', () => {
   game.reset();
+  renderer?.clear();
 });
 
 initI18n();

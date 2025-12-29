@@ -43,6 +43,13 @@ const BASE_TIME = 30;
 const TIME_BONUS = 5;
 const PARTS_PER_LEVEL = 5;
 
+export interface PendingEvents {
+  start: boolean;
+  selectPart: { correct: boolean; partName: string }[];
+  levelComplete: { level: number; score: number; timeBonus: number }[];
+  gameOver: { score: number; level: number }[];
+}
+
 export class MechaBuildGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -59,6 +66,22 @@ export class MechaBuildGame {
   private availableParts: { emoji: string; name: string }[] = [];
 
   private onPartsUpdate: ((parts: { emoji: string; name: string }[], targetIndex: number) => void) | null = null;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    selectPart: [],
+    levelComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      selectPart: [],
+      levelComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -97,6 +120,7 @@ export class MechaBuildGame {
     this.level = 1;
     this.timeLeft = BASE_TIME;
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.setupLevel();
     this.startTimer();
     this.emitState();
@@ -195,6 +219,7 @@ export class MechaBuildGame {
       this.assembledParts.push(targetPart);
       this.score += 100 * this.level;
       this.currentPartIndex++;
+      this.pendingEvents.selectPart.push({ correct: true, partName });
 
       if (this.currentPartIndex >= this.requiredParts.length) {
         // Level complete!
@@ -215,6 +240,7 @@ export class MechaBuildGame {
     } else {
       // Wrong part - time penalty
       this.timeLeft = Math.max(0, this.timeLeft - 2);
+      this.pendingEvents.selectPart.push({ correct: false, partName });
       this.emitState();
       return "wrong";
     }
@@ -222,7 +248,9 @@ export class MechaBuildGame {
 
   private levelComplete() {
     this.status = "levelComplete";
-    this.score += this.timeLeft * 10; // Bonus for remaining time
+    const timeBonus = this.timeLeft * 10;
+    this.score += timeBonus; // Bonus for remaining time
+    this.pendingEvents.levelComplete.push({ level: this.level, score: this.score, timeBonus });
     this.emitState();
 
     setTimeout(() => {
@@ -246,6 +274,7 @@ export class MechaBuildGame {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
     }
+    this.pendingEvents.gameOver.push({ score: this.score, level: this.level });
     this.emitState();
   }
 

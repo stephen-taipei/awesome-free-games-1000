@@ -37,6 +37,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  catchFrisbee: { points: number; combo: number; isGolden: boolean }[];
+  miss: { livesLeft: number }[];
+  gameOver: { score: number; highScore: number; isNewBest: boolean }[];
+}
+
 const GRAVITY = 0.4;
 const JUMP_FORCE = -12;
 const DOG_SPEED = 8;
@@ -60,6 +68,24 @@ export class FrisbeeDogGame {
   private lastTime = 0;
   private particles: { x: number; y: number; vx: number; vy: number; life: number; color: string }[] = [];
   private clouds: { x: number; y: number; size: number; speed: number }[] = [];
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    jump: false,
+    catchFrisbee: [],
+    miss: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      jump: false,
+      catchFrisbee: [],
+      miss: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -151,6 +177,7 @@ export class FrisbeeDogGame {
     if (!this.dog.jumping) {
       this.dog.jumping = true;
       this.dog.jumpVelocity = JUMP_FORCE;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -169,6 +196,7 @@ export class FrisbeeDogGame {
     this.dog.targetX = this.width / 2;
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -237,6 +265,7 @@ export class FrisbeeDogGame {
         frisbee.active = false;
         this.combo = 0;
         this.lives--;
+        this.pendingEvents.miss.push({ livesLeft: this.lives });
         this.emitState();
 
         if (this.lives <= 0) {
@@ -325,6 +354,11 @@ export class FrisbeeDogGame {
       });
     }
 
+    this.pendingEvents.catchFrisbee.push({
+      points,
+      combo: this.combo,
+      isGolden: frisbee.color === "#ffd700"
+    });
     this.emitState();
   }
 
@@ -333,6 +367,8 @@ export class FrisbeeDogGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    const isNewBest = this.score >= this.highScore;
+    this.pendingEvents.gameOver.push({ score: this.score, highScore: this.highScore, isNewBest });
     this.emitState();
   }
 

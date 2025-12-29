@@ -37,6 +37,14 @@ export interface GameState {
   coinsCollected: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  gravityFlip: boolean;
+  coinCollected: { score: number }[];
+  obstaclePass: { score: number }[];
+  gameOver: { score: number; highScore: number; coinsCollected: number }[];
+}
+
 const GRAVITY = 0.5;
 const FLIP_FORCE = 12;
 const INITIAL_SPEED = 4;
@@ -49,6 +57,24 @@ export class GravityFlipGame {
   private canvasHeight: number = 500;
   private obstacleTimer: number = 0;
   private coinTimer: number = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    gravityFlip: false,
+    coinCollected: [],
+    obstaclePass: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      gravityFlip: false,
+      coinCollected: [],
+      obstaclePass: [],
+      gameOver: [],
+    };
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -89,6 +115,7 @@ export class GravityFlipGame {
     this.state.player.y = this.canvasHeight / 2;
     this.obstacleTimer = 0;
     this.coinTimer = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -97,6 +124,7 @@ export class GravityFlipGame {
 
     this.state.player.gravityDirection *= -1;
     this.state.player.vy = FLIP_FORCE * this.state.player.gravityDirection * -1;
+    this.pendingEvents.gravityFlip = true;
   }
 
   public update(): void {
@@ -128,6 +156,7 @@ export class GravityFlipGame {
       if (!obs.passed && obs.x + 40 < player.x) {
         obs.passed = true;
         this.state.score++;
+        this.pendingEvents.obstaclePass.push({ score: this.state.score });
       }
     }
 
@@ -213,6 +242,7 @@ export class GravityFlipGame {
         coin.collected = true;
         this.state.coinsCollected++;
         this.state.score += 5;
+        this.pendingEvents.coinCollected.push({ score: this.state.score });
       }
     }
   }
@@ -225,6 +255,7 @@ export class GravityFlipGame {
       localStorage.setItem("gravityFlipHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, highScore: this.state.highScore, coinsCollected: this.state.coinsCollected });
     this.emitState();
   }
 

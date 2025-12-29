@@ -16,6 +16,11 @@ interface GameState {
   score: number;
   highScore: number;
   status: "idle" | "playing" | "over";
+  snakeLength: number;
+  snakeMove?: { x: number; y: number };
+  foodEat?: { x: number; y: number };
+  scaleShimmer?: { x: number; y: number };
+  gameOver?: { x: number; y: number; snakePositions: { x: number; y: number }[] };
 }
 
 type StateCallback = (state: GameState) => void;
@@ -41,6 +46,14 @@ export class SnakeGame {
   private onStateChange: StateCallback | null = null;
   private gameInterval: number | null = null;
   private speed = INITIAL_SPEED;
+  private moveCount = 0;
+
+  private pendingEvents: {
+    snakeMove?: { x: number; y: number };
+    foodEat?: { x: number; y: number };
+    scaleShimmer?: { x: number; y: number };
+    gameOver?: { x: number; y: number; snakePositions: { x: number; y: number }[] };
+  } = {};
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -65,11 +78,18 @@ export class SnakeGame {
 
   private emitState() {
     if (this.onStateChange) {
-      this.onStateChange({
+      const state: GameState = {
         score: this.score,
         highScore: this.highScore,
         status: this.status,
-      });
+        snakeLength: this.snake.length,
+        ...this.pendingEvents,
+      };
+
+      this.onStateChange(state);
+
+      // Clear pending events after emission
+      this.pendingEvents = {};
     }
   }
 
@@ -91,6 +111,7 @@ export class SnakeGame {
     this.speed = INITIAL_SPEED;
     this.direction = "right";
     this.nextDirection = "right";
+    this.moveCount = 0;
 
     // Initialize snake in center
     const centerX = Math.floor(this.gridWidth / 2);
@@ -149,6 +170,7 @@ export class SnakeGame {
     if (this.status !== "playing") return;
 
     this.direction = this.nextDirection;
+    this.moveCount++;
 
     // Calculate new head position
     const head = this.snake[0];
@@ -189,6 +211,21 @@ export class SnakeGame {
     // Move snake
     this.snake.unshift(newHead);
 
+    // Emit move event (for particles)
+    const headPixelX = newHead.x * this.cellSize + this.cellSize / 2;
+    const headPixelY = newHead.y * this.cellSize + this.cellSize / 2;
+    this.pendingEvents.snakeMove = { x: headPixelX, y: headPixelY };
+
+    // Occasional scale shimmer
+    if (this.moveCount % 5 === 0 && this.snake.length > 3) {
+      const shimmerIndex = Math.floor(Math.random() * (this.snake.length - 1)) + 1;
+      const shimmerSegment = this.snake[shimmerIndex];
+      this.pendingEvents.scaleShimmer = {
+        x: shimmerSegment.x * this.cellSize + this.cellSize / 2,
+        y: shimmerSegment.y * this.cellSize + this.cellSize / 2,
+      };
+    }
+
     // Check food collision
     if (newHead.x === this.food.x && newHead.y === this.food.y) {
       this.score += 10;
@@ -196,6 +233,13 @@ export class SnakeGame {
         this.highScore = this.score;
         this.saveHighScore();
       }
+
+      // Emit food eat event
+      this.pendingEvents.foodEat = {
+        x: this.food.x * this.cellSize + this.cellSize / 2,
+        y: this.food.y * this.cellSize + this.cellSize / 2,
+      };
+
       this.emitState();
       this.spawnFood();
 
@@ -206,6 +250,7 @@ export class SnakeGame {
       }
     } else {
       this.snake.pop();
+      this.emitState();
     }
 
     this.draw();
@@ -217,6 +262,18 @@ export class SnakeGame {
       clearInterval(this.gameInterval);
       this.gameInterval = null;
     }
+
+    // Emit game over event with snake positions
+    const head = this.snake[0];
+    this.pendingEvents.gameOver = {
+      x: head.x * this.cellSize + this.cellSize / 2,
+      y: head.y * this.cellSize + this.cellSize / 2,
+      snakePositions: this.snake.map((s) => ({
+        x: s.x * this.cellSize + this.cellSize / 2,
+        y: s.y * this.cellSize + this.cellSize / 2,
+      })),
+    };
+
     this.emitState();
   }
 
@@ -225,12 +282,11 @@ export class SnakeGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Background
-    ctx.fillStyle = "#1e272e";
-    ctx.fillRect(0, 0, w, h);
+    // Clear with transparent to show WebGPU background
+    ctx.clearRect(0, 0, w, h);
 
-    // Grid lines
-    ctx.strokeStyle = "#2d3436";
+    // Grid lines (subtle)
+    ctx.strokeStyle = "rgba(0, 184, 148, 0.1)";
     ctx.lineWidth = 1;
     for (let x = 0; x <= this.gridWidth; x++) {
       ctx.beginPath();
@@ -258,6 +314,15 @@ export class SnakeGame {
     const y = this.food.y * this.cellSize + this.cellSize / 2;
     const radius = this.cellSize * 0.4;
 
+    // Glow effect
+    const glowGrad = ctx.createRadialGradient(x, y, 0, x, y, radius * 1.5);
+    glowGrad.addColorStop(0, "rgba(231, 76, 60, 0.6)");
+    glowGrad.addColorStop(1, "transparent");
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
     // Apple shape
     ctx.fillStyle = "#e74c3c";
     ctx.beginPath();
@@ -275,7 +340,7 @@ export class SnakeGame {
     ctx.fill();
 
     // Shine
-    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
     ctx.beginPath();
     ctx.arc(x - radius * 0.3, y - radius * 0.3, radius * 0.25, 0, Math.PI * 2);
     ctx.fill();
@@ -293,15 +358,40 @@ export class SnakeGame {
 
       const isHead = i === 0;
 
+      // Glow effect for head
+      if (isHead) {
+        const glowX = x + size / 2;
+        const glowY = y + size / 2;
+        const glowGrad = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, size);
+        glowGrad.addColorStop(0, "rgba(0, 184, 148, 0.5)");
+        glowGrad.addColorStop(1, "transparent");
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath();
+        ctx.arc(glowX, glowY, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       // Body color gradient
       const brightness = 100 - (i / this.snake.length) * 30;
-      ctx.fillStyle = isHead ? "#00b894" : `hsl(168, 76%, ${brightness}%)`;
+      const bodyGrad = ctx.createLinearGradient(x, y, x + size, y + size);
+      bodyGrad.addColorStop(0, isHead ? "#00e6b8" : `hsl(168, 76%, ${brightness}%)`);
+      bodyGrad.addColorStop(1, isHead ? "#00b894" : `hsl(168, 76%, ${brightness - 10}%)`);
+      ctx.fillStyle = bodyGrad;
 
       // Rounded rectangle
       const radius = size * 0.3;
       ctx.beginPath();
       ctx.roundRect(x, y, size, size, radius);
       ctx.fill();
+
+      // Scale pattern
+      if (!isHead) {
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2, size * 0.2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
 
       // Head features
       if (isHead) {
@@ -344,7 +434,7 @@ export class SnakeGame {
         ctx.fill();
 
         // Pupils
-        ctx.fillStyle = "#2d3436";
+        ctx.fillStyle = "#0a1a0a";
         const pupilSize = eyeSize * 0.6;
         ctx.beginPath();
         ctx.arc(eye1X, eye1Y, pupilSize, 0, Math.PI * 2);

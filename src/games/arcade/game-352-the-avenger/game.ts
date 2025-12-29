@@ -86,6 +86,17 @@ export interface GameConfig {
   killStreakTimeout: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  shoot: boolean;
+  enemyKilled: { type: string; points: number }[];
+  playerHit: { damage: number; healthRemaining: number }[];
+  rageBurst: boolean;
+  invincibilityUsed: boolean;
+  killStreak: { streak: number; multiplier: number }[];
+  gameOver: { score: number; bestScore: number; wave: number; killStreak: number }[];
+}
+
 const ENEMY_TYPES = {
   normal: { health: 30, speed: 80, damage: 10, color: '#ff6b6b', radius: 15 },
   fast: { health: 20, speed: 150, damage: 8, color: '#feca57', radius: 12 },
@@ -103,6 +114,17 @@ export class AvengerGame {
   private mouseX: number = 0;
   private mouseY: number = 0;
   private onStateChange?: (state: GameState) => void;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    shoot: false,
+    enemyKilled: [],
+    playerHit: [],
+    rageBurst: false,
+    invincibilityUsed: false,
+    killStreak: [],
+    gameOver: [],
+  };
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -173,12 +195,26 @@ export class AvengerGame {
     return { ...this.state };
   }
 
+  clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      shoot: false,
+      enemyKilled: [],
+      playerHit: [],
+      rageBurst: false,
+      invincibilityUsed: false,
+      killStreak: [],
+      gameOver: [],
+    };
+  }
+
   newGame(): void {
     this.state = this.createInitialState();
     this.state.isPlaying = true;
     this.lastTime = performance.now();
     this.spawnTimer = 0;
     this.rageDecayTimer = 0;
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -473,11 +509,18 @@ export class AvengerGame {
   private onEnemyKilled(enemy: Enemy): void {
     // 增加分數（帶倍率）
     const baseScore = enemy.maxHealth;
-    this.state.score += Math.floor(baseScore * this.state.scoreMultiplier);
+    const points = Math.floor(baseScore * this.state.scoreMultiplier);
+    this.state.score += points;
 
     // 增加連殺
     this.state.killStreak++;
     this.state.killStreakTimer = this.config.killStreakTimeout;
+
+    this.pendingEvents.enemyKilled.push({ type: enemy.type, points });
+    this.pendingEvents.killStreak.push({
+      streak: this.state.killStreak,
+      multiplier: this.state.scoreMultiplier,
+    });
 
     // 創建粒子效果
     this.createParticles(enemy.x, enemy.y, enemy.color, 12);
@@ -487,6 +530,11 @@ export class AvengerGame {
     // 受傷增加憤怒值
     const rageGain = damage * 2;
     this.state.player.rage = Math.min(this.state.player.maxRage, this.state.player.rage + rageGain);
+
+    this.pendingEvents.playerHit.push({
+      damage,
+      healthRemaining: this.state.player.health,
+    });
 
     // 創建受傷粒子
     this.createParticles(this.state.player.x, this.state.player.y, '#ff0000', 10);
@@ -533,6 +581,8 @@ export class AvengerGame {
       return true;
     });
 
+    this.pendingEvents.rageBurst = true;
+
     // 創建爆發效果
     this.createParticles(this.state.player.x, this.state.player.y, '#ff0000', 30);
   }
@@ -544,6 +594,7 @@ export class AvengerGame {
     this.state.player.rage -= 75;
     this.state.player.isInvincible = true;
     this.state.player.invincibleTimer = 3;
+    this.pendingEvents.invincibilityUsed = true;
   }
 
   // 射擊（消耗憤怒值）
@@ -583,6 +634,8 @@ export class AvengerGame {
         damage: 40,
         isPlayerBullet: true,
       });
+
+      this.pendingEvents.shoot = true;
     }
   }
 
@@ -599,6 +652,13 @@ export class AvengerGame {
       this.state.bestScore = this.state.score;
       this.saveBestScore(this.state.bestScore);
     }
+
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      bestScore: this.state.bestScore,
+      wave: this.state.wave,
+      killStreak: this.state.killStreak,
+    });
 
     this.notifyStateChange();
   }

@@ -154,9 +154,29 @@ export class Puzzle3DGame {
   private isRotating: boolean = false;
   private lastMouseX: number = 0;
   private lastMouseY: number = 0;
+  private lastRotateEmit: number = 0;
 
   constructor(container: HTMLElement) {
     this.container = container;
+  }
+
+  private notifyChange(extra?: { event?: string; x?: number; y?: number }): void {
+    if (this.onStateChange) {
+      this.onStateChange({
+        level: this.currentLevel + 1,
+        pieces: this.blocks.filter(b => !b.placed).length,
+        status: this.status,
+        ...extra,
+      });
+    }
+  }
+
+  private getContainerCenter(): { x: number; y: number } {
+    const rect = this.container.getBoundingClientRect();
+    return {
+      x: rect.width / 2,
+      y: rect.height / 2,
+    };
   }
 
   public start() {
@@ -318,6 +338,14 @@ export class Puzzle3DGame {
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
         this.updateSceneRotation();
+
+        // Throttle scene rotation events
+        const now = Date.now();
+        if (now - this.lastRotateEmit > 100) {
+          this.lastRotateEmit = now;
+          const center = this.getContainerCenter();
+          this.notifyChange({ event: "sceneRotate", x: center.x, y: center.y });
+        }
       }
     });
 
@@ -337,12 +365,15 @@ export class Puzzle3DGame {
     const block = this.blocks.find(b => b.id === id);
     if (!block || block.placed) return;
 
+    const center = this.getContainerCenter();
+
     if (this.selectedBlock?.id === id) {
       // Place block
       this.placeBlock(block);
     } else {
       this.selectedBlock = block;
       this.render();
+      this.notifyChange({ event: "blockSelect", x: center.x, y: center.y });
     }
   }
 
@@ -352,6 +383,9 @@ export class Puzzle3DGame {
 
     block.rotY += 90;
     this.render();
+
+    const center = this.getContainerCenter();
+    this.notifyChange({ event: "blockRotate", x: center.x, y: center.y });
   }
 
   private placeBlock(block: Block3D) {
@@ -360,25 +394,16 @@ export class Puzzle3DGame {
     this.selectedBlock = null;
     this.render();
 
+    const center = this.getContainerCenter();
+
+    // Emit block place event
+    this.notifyChange({ event: "blockPlace", x: center.x, y: center.y });
+
     // Check win
     const allPlaced = this.blocks.every(b => b.placed);
     if (allPlaced) {
       this.status = "won";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "won",
-          level: this.currentLevel + 1,
-          pieces: 0,
-        });
-      }
-    } else {
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "playing",
-          level: this.currentLevel + 1,
-          pieces: this.blocks.filter(b => !b.placed).length,
-        });
-      }
+      this.notifyChange();
     }
   }
 

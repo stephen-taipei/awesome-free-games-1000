@@ -31,6 +31,15 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  thrust: { x: number; y: number }[];
+  collision: { x: number; y: number; type: string }[];
+  altitudeMilestone: { altitude: number }[];
+  start: boolean;
+  won: { score: number; fuelRemaining: number }[];
+  gameOver: { altitude: number; score: number }[];
+}
+
 const TARGET_ALTITUDE = 10000;
 
 export class RocketLaunchGame {
@@ -52,10 +61,31 @@ export class RocketLaunchGame {
   private obstacles: Obstacle[] = [];
   private particles: Particle[] = [];
   private cameraY = 0;
+  private lastAltitudeMilestone = 0;
+
+  public pendingEvents: PendingEvents = {
+    thrust: [],
+    collision: [],
+    altitudeMilestone: [],
+    start: false,
+    won: [],
+    gameOver: [],
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      thrust: [],
+      collision: [],
+      altitudeMilestone: [],
+      start: false,
+      won: [],
+      gameOver: [],
+    };
   }
 
   setOnStateChange(cb: StateCallback) {
@@ -96,8 +126,10 @@ export class RocketLaunchGame {
     this.cameraY = 0;
     this.obstacles = [];
     this.particles = [];
+    this.lastAltitudeMilestone = 0;
 
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -163,6 +195,7 @@ export class RocketLaunchGame {
       this.rocketVx += thrustX;
       this.rocketVy += thrustY;
       this.fuel -= 0.2;
+      this.pendingEvents.thrust.push({ x: this.rocketX, y: this.rocketY });
 
       // Create exhaust particles
       for (let i = 0; i < 3; i++) {
@@ -194,6 +227,13 @@ export class RocketLaunchGame {
     // Update altitude
     this.altitude = Math.max(0, -this.rocketY + h - 80);
     this.score = Math.floor(this.altitude / 10);
+
+    // Check altitude milestones
+    const currentMilestone = Math.floor(this.altitude / 2000) * 2000;
+    if (currentMilestone > this.lastAltitudeMilestone && currentMilestone > 0) {
+      this.lastAltitudeMilestone = currentMilestone;
+      this.pendingEvents.altitudeMilestone.push({ altitude: currentMilestone });
+    }
 
     // Update camera
     if (this.rocketY < this.cameraY + h * 0.4) {
@@ -232,6 +272,8 @@ export class RocketLaunchGame {
         this.rocketY - this.cameraY < obsScreenY + obs.height + 20
       ) {
         this.status = "over";
+        this.pendingEvents.collision.push({ x: this.rocketX, y: this.rocketY, type: obs.type });
+        this.pendingEvents.gameOver.push({ altitude: Math.floor(this.altitude), score: this.score });
         this.emitState();
         return;
       }
@@ -252,6 +294,8 @@ export class RocketLaunchGame {
     if (this.rocketY > h - 40 && this.altitude === 0) {
       if (Math.abs(this.rocketVy) > 3 || Math.abs(this.rocketVx) > 2) {
         this.status = "over";
+        this.pendingEvents.collision.push({ x: this.rocketX, y: this.rocketY, type: "ground" });
+        this.pendingEvents.gameOver.push({ altitude: Math.floor(this.altitude), score: this.score });
         this.emitState();
         return;
       }
@@ -261,6 +305,7 @@ export class RocketLaunchGame {
     if (this.altitude >= TARGET_ALTITUDE) {
       this.status = "won";
       this.score += Math.floor(this.fuel) * 10;
+      this.pendingEvents.won.push({ score: this.score, fuelRemaining: Math.floor(this.fuel) });
       this.emitState();
     }
 

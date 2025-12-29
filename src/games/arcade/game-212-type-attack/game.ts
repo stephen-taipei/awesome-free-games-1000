@@ -26,6 +26,15 @@ export interface GameState {
   startTime: number;
 }
 
+export interface PendingEvents {
+  spawn: { text: string; x: number }[];
+  wordComplete: { text: string; score: number }[];
+  miss: { text: string }[];
+  levelUp: { level: number }[];
+  start: boolean;
+  gameOver: { score: number; wordsTyped: number; wpm: number; accuracy: number }[];
+}
+
 const WORD_LIST = [
   // Easy (3-4 letters)
   "cat", "dog", "run", "fun", "sun", "red", "big", "top", "cup", "map",
@@ -52,8 +61,28 @@ export class TypeAttackGame {
   private canvasWidth: number = 400;
   private canvasHeight: number = 450;
 
+  public pendingEvents: PendingEvents = {
+    spawn: [],
+    wordComplete: [],
+    miss: [],
+    levelUp: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      spawn: [],
+      wordComplete: [],
+      miss: [],
+      levelUp: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -94,6 +123,7 @@ export class TypeAttackGame {
     this.lastTime = performance.now();
     this.lastSpawnTime = this.lastTime;
 
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -129,8 +159,9 @@ export class TypeAttackGame {
     // Check for words that reached bottom
     const escaped = this.state.words.filter((w) => w.y > this.canvasHeight - 50);
     if (escaped.length > 0) {
-      escaped.forEach(() => {
+      escaped.forEach((w) => {
         this.state.lives--;
+        this.pendingEvents.miss.push({ text: w.text });
       });
       this.state.words = this.state.words.filter((w) => w.y <= this.canvasHeight - 50);
 
@@ -145,6 +176,7 @@ export class TypeAttackGame {
       const newLevel = Math.floor(this.state.wordsTyped / 5) + 1;
       if (newLevel > this.state.level) {
         this.state.level = newLevel;
+        this.pendingEvents.levelUp.push({ level: newLevel });
       }
     }
 
@@ -162,15 +194,17 @@ export class TypeAttackGame {
     const text = wordPool[Math.floor(Math.random() * wordPool.length)];
     const speed = 0.5 + this.state.level * 0.1 + Math.random() * 0.3;
 
+    const x = 50 + Math.random() * (this.canvasWidth - 100);
     this.state.words.push({
       id: this.wordId++,
       text,
-      x: 50 + Math.random() * (this.canvasWidth - 100),
+      x,
       y: -20,
       speed,
       typed: "",
       active: false,
     });
+    this.pendingEvents.spawn.push({ text, x });
   }
 
   public typeChar(char: string): void {
@@ -189,9 +223,11 @@ export class TypeAttackGame {
 
         // Check if word is complete
         if (word.typed === word.text) {
-          this.state.score += word.text.length * 10 + Math.floor(50 / (word.y / 100 + 1));
+          const wordScore = word.text.length * 10 + Math.floor(50 / (word.y / 100 + 1));
+          this.state.score += wordScore;
           this.state.wordsTyped++;
           this.state.correctChars += word.text.length;
+          this.pendingEvents.wordComplete.push({ text: word.text, score: wordScore });
           this.state.words = this.state.words.filter((w) => w.id !== word.id);
           this.state.currentInput = "";
 
@@ -253,6 +289,12 @@ export class TypeAttackGame {
 
   private endGame(): void {
     this.state.status = "gameOver";
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      wordsTyped: this.state.wordsTyped,
+      wpm: this.getWPM(),
+      accuracy: this.getAccuracy(),
+    });
     if (this.gameLoop) {
       cancelAnimationFrame(this.gameLoop);
       this.gameLoop = null;

@@ -132,7 +132,11 @@ export class WaterFlowGame {
       pipe.rotation = (pipe.rotation + 90) % 360;
       this.moves++;
       this.draw();
-      this.notifyChange();
+
+      // Emit pipe rotation event
+      const pipeX = this.offsetX + (col + 0.5) * this.cellSize;
+      const pipeY = this.offsetY + (row + 0.5) * this.cellSize;
+      this.notifyChange({ event: 'pipeRotate', x: pipeX, y: pipeY });
     }
   }
 
@@ -153,6 +157,11 @@ export class WaterFlowGame {
     this.grid[sourceRow][sourceCol].hasWater = true;
     this.grid[sourceRow][sourceCol].waterLevel = 1;
 
+    // Emit flow start event
+    const sourceX = this.offsetX + (sourceCol + 0.5) * this.cellSize;
+    const sourceY = this.offsetY + (sourceRow + 0.5) * this.cellSize;
+    this.notifyChange({ event: 'flowStart', x: sourceX, y: sourceY });
+
     this.flowWater();
   }
 
@@ -168,16 +177,33 @@ export class WaterFlowGame {
         // Check if target has water
         if (this.grid[targetRow][targetCol].hasWater) {
           this.status = "won";
+          // Emit reach target event
+          const targetX = this.offsetX + (targetCol + 0.5) * this.cellSize;
+          const targetY = this.offsetY + (targetRow + 0.5) * this.cellSize;
+          this.notifyChange({ event: 'reachTarget', x: targetX, y: targetY });
         } else {
           this.status = "failed";
+          // Emit flow fail event at last visited position
+          const lastVisited = Array.from(visited).pop()?.split(',').map(Number);
+          if (lastVisited) {
+            const failX = this.offsetX + (lastVisited[1] + 0.5) * this.cellSize;
+            const failY = this.offsetY + (lastVisited[0] + 0.5) * this.cellSize;
+            this.notifyChange({ event: 'flowFail', x: failX, y: failY });
+          } else {
+            this.notifyChange();
+          }
         }
-        this.notifyChange();
         return;
       }
 
       const [r, c] = queue.shift()!;
       const pipe = this.grid[r][c];
       pipe.hasWater = true;
+
+      // Emit water fill event
+      const fillX = this.offsetX + (c + 0.5) * this.cellSize;
+      const fillY = this.offsetY + (r + 0.5) * this.cellSize;
+      this.notifyChange({ event: 'waterFill', x: fillX, y: fillY });
 
       // Animate water fill
       this.animateWaterFill(r, c, () => {
@@ -382,12 +408,13 @@ export class WaterFlowGame {
     this.onStateChange = cb;
   }
 
-  private notifyChange() {
+  private notifyChange(extra?: { event?: string; x?: number; y?: number }) {
     if (this.onStateChange) {
       this.onStateChange({
         level: this.level,
         moves: this.moves,
         status: this.status,
+        ...extra,
       });
     }
   }

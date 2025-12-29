@@ -1,10 +1,117 @@
 /**
  * Flip Puzzle Main Entry
- * Game #097
+ * Game #097 - With WebGPU Effects
  */
 import { FlipGame, GameState } from "./game";
 import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
+import { WebGPURenderer } from "./webgpu";
+
+// Audio System for Tile/Toggle sounds
+class AudioSystem {
+  private audioContext: AudioContext | null = null;
+  private initialized = false;
+
+  async init() {
+    if (this.initialized) return;
+    try {
+      this.audioContext = new AudioContext();
+      this.initialized = true;
+    } catch (e) {
+      console.warn("Audio initialization failed:", e);
+    }
+  }
+
+  private playTone(
+    frequency: number,
+    duration: number,
+    type: OscillatorType = "sine",
+    volume: number = 0.15
+  ) {
+    if (!this.audioContext) return;
+
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+
+    gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.001,
+      this.audioContext.currentTime + duration
+    );
+
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    oscillator.start();
+    oscillator.stop(this.audioContext.currentTime + duration);
+  }
+
+  // Tile flip - digital click
+  playFlip(toOn: boolean) {
+    if (!this.audioContext) return;
+
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = "square";
+    osc.frequency.setValueAtTime(toOn ? 800 : 400, this.audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(
+      toOn ? 1200 : 200,
+      this.audioContext.currentTime + 0.08
+    );
+
+    gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.1);
+
+    osc.connect(gain);
+    gain.connect(this.audioContext.destination);
+
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.1);
+  }
+
+  // Victory melody
+  playVictory() {
+    if (!this.audioContext) return;
+
+    const melody = [523, 659, 784, 1047, 784, 1047, 1319];
+    melody.forEach((freq, i) => {
+      setTimeout(() => {
+        this.playTone(freq, 0.25, "sine", 0.12);
+      }, i * 100);
+    });
+  }
+
+  // Hint sound
+  playHint() {
+    if (!this.audioContext) return;
+
+    this.playTone(600, 0.1, "sine", 0.08);
+    setTimeout(() => this.playTone(800, 0.15, "sine", 0.1), 100);
+  }
+
+  // Reset sound
+  playReset() {
+    if (!this.audioContext) return;
+
+    this.playTone(500, 0.08, "triangle", 0.08);
+    setTimeout(() => this.playTone(350, 0.1, "triangle", 0.06), 60);
+    setTimeout(() => this.playTone(200, 0.12, "triangle", 0.05), 120);
+  }
+
+  // Level start
+  playLevelStart() {
+    if (!this.audioContext) return;
+
+    this.playTone(400, 0.1, "sine", 0.08);
+    setTimeout(() => this.playTone(500, 0.1, "sine", 0.09), 80);
+    setTimeout(() => this.playTone(600, 0.12, "sine", 0.1), 160);
+    setTimeout(() => this.playTone(800, 0.15, "sine", 0.12), 240);
+  }
+}
 
 // Elements
 const languageSelect = document.getElementById("language-select") as HTMLSelectElement;
@@ -19,8 +126,11 @@ const overlayMsg = document.getElementById("overlay-msg")!;
 const startBtn = document.getElementById("start-btn")!;
 const resetBtn = document.getElementById("reset-btn")!;
 const hintBtn = document.getElementById("hint-btn")!;
+const webgpuCanvas = document.getElementById("webgpu-canvas") as HTMLCanvasElement;
 
 let game: FlipGame;
+let webgpuRenderer: WebGPURenderer | null = null;
+const audioSystem = new AudioSystem();
 let hintTimeout: number | null = null;
 
 function initI18n(): void {
@@ -49,6 +159,41 @@ function updateTexts(): void {
   });
 }
 
+async function initWebGPU(): Promise<void> {
+  if (!webgpuCanvas) return;
+
+  webgpuRenderer = new WebGPURenderer(webgpuCanvas);
+  const success = await webgpuRenderer.init();
+
+  if (!success) {
+    console.warn("WebGPU not available, running without effects");
+    webgpuRenderer = null;
+  } else {
+    resizeWebGPU();
+  }
+}
+
+function resizeWebGPU(): void {
+  if (webgpuRenderer && webgpuCanvas.parentElement) {
+    const rect = webgpuCanvas.parentElement.getBoundingClientRect();
+    webgpuRenderer.resize(rect.width, rect.height);
+  }
+}
+
+function getTilePosition(row: number, col: number, size: number): { x: number; y: number; tileSize: number } {
+  const boardRect = currentBoard.getBoundingClientRect();
+  const canvasRect = webgpuCanvas?.getBoundingClientRect();
+
+  if (!canvasRect) return { x: 0, y: 0, tileSize: 40 };
+
+  const tileSize = boardRect.width / size;
+
+  const x = boardRect.left - canvasRect.left + col * tileSize + tileSize / 2;
+  const y = boardRect.top - canvasRect.top + row * tileSize + tileSize / 2;
+
+  return { x, y, tileSize };
+}
+
 function initGame(): void {
   game = new FlipGame();
 
@@ -57,9 +202,13 @@ function initGame(): void {
     updateUI(state);
 
     if (state.status === "won") {
+      audioSystem.playVictory();
+      webgpuRenderer?.emitVictory();
       setTimeout(() => showWinOverlay(), 500);
     }
   };
+
+  window.addEventListener("resize", resizeWebGPU);
 }
 
 function createBoard(container: HTMLElement, size: number, isTarget: boolean = false): void {
@@ -85,20 +234,38 @@ function createBoard(container: HTMLElement, size: number, isTarget: boolean = f
 function handleTileClick(row: number, col: number): void {
   if (game.getState().status !== "playing") return;
 
+  audioSystem.init();
   clearHint();
 
+  const state = game.getState();
+  const size = state.size;
+  const board = state.board;
+
+  // Get current states before flip
+  const centerOn = board[row][col];
+  const pos = getTilePosition(row, col, size);
+
+  // Emit flip effect for center
+  webgpuRenderer?.emitFlip(pos.x, pos.y, pos.tileSize, !centerOn);
+
+  // Adjacent tiles
+  const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  for (const [dr, dc] of directions) {
+    const nr = row + dr;
+    const nc = col + dc;
+    if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+      const adjPos = getTilePosition(nr, nc, size);
+      const adjOn = board[nr][nc];
+      webgpuRenderer?.emitAdjacentFlip(adjPos.x, adjPos.y, pos.tileSize, !adjOn);
+    }
+  }
+
+  audioSystem.playFlip(!centerOn);
+
   // Add flip animation
-  const size = game.getState().size;
   const tiles = currentBoard.querySelectorAll(".tile");
 
-  // Get affected tiles
   const affected: number[] = [row * size + col];
-  const directions = [
-    [-1, 0],
-    [1, 0],
-    [0, -1],
-    [0, 1],
-  ];
   for (const [dr, dc] of directions) {
     const nr = row + dr;
     const nc = col + dc;
@@ -164,6 +331,7 @@ function clearHint(): void {
 }
 
 function showHint(): void {
+  audioSystem.init();
   clearHint();
   const hint = game.getHint();
   if (!hint) return;
@@ -176,6 +344,11 @@ function showHint(): void {
   if (tile) {
     tile.classList.add("hint");
     hintTimeout = window.setTimeout(clearHint, 3000);
+
+    audioSystem.playHint();
+
+    const pos = getTilePosition(row, col, size);
+    webgpuRenderer?.emitHint(pos.x, pos.y, pos.tileSize);
   }
 }
 
@@ -194,21 +367,33 @@ function showWinOverlay(): void {
     startBtn.onclick = () => {
       overlay.style.display = "none";
       game.nextLevel();
+      audioSystem.playLevelStart();
+      webgpuRenderer?.emitLevelStart();
     };
   }
 }
 
 function startGame(level: number = 1): void {
+  audioSystem.init();
   overlay.style.display = "none";
   clearHint();
   game.start(level);
+  audioSystem.playLevelStart();
+  webgpuRenderer?.emitLevelStart();
 }
 
 // Event listeners
 startBtn.addEventListener("click", () => startGame());
-resetBtn.addEventListener("click", () => game.reset());
+resetBtn.addEventListener("click", () => {
+  audioSystem.init();
+  game.reset();
+  audioSystem.playReset();
+  webgpuRenderer?.emitReset();
+});
 hintBtn.addEventListener("click", showHint);
 
 // Initialize
 initI18n();
-initGame();
+initWebGPU().then(() => {
+  initGame();
+});

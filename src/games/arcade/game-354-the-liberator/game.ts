@@ -63,6 +63,17 @@ interface Particle {
 
 type Ability = 'break-chains' | 'hope-light' | 'freedom-dash';
 
+export interface PendingEvents {
+  start: boolean;
+  prisonerRescued: { totalRescued: number }[];
+  companionGained: boolean;
+  enemyKilled: { type: string; points: number }[];
+  playerHit: { healthRemaining: number }[];
+  abilityUsed: { ability: string }[];
+  levelComplete: { level: number }[];
+  gameOver: { won: boolean; score: number; rescued: number }[];
+}
+
 export class LiberatorGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -93,6 +104,17 @@ export class LiberatorGame {
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
 
   onStateChange: ((state: any) => void) | null = null;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    prisonerRescued: [],
+    companionGained: false,
+    enemyKilled: [],
+    playerHit: [],
+    abilityUsed: [],
+    levelComplete: [],
+    gameOver: [],
+  };
 
   private animationId: number | null = null;
   private lastTime = 0;
@@ -167,6 +189,7 @@ export class LiberatorGame {
     if (this.status === 'playing') return;
     this.status = 'playing';
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.emitState();
   }
@@ -258,6 +281,9 @@ export class LiberatorGame {
             angle: Math.random() * Math.PI * 2
           });
 
+          this.pendingEvents.prisonerRescued.push({ totalRescued: this.rescued });
+          this.pendingEvents.companionGained = true;
+
           // Hope energy bonus
           this.player.hopeEnergy = Math.min(
             this.player.maxHopeEnergy,
@@ -343,8 +369,10 @@ export class LiberatorGame {
 
       // Remove if dead
       if (e.health <= 0) {
+        const points = e.type === 'guard' ? 50 : e.type === 'warden' ? 100 : 200;
         this.enemies.splice(i, 1);
-        this.score += e.type === 'guard' ? 50 : e.type === 'warden' ? 100 : 200;
+        this.score += points;
+        this.pendingEvents.enemyKilled.push({ type: e.type, points });
         this.createDeathEffect(e.x, e.y, '#ff4444');
         this.emitState();
       }
@@ -415,8 +443,11 @@ export class LiberatorGame {
           this.projectiles.splice(i, 1);
           this.createHitEffect(proj.x, proj.y, '#ff4444');
 
+          this.pendingEvents.playerHit.push({ healthRemaining: p.health });
+
           if (p.health <= 0) {
             this.status = 'lost';
+            this.pendingEvents.gameOver.push({ won: false, score: this.score, rescued: this.rescued });
             if (this.animationId) cancelAnimationFrame(this.animationId);
             this.emitState();
           } else {
@@ -439,8 +470,10 @@ export class LiberatorGame {
     for (const e of this.enemies) {
       if (this.getDistance(p.x, p.y, e.x, e.y) < 30) {
         p.health -= 0.2;
+        this.pendingEvents.playerHit.push({ healthRemaining: p.health });
         if (p.health <= 0) {
           this.status = 'lost';
+          this.pendingEvents.gameOver.push({ won: false, score: this.score, rescued: this.rescued });
           if (this.animationId) cancelAnimationFrame(this.animationId);
           this.emitState();
         }
@@ -453,9 +486,11 @@ export class LiberatorGame {
     const noEnemies = this.enemies.length === 0;
 
     if (allRescued && noEnemies) {
+      this.pendingEvents.levelComplete.push({ level: this.level });
       this.level++;
       if (this.level > 10) {
         this.status = 'won';
+        this.pendingEvents.gameOver.push({ won: true, score: this.score, rescued: this.rescued });
         if (this.animationId) cancelAnimationFrame(this.animationId);
       } else {
         setTimeout(() => this.setupLevel(), 1000);
@@ -556,6 +591,8 @@ export class LiberatorGame {
   useAbility(ability: Ability) {
     if (this.status !== 'playing') return;
     if (this.abilityCooldowns[ability] > 0) return;
+
+    this.pendingEvents.abilityUsed.push({ ability });
 
     switch (ability) {
       case 'break-chains':
@@ -909,6 +946,19 @@ export class LiberatorGame {
   setOnStateChange(cb: (state: any) => void) {
     this.onStateChange = cb;
     this.emitState();
+  }
+
+  clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      prisonerRescued: [],
+      companionGained: false,
+      enemyKilled: [],
+      playerHit: [],
+      abilityUsed: [],
+      levelComplete: [],
+      gameOver: [],
+    };
   }
 
   private emitState() {

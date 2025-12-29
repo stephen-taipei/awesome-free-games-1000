@@ -59,6 +59,14 @@ interface GameState {
   survivalTime: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  collect: { type: "energy" | "star"; points: number }[];
+  oxygenPickup: { amount: number }[];
+  hit: { damage: number }[];
+  gameOver: { score: number; highScore: number; isNewBest: boolean; survivalTime: number }[];
+}
+
 type StateCallback = (state: GameState) => void;
 
 const OXYGEN_DECAY_RATE = 0.1;
@@ -86,6 +94,24 @@ export class SpaceWalkGame {
   private elapsedTime = 0;
   private spawnTimer = 0;
   private difficulty = 1;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    collect: [],
+    oxygenPickup: [],
+    hit: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      collect: [],
+      oxygenPickup: [],
+      hit: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -174,6 +200,7 @@ export class SpaceWalkGame {
     this.elapsedTime = 0;
     this.spawnTimer = 0;
     this.difficulty = 1;
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -421,6 +448,7 @@ export class SpaceWalkGame {
 
       if (dist < a.radius + orb.radius) {
         this.score += orb.points;
+        this.pendingEvents.collect.push({ type: orb.type, points: orb.points });
         this.energyOrbs.splice(i, 1);
         this.createCollectParticles(orb.pos.x, orb.pos.y, orb.type === "star" ? "#ffff00" : "#00ffff");
 
@@ -438,6 +466,7 @@ export class SpaceWalkGame {
 
       if (dist < a.radius + tank.radius) {
         a.oxygenLevel = Math.min(MAX_OXYGEN, a.oxygenLevel + tank.amount);
+        this.pendingEvents.oxygenPickup.push({ amount: tank.amount });
         this.oxygenTanks.splice(i, 1);
         this.createCollectParticles(tank.pos.x, tank.pos.y, "#00ff00");
       }
@@ -451,6 +480,7 @@ export class SpaceWalkGame {
         if (dist < a.radius + obs.radius) {
           a.oxygenLevel -= 20;
           a.invulnerable = 60; // 1 second invulnerability
+          this.pendingEvents.hit.push({ damage: 20 });
           this.createExplosionParticles(a.pos.x, a.pos.y);
 
           if (a.oxygenLevel <= 0) {
@@ -496,6 +526,13 @@ export class SpaceWalkGame {
 
   private gameOver() {
     this.status = "over";
+    const isNewBest = this.score > this.highScore;
+    this.pendingEvents.gameOver.push({
+      score: this.score,
+      highScore: this.highScore,
+      isNewBest,
+      survivalTime: this.elapsedTime,
+    });
     this.emitState();
   }
 

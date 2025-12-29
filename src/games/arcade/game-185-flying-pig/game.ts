@@ -17,6 +17,13 @@ interface GameState {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  flap: { x: number; y: number }[];
+  pipePass: { x: number; y: number; score: number }[];
+  start: boolean;
+  gameOver: { x: number; y: number; score: number }[];
+}
+
 const GRAVITY = 0.4;
 const FLAP_FORCE = -8;
 const PIG_SIZE = 35;
@@ -45,10 +52,26 @@ export class FlyingPigGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  public pendingEvents: PendingEvents = {
+    flap: [],
+    pipePass: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.loadBestScore();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      flap: [],
+      pipePass: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(callback: StateChangeCallback) {
@@ -109,6 +132,7 @@ export class FlyingPigGame {
 
   start() {
     this.isPlaying = true;
+    this.pendingEvents.start = true;
     this.init();
     this.gameLoop();
   }
@@ -124,6 +148,7 @@ export class FlyingPigGame {
     if (!this.isPlaying) return;
     this.pigVY = FLAP_FORCE;
     this.wingUp = true;
+    this.pendingEvents.flap.push({ x: this.pigX, y: this.pigY });
     setTimeout(() => (this.wingUp = false), 100);
   }
 
@@ -177,6 +202,7 @@ export class FlyingPigGame {
       if (!pipe.passed && pipe.x + PIPE_WIDTH < this.pigX) {
         pipe.passed = true;
         this.score++;
+        this.pendingEvents.pipePass.push({ x: pipe.x, y: pipe.gapY, score: this.score });
         this.emitState();
       }
 
@@ -221,6 +247,7 @@ export class FlyingPigGame {
 
   private gameOver() {
     this.isPlaying = false;
+    this.pendingEvents.gameOver.push({ x: this.pigX, y: this.pigY, score: this.score });
     if (this.score > this.bestScore) {
       this.bestScore = this.score;
       this.saveBestScore();

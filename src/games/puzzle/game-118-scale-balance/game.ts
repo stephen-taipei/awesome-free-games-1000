@@ -137,6 +137,13 @@ export class ScaleBalanceGame {
             y: pos.y - w.y,
           };
 
+          // Emit weight pickup event
+          if (this.onStateChange) {
+            this.onStateChange({
+              weightPickup: { x: w.x, y: w.y },
+            });
+          }
+
           // Remove from scale if placed
           if (w.onScale) {
             w.onScale = null;
@@ -155,6 +162,13 @@ export class ScaleBalanceGame {
       this.draggedWeight.x = pos.x - this.dragOffset.x;
       this.draggedWeight.y = pos.y - this.dragOffset.y;
 
+      // Emit drag trail event
+      if (this.onStateChange) {
+        this.onStateChange({
+          dragTrail: { x: this.draggedWeight.x, y: this.draggedWeight.y },
+        });
+      }
+
       this.updateScale();
       this.draw();
     };
@@ -165,6 +179,7 @@ export class ScaleBalanceGame {
       // Check if dropped on scale
       const w = this.draggedWeight;
       const armY = this.pivotY;
+      let wasPlaced = false;
 
       // Left side
       if (w.x < this.pivotX - 20 && w.x > this.pivotX - this.armLength - 20) {
@@ -173,6 +188,7 @@ export class ScaleBalanceGame {
           w.position = Math.round(Math.max(-3, Math.min(-1, relX)));
           w.onScale = "left";
           this.snapWeightToArm(w);
+          wasPlaced = true;
         }
       }
       // Right side
@@ -182,7 +198,15 @@ export class ScaleBalanceGame {
           w.position = Math.round(Math.min(3, Math.max(1, relX)));
           w.onScale = "right";
           this.snapWeightToArm(w);
+          wasPlaced = true;
         }
+      }
+
+      // Emit weight placed event
+      if (wasPlaced && this.onStateChange) {
+        this.onStateChange({
+          weightPlaced: { x: w.x, y: w.y, value: w.value },
+        });
       }
 
       // Return to tray if not on scale
@@ -222,6 +246,9 @@ export class ScaleBalanceGame {
     w.position = 0;
   }
 
+  private prevBalanced: boolean = false;
+  private prevTiltDirection: number = 0;
+
   private updateScale() {
     let leftTorque = 0;
     let rightTorque = 0;
@@ -247,11 +274,39 @@ export class ScaleBalanceGame {
       }
     });
 
+    const isBalanced = Math.abs(leftTorque - rightTorque) < 0.1;
+    const tiltDirection = diff > 0.5 ? 1 : diff < -0.5 ? -1 : 0;
+
+    // Emit balanced event when scale becomes balanced
+    if (isBalanced && !this.prevBalanced && (leftTorque > 0 || rightTorque > 0)) {
+      if (this.onStateChange) {
+        this.onStateChange({
+          scaleBalanced: { pivotX: this.pivotX, pivotY: this.pivotY },
+        });
+      }
+    }
+
+    // Emit tilt event when direction changes
+    if (tiltDirection !== 0 && tiltDirection !== this.prevTiltDirection) {
+      if (this.onStateChange) {
+        this.onStateChange({
+          scaleTilt: {
+            pivotX: this.pivotX,
+            pivotY: this.pivotY,
+            direction: tiltDirection,
+          },
+        });
+      }
+    }
+
+    this.prevBalanced = isBalanced;
+    this.prevTiltDirection = tiltDirection;
+
     if (this.onStateChange) {
       this.onStateChange({
         leftTorque,
         rightTorque,
-        balanced: Math.abs(leftTorque - rightTorque) < 0.1,
+        balanced: isBalanced,
       });
     }
   }
@@ -292,6 +347,8 @@ export class ScaleBalanceGame {
     this.weights = [];
     this.scaleAngle = 0;
     this.targetAngle = 0;
+    this.prevBalanced = false;
+    this.prevTiltDirection = 0;
 
     let id = 0;
 

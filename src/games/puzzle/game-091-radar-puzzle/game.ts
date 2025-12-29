@@ -1,6 +1,7 @@
 /**
  * Radar Puzzle Game Engine
  * Game #091 - Use radar to find hidden targets
+ * Radar / Sonar / Military Theme
  */
 
 export interface Target {
@@ -18,6 +19,17 @@ export interface LevelConfig {
   visibleDuration: number;
 }
 
+export interface GameState {
+  event?: "sweep" | "targetVisible" | "targetFound" | "miss" | "victory" | "levelStart" | "reset";
+  x?: number;
+  y?: number;
+  targetId?: number;
+  found?: string;
+  time?: string;
+  level?: number;
+  status?: "playing" | "won";
+}
+
 export class RadarPuzzleGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -29,12 +41,13 @@ export class RadarPuzzleGame {
 
   private startTime = 0;
   private elapsedTime = 0;
+  private lastSweepEmit = 0;
 
   private currentLevel = 0;
   private status: "playing" | "won" = "playing";
   private animationId = 0;
 
-  private onStateChange: ((state: any) => void) | null = null;
+  private onStateChange: ((state: GameState) => void) | null = null;
 
   private levels: LevelConfig[] = [
     { targetCount: 3, radarSpeed: 0.02, visibleDuration: 1500 },
@@ -56,8 +69,20 @@ export class RadarPuzzleGame {
     this.status = "playing";
     this.startTime = Date.now();
     this.elapsedTime = 0;
+    this.lastSweepEmit = 0;
 
     this.loadLevel(this.currentLevel);
+
+    // Emit level start
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "levelStart",
+        x: this.canvas.width / 2,
+        y: this.canvas.height / 2,
+        level: this.currentLevel,
+      });
+    }
+
     this.loop();
   }
 
@@ -94,11 +119,30 @@ export class RadarPuzzleGame {
 
   private update() {
     const config = this.levels[this.currentLevel % this.levels.length];
+    const cx = this.canvas.width / 2;
+    const cy = this.canvas.height / 2;
+    const maxRadius = Math.min(cx, cy) * 0.9;
 
     // Update radar angle
+    const prevAngle = this.radarAngle;
     this.radarAngle += config.radarSpeed;
     if (this.radarAngle > Math.PI * 2) {
       this.radarAngle -= Math.PI * 2;
+    }
+
+    // Emit sweep periodically
+    const now = Date.now();
+    if (now - this.lastSweepEmit > 500) {
+      this.lastSweepEmit = now;
+      const sweepX = cx + Math.cos(this.radarAngle) * maxRadius * 0.5;
+      const sweepY = cy + Math.sin(this.radarAngle) * maxRadius * 0.5;
+      if (this.onStateChange) {
+        this.onStateChange({
+          event: "sweep",
+          x: sweepX,
+          y: sweepY,
+        });
+      }
     }
 
     // Update time
@@ -113,9 +157,25 @@ export class RadarPuzzleGame {
       let angleDiff = Math.abs(this.radarAngle - target.angle);
       if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
 
+      const wasVisible = target.visible;
+
       if (angleDiff < sweepWidth) {
-        target.visible = true;
-        target.fadeTime = Date.now();
+        if (!target.visible) {
+          target.visible = true;
+          target.fadeTime = Date.now();
+
+          // Emit target visible event
+          if (this.onStateChange) {
+            const targetX = cx + Math.cos(target.angle) * target.distance * maxRadius;
+            const targetY = cy + Math.sin(target.angle) * target.distance * maxRadius;
+            this.onStateChange({
+              event: "targetVisible",
+              x: targetX,
+              y: targetY,
+              targetId: target.id,
+            });
+          }
+        }
       } else if (target.visible && Date.now() - target.fadeTime > config.visibleDuration) {
         target.visible = false;
       }
@@ -136,6 +196,8 @@ export class RadarPuzzleGame {
     const cy = this.canvas.height / 2;
     const maxRadius = Math.min(cx, cy) * 0.9;
 
+    let foundTarget = false;
+
     // Check if click is on a visible, unfound target
     for (const target of this.targets) {
       if (target.found || !target.visible) continue;
@@ -147,19 +209,40 @@ export class RadarPuzzleGame {
       if (dist < 25) {
         target.found = true;
         this.foundCount++;
+        foundTarget = true;
+
+        // Emit target found event
+        if (this.onStateChange) {
+          this.onStateChange({
+            event: "targetFound",
+            x: targetX,
+            y: targetY,
+            targetId: target.id,
+          });
+        }
 
         if (this.foundCount >= this.totalTargets) {
           this.status = "won";
           if (this.onStateChange) {
             this.onStateChange({
+              event: "victory",
               status: "won",
-              time: this.elapsedTime,
+              time: `${Math.floor(this.elapsedTime / 1000)}s`,
               level: this.currentLevel,
             });
           }
         }
         break;
       }
+    }
+
+    // Emit miss event if no target was clicked
+    if (!foundTarget && this.onStateChange) {
+      this.onStateChange({
+        event: "miss",
+        x,
+        y,
+      });
     }
   }
 
@@ -171,12 +254,11 @@ export class RadarPuzzleGame {
     const cy = h / 2;
     const maxRadius = Math.min(cx, cy) * 0.9;
 
-    // Clear with dark background
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(0, 0, w, h);
+    // Clear with transparent background (WebGPU handles the visuals)
+    ctx.clearRect(0, 0, w, h);
 
     // Draw radar circles
-    ctx.strokeStyle = "rgba(46, 204, 113, 0.3)";
+    ctx.strokeStyle = "rgba(46, 204, 113, 0.2)";
     ctx.lineWidth = 1;
     for (let i = 1; i <= 4; i++) {
       ctx.beginPath();
@@ -193,19 +275,13 @@ export class RadarPuzzleGame {
     ctx.stroke();
 
     // Draw radar sweep (cone with gradient)
-    const sweepWidth = 0.5; // Visual sweep width
-    const gradient = ctx.createConicalGradient
-      ? ctx.createConicGradient(this.radarAngle - sweepWidth, cx, cy)
-      : this.createSweepGradient(cx, cy, this.radarAngle, sweepWidth, maxRadius);
-
+    const sweepWidth = 0.5;
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, maxRadius, this.radarAngle - sweepWidth, this.radarAngle);
     ctx.closePath();
-
-    // Fallback: simple fill
-    ctx.fillStyle = "rgba(46, 204, 113, 0.3)";
+    ctx.fillStyle = "rgba(46, 204, 113, 0.15)";
     ctx.fill();
     ctx.restore();
 
@@ -213,7 +289,7 @@ export class RadarPuzzleGame {
     ctx.strokeStyle = "#2ecc71";
     ctx.lineWidth = 2;
     ctx.shadowColor = "#2ecc71";
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 15;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.lineTo(
@@ -231,9 +307,12 @@ export class RadarPuzzleGame {
       if (target.found) {
         // Found target - solid green
         ctx.fillStyle = "#2ecc71";
+        ctx.shadowColor = "#2ecc71";
+        ctx.shadowBlur = 15;
         ctx.beginPath();
         ctx.arc(targetX, targetY, 12, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
 
         // Checkmark
         ctx.strokeStyle = "#0a0a0a";
@@ -252,36 +331,28 @@ export class RadarPuzzleGame {
         // Outer glow
         ctx.fillStyle = `rgba(46, 204, 113, ${alpha * 0.3})`;
         ctx.beginPath();
-        ctx.arc(targetX, targetY, 20, 0, Math.PI * 2);
+        ctx.arc(targetX, targetY, 22, 0, Math.PI * 2);
         ctx.fill();
 
         // Inner blip
         ctx.fillStyle = `rgba(46, 204, 113, ${alpha})`;
+        ctx.shadowColor = `rgba(46, 204, 113, ${alpha})`;
+        ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(targetX, targetY, 8, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
       }
     });
 
     // Draw center dot
     ctx.fillStyle = "#2ecc71";
+    ctx.shadowColor = "#2ecc71";
+    ctx.shadowBlur = 10;
     ctx.beginPath();
     ctx.arc(cx, cy, 5, 0, Math.PI * 2);
     ctx.fill();
-  }
-
-  private createSweepGradient(
-    cx: number,
-    cy: number,
-    angle: number,
-    width: number,
-    radius: number
-  ): CanvasGradient {
-    // Fallback linear gradient
-    const gradient = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    gradient.addColorStop(0, "rgba(46, 204, 113, 0.5)");
-    gradient.addColorStop(1, "rgba(46, 204, 113, 0.1)");
-    return gradient;
+    ctx.shadowBlur = 0;
   }
 
   public resize() {
@@ -295,6 +366,15 @@ export class RadarPuzzleGame {
 
   public reset() {
     this.stop();
+
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "reset",
+        x: this.canvas.width / 2,
+        y: this.canvas.height / 2,
+      });
+    }
+
     this.start(this.currentLevel);
   }
 
@@ -315,7 +395,7 @@ export class RadarPuzzleGame {
     return this.elapsedTime;
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 }

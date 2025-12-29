@@ -1,25 +1,148 @@
+/**
+ * Stack Puzzle - Building Construction / Skyscraper Theme
+ * Game #045
+ */
+
+/* Theme Colors */
+:root {
+  --safety-orange: #ff6b35;
+  --safety-orange-dark: #e55a25;
+  --steel-gray: #4a5568;
+  --steel-dark: #2d3748;
+  --concrete: #718096;
+  --concrete-light: #a0aec0;
+  --sky-dusk: #2d3561;
+  --sky-horizon: #553c5d;
+  --warning-yellow: #f6e05e;
+  --success-green: #48bb78;
+  --crane-rust: #c05621;
+}
+
 .game-container {
   max-width: 550px;
+  background: linear-gradient(
+    180deg,
+    var(--sky-dusk) 0%,
+    var(--sky-horizon) 40%,
+    var(--steel-dark) 100%
+  );
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Steel beam pattern overlay */
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent 0px,
+      transparent 30px,
+      rgba(255, 255, 255, 0.02) 30px,
+      rgba(255, 255, 255, 0.02) 32px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0px,
+      transparent 30px,
+      rgba(255, 255, 255, 0.02) 30px,
+      rgba(255, 255, 255, 0.02) 32px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Crane hook decoration */
+.game-container::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 30px;
+  background: linear-gradient(
+    180deg,
+    var(--crane-rust) 0%,
+    var(--steel-gray) 100%
+  );
+  border-radius: 0 0 2px 2px;
+  z-index: 0;
+  animation: swingHook 4s ease-in-out infinite;
+}
+
+@keyframes swingHook {
+  0%, 100% { transform: translateX(-50%) rotate(-2deg); }
+  50% { transform: translateX(-50%) rotate(2deg); }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(
+    180deg,
+    var(--sky-dusk) 0%,
+    var(--sky-horizon) 30%,
+    var(--steel-dark) 100%
+  );
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.05),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  z-index: 1;
 }
 
-canvas {
+/* Construction zone stripes */
+.game-area::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--warning-yellow) 0px,
+    var(--warning-yellow) 10px,
+    var(--steel-dark) 10px,
+    var(--steel-dark) 20px
+  );
+  z-index: 1;
+}
+
+#bg-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+canvas#game-canvas {
   width: 100%;
   height: 100%;
   cursor: pointer;
+  position: relative;
+  z-index: 2;
 }
 
 .game-controls {
@@ -28,43 +151,211 @@ canvas {
   gap: 0.75rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  background: linear-gradient(135deg, var(--steel-gray) 0%, var(--steel-dark) 100%);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   display: flex;
   gap: 0.5rem;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .stats-card span:first-child {
-  opacity: 0.8;
+  opacity: 0.7;
+}
+
+.stats-card.level-card {
+  background: linear-gradient(135deg, var(--crane-rust) 0%, #a3471c 100%);
+  box-shadow: 0 2px 8px rgba(192, 86, 33, 0.3);
+}
+
+.stats-card.blocks-card {
+  background: linear-gradient(135deg, var(--safety-orange) 0%, var(--safety-orange-dark) 100%);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
 }
 
 .stats-card.height-card {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  background: linear-gradient(135deg, var(--concrete) 0%, var(--steel-gray) 100%);
+  box-shadow: 0 2px 8px rgba(113, 128, 150, 0.3);
 }
 
 .stats-card.height-card.progress {
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  background: linear-gradient(135deg, var(--warning-yellow) 0%, #d69e2e 100%);
+  color: var(--steel-dark);
+  box-shadow:
+    0 2px 8px rgba(246, 224, 94, 0.4),
+    0 0 15px rgba(246, 224, 94, 0.2);
+  animation: buildingProgress 1.5s ease-in-out infinite;
 }
 
 .stats-card.height-card.success {
-  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  background: linear-gradient(135deg, var(--success-green) 0%, #38a169 100%);
+  box-shadow:
+    0 2px 8px rgba(72, 187, 120, 0.4),
+    0 0 20px rgba(72, 187, 120, 0.3);
+  animation: buildingComplete 0.6s ease-out;
+}
+
+@keyframes buildingProgress {
+  0%, 100% {
+    box-shadow:
+      0 2px 8px rgba(246, 224, 94, 0.4),
+      0 0 15px rgba(246, 224, 94, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 2px 12px rgba(246, 224, 94, 0.6),
+      0 0 25px rgba(246, 224, 94, 0.4);
+  }
+}
+
+@keyframes buildingComplete {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.footer-controls button {
+  background: linear-gradient(135deg, var(--safety-orange) 0%, var(--safety-orange-dark) 100%);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow:
+    0 2px 8px rgba(255, 107, 53, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer-controls button:hover {
+  background: linear-gradient(135deg, var(--safety-orange-dark) 0%, var(--safety-orange) 100%);
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 12px rgba(255, 107, 53, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.footer-controls button:active {
+  transform: translateY(0);
+  box-shadow:
+    0 2px 6px rgba(255, 107, 53, 0.3),
+    inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .controls-hint {
   margin-top: 1rem;
   color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  font-size: 0.9rem;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Victory effect */
+.game-container.victory {
+  animation: victoryGlow 0.8s ease-out;
+}
+
+@keyframes victoryGlow {
+  0% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 8px 50px rgba(255, 107, 53, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 0 60px rgba(246, 224, 94, 0.4);
+  }
+  100% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Block drop animation */
+@keyframes blockDrop {
+  0% { transform: translateY(-20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Crane arm swing */
+@keyframes craneSwing {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .game-container {
+    padding: 1rem;
+    border-radius: 8px;
+  }
+
+  .game-area {
+    height: 380px;
+  }
+
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .footer-controls {
+    flex-wrap: wrap;
+  }
+
+  .footer-controls button {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Text selection */
+::selection {
+  background: rgba(255, 107, 53, 0.3);
+  color: white;
 }

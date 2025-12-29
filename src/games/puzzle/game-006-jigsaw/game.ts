@@ -12,7 +12,7 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, GameConfig> = {
   expert: { rows: 8, cols: 8 },
 };
 
-interface Piece {
+export interface Piece {
   id: number;
   row: number;
   col: number;
@@ -25,6 +25,7 @@ interface Piece {
   currentX: number;
   currentY: number;
   isLocked: boolean;
+  wasLocked?: boolean;  // 用於追蹤狀態變化
   edges: { top: number; right: number; bottom: number; left: number }; // 0=flat, 1=out, -1=in
 }
 
@@ -438,5 +439,16 @@ export class JigsawGame {
 
   public getPlayTime(): number {
     return Math.floor((Date.now() - this.state.startTime) / 1000);
+  }
+
+  public getImage(): HTMLImageElement | null {
+    return this.image;
+  }
+
+  public getState(): GameState {
+    return {
+      ...this.state,
+      pieces: this.pieces.map(p => ({ ...p })),
+    };
   }
 }

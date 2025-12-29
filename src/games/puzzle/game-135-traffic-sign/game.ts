@@ -69,8 +69,23 @@ export class TrafficSignGame {
   private selectedSign: number | null = null;
   private shuffledMeanings: { id: number; text: string; matched: boolean }[] = [];
 
+  // Event state for WebGPU
+  private pendingEvents: {
+    signSelect?: { x: number; y: number; color: string };
+    correctMatch?: { x: number; y: number; color: string };
+    wrongMatch?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
   onStateChange: ((state: any) => void) | null = null;
+
+  private getNormalizedPos(x: number, y: number): { x: number; y: number } {
+    return {
+      x: x / this.canvas.width,
+      y: y / this.canvas.height
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -130,6 +145,20 @@ export class TrafficSignGame {
         const sign = this.signs[signIndex];
         if (!this.isSignMatched(sign.id)) {
           this.selectedSign = sign.id;
+
+          // Emit sign select event
+          const startX = (this.canvas.width - this.signs.length * (this.signSize + 10)) / 2;
+          const signX = startX + signIndex * (this.signSize + 10) + this.signSize / 2;
+          const signY = this.signAreaY + this.signSize / 2;
+          const pos = this.getNormalizedPos(signX, signY);
+
+          this.pendingEvents.signSelect = {
+            x: pos.x,
+            y: pos.y,
+            color: sign.color
+          };
+          this.notifyState();
+
           this.draw();
         }
         return;
@@ -141,7 +170,7 @@ export class TrafficSignGame {
         if (meaningIndex !== null) {
           const meaning = this.shuffledMeanings[meaningIndex];
           if (!meaning.matched) {
-            this.tryMatch(this.selectedSign, meaning.id);
+            this.tryMatch(this.selectedSign, meaning.id, meaningIndex);
           }
         }
       }
@@ -187,13 +216,34 @@ export class TrafficSignGame {
     return this.shuffledMeanings.some(m => m.id === signId && m.matched);
   }
 
-  private tryMatch(signId: number, meaningId: number) {
+  private tryMatch(signId: number, meaningId: number, meaningIndex: number) {
+    const meaningHeight = 40;
+    const meaningSpacing = 10;
+    const meaningsPerRow = Math.min(3, this.shuffledMeanings.length);
+    const meaningWidth = (this.canvas.width - 40 - (meaningsPerRow - 1) * meaningSpacing) / meaningsPerRow;
+
+    const row = Math.floor(meaningIndex / meaningsPerRow);
+    const col = meaningIndex % meaningsPerRow;
+    const meaningX = 20 + col * (meaningWidth + meaningSpacing) + meaningWidth / 2;
+    const meaningY = this.meaningAreaY + row * (meaningHeight + meaningSpacing) + meaningHeight / 2;
+    const pos = this.getNormalizedPos(meaningX, meaningY);
+
     if (signId === meaningId) {
       // Correct match!
       const meaning = this.shuffledMeanings.find(m => m.id === meaningId);
-      if (meaning) {
+      const sign = this.signs.find(s => s.id === signId);
+
+      if (meaning && sign) {
         meaning.matched = true;
         this.matchedCount++;
+
+        // Emit correct match event
+        this.pendingEvents.correctMatch = {
+          x: pos.x,
+          y: pos.y,
+          color: sign.color
+        };
+
         this.notifyState();
 
         if (this.matchedCount >= this.totalPairs) {
@@ -201,6 +251,10 @@ export class TrafficSignGame {
           this.notifyState();
         }
       }
+    } else {
+      // Wrong match
+      this.pendingEvents.wrongMatch = { x: pos.x, y: pos.y };
+      this.notifyState();
     }
 
     this.selectedSign = null;
@@ -358,6 +412,8 @@ export class TrafficSignGame {
   reset() {
     this.loadLevel(this.currentLevel);
     this.status = 'playing';
+    this.pendingEvents.reset = true;
+    this.notifyState();
     this.draw();
   }
 
@@ -379,8 +435,10 @@ export class TrafficSignGame {
         level: this.currentLevel + 1,
         totalLevels: LEVELS.length,
         matchedCount: this.matchedCount,
-        totalPairs: this.totalPairs
+        totalPairs: this.totalPairs,
+        ...this.pendingEvents
       });
+      this.pendingEvents = {};
     }
   }
 

@@ -1,18 +1,106 @@
+/**
+ * Lights Out Styles
+ * Neon Circuit Theme
+ * Game #032
+ */
+
+:root {
+  --pcb-dark: #0a1a10;
+  --pcb-base: #0d2818;
+  --pcb-trace: #1a4030;
+  --neon-green: #00ff66;
+  --neon-yellow: #ffee00;
+  --neon-cyan: #00ffff;
+  --electric-blue: #4488ff;
+  --off-dark: #1a2a20;
+  --off-mid: #2a3a30;
+}
+
 .game-container {
-  max-width: 500px;
+  max-width: 520px;
+  background: linear-gradient(180deg, var(--pcb-dark) 0%, var(--pcb-base) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Circuit trace pattern overlay */
+.game-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 19px,
+      rgba(0, 255, 102, 0.03) 19px,
+      rgba(0, 255, 102, 0.03) 20px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 19px,
+      rgba(0, 255, 102, 0.03) 19px,
+      rgba(0, 255, 102, 0.03) 20px
+    );
+  pointer-events: none;
+  z-index: 1;
 }
 
 .game-area {
   width: 100%;
-  /* auto height */
-  background: #2c3e50;
-  border-radius: 8px;
+  background: linear-gradient(145deg, var(--pcb-base) 0%, var(--pcb-dark) 100%);
+  border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(0, 255, 102, 0.1),
+    inset 0 0 60px rgba(0, 0, 0, 0.4);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
+  position: relative;
+  border: 2px solid var(--pcb-trace);
+  z-index: 2;
+}
+
+/* Circuit corner decorations */
+.game-area::before,
+.game-area::after {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--neon-green);
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.game-area::before {
+  top: 10px;
+  left: 10px;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: 0 0 10px var(--neon-green);
+}
+
+.game-area::after {
+  bottom: 10px;
+  right: 10px;
+  border-left: none;
+  border-top: none;
+  box-shadow: 0 0 10px var(--neon-green);
+}
+
+/* WebGPU overlay */
+.webgpu-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 12px;
 }
 
 .grid-container {
@@ -23,22 +111,59 @@
   width: 100%;
   max-width: 350px;
   aspect-ratio: 1/1;
+  position: relative;
+  z-index: 5;
 }
 
 .cell {
-  background: #34495e; /* Off state */
+  background: linear-gradient(145deg, var(--off-mid), var(--off-dark));
   border-radius: 8px;
   cursor: pointer;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
-  transition: all 0.2s;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.15s ease;
   position: relative;
-  border: 2px solid #2c3e50;
+  border: 2px solid var(--pcb-trace);
+}
+
+.cell::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 4px;
+  background: transparent;
+  transition: all 0.15s ease;
+}
+
+.cell:hover {
+  border-color: var(--neon-cyan);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 15px rgba(0, 255, 255, 0.3);
 }
 
 .cell.on {
-  background: #f1c40f;
-  box-shadow: 0 0 15px #f1c40f, inset 0 0 5px rgba(255, 255, 255, 0.5);
-  border-color: #f39c12;
+  background: radial-gradient(
+    ellipse at center,
+    var(--neon-yellow) 0%,
+    #ccaa00 50%,
+    #886600 100%
+  );
+  box-shadow:
+    0 0 20px var(--neon-yellow),
+    0 0 40px rgba(255, 238, 0, 0.5),
+    0 0 60px rgba(255, 238, 0, 0.3),
+    inset 0 0 15px rgba(255, 255, 255, 0.5);
+  border-color: var(--neon-yellow);
+}
+
+.cell.on::before {
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.4) 0%,
+    transparent 50%
+  );
 }
 
 .cell:active {
@@ -50,18 +175,220 @@
   justify-content: flex-end;
   gap: 1rem;
   margin-bottom: 1rem;
+  position: relative;
+  z-index: 3;
 }
 
 .stats-card {
-  background: white;
-  padding: 0.5rem 1rem;
+  background: linear-gradient(145deg, var(--pcb-trace), var(--pcb-base));
+  color: var(--neon-green);
+  padding: 0.6rem 1.2rem;
   border-radius: 8px;
+  font-family: 'Courier New', monospace;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 0.95rem;
+  border: 1px solid var(--neon-green);
+  box-shadow:
+    0 0 10px rgba(0, 255, 102, 0.2),
+    inset 0 1px 0 rgba(0, 255, 102, 0.1);
+  text-shadow: 0 0 5px var(--neon-green);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+  position: relative;
+  z-index: 3;
+}
+
+.footer-controls button {
+  background: linear-gradient(145deg, var(--pcb-trace), var(--pcb-dark));
+  color: var(--neon-cyan);
+  border: 2px solid var(--neon-cyan);
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px var(--neon-cyan);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.3),
+    0 0 10px rgba(0, 255, 255, 0.1);
+}
+
+.footer-controls button:hover {
+  background: var(--neon-cyan);
+  color: var(--pcb-dark);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(0, 255, 255, 0.5);
+  transform: translateY(-2px);
+  text-shadow: none;
+}
+
+.footer-controls button:active {
+  transform: translateY(0);
+}
+
+/* Game overlay */
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 26, 16, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 12px;
+}
+
+.game-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(0, 255, 102, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 30% 70%, rgba(0, 255, 255, 0.05) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+/* Circuit frame */
+.game-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 20px;
+  border: 1px solid var(--neon-green);
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.2);
+}
+
+.game-overlay h2 {
+  font-family: 'Courier New', monospace;
+  font-size: 2.2rem;
+  color: var(--neon-green);
+  text-shadow:
+    0 0 10px var(--neon-green),
+    0 0 30px rgba(0, 255, 102, 0.5);
+  margin-bottom: 1rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.game-overlay p {
+  font-family: 'Courier New', monospace;
+  color: var(--neon-cyan);
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 0 5px var(--neon-cyan);
+}
+
+.game-overlay button {
+  background: transparent;
+  color: var(--neon-green);
+  border: 2px solid var(--neon-green);
+  padding: 0.9rem 2.5rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 0 0 5px var(--neon-green);
+  box-shadow:
+    0 0 20px rgba(0, 255, 102, 0.2),
+    inset 0 0 20px rgba(0, 255, 102, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-overlay button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 255, 102, 0.2) 50%,
+    transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.game-overlay button:hover::before {
+  transform: translateX(100%);
+}
+
+.game-overlay button:hover {
+  background: var(--neon-green);
+  color: var(--pcb-dark);
+  box-shadow:
+    0 0 40px rgba(0, 255, 102, 0.6),
+    inset 0 0 20px rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  text-shadow: none;
+}
+
+/* Language selector */
+select {
+  background: var(--pcb-base);
+  color: var(--neon-green);
+  border: 1px solid var(--neon-green);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+select:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
+}
+
+select option {
+  background: var(--pcb-dark);
+  color: var(--neon-green);
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .game-area {
+    padding: 1.5rem;
+  }
+
+  .grid-container {
+    gap: 8px;
+  }
+
+  .cell {
+    border-radius: 6px;
+  }
+
+  .game-overlay h2 {
+    font-size: 1.8rem;
+  }
+}
+
+/* Scanline animation */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+.game-area::before {
+  animation: none;
 }

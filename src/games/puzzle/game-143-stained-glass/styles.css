@@ -1,25 +1,138 @@
-.game-container {
-  max-width: 500px;
+/**
+ * Stained Glass Styles
+ * Cathedral / Light Through Glass Theme
+ * Game #143
+ */
+
+:root {
+  --deep-violet: #1a1428;
+  --cathedral-purple: #2d1f3d;
+  --royal-purple: #9b59b6;
+  --amethyst: #8e44ad;
+  --sapphire: #3498db;
+  --ruby: #e74c3c;
+  --emerald: #27ae60;
+  --amber: #f1c40f;
+  --light-beam: rgba(255, 250, 230, 0.15);
+  --glass-bg: rgba(155, 89, 182, 0.12);
+  --glass-border: rgba(155, 89, 182, 0.25);
 }
 
-.game-area {
-  position: relative;
-  width: 100%;
-  height: 380px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(ellipse at center top, var(--cathedral-purple) 0%, var(--deep-violet) 100%);
+  min-height: 100vh;
   display: flex;
   justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
   overflow: hidden;
-  border: 2px solid #9b59b6;
 }
 
-canvas {
+/* Light rays from above */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200%;
+  height: 100%;
+  background:
+    conic-gradient(from 270deg at 50% 0%,
+      transparent 0deg,
+      rgba(255, 250, 230, 0.03) 5deg,
+      transparent 10deg,
+      transparent 20deg,
+      rgba(255, 250, 230, 0.04) 25deg,
+      transparent 30deg,
+      transparent 50deg,
+      rgba(255, 250, 230, 0.03) 55deg,
+      transparent 60deg,
+      transparent 80deg,
+      rgba(255, 250, 230, 0.05) 85deg,
+      transparent 90deg);
+  pointer-events: none;
+  animation: lightShift 15s ease-in-out infinite;
+}
+
+@keyframes lightShift {
+  0%, 100% { opacity: 0.6; transform: translateX(-50%) rotate(0deg); }
+  50% { opacity: 0.9; transform: translateX(-50%) rotate(2deg); }
+}
+
+/* Dust motes */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  background-image:
+    radial-gradient(1px 1px at 100px 200px, rgba(255, 250, 230, 0.4), transparent),
+    radial-gradient(1px 1px at 300px 100px, rgba(255, 250, 230, 0.3), transparent),
+    radial-gradient(1px 1px at 200px 350px, rgba(255, 250, 230, 0.5), transparent),
+    radial-gradient(1px 1px at 400px 250px, rgba(255, 250, 230, 0.3), transparent);
+  background-size: 500px 400px;
+  pointer-events: none;
+  animation: dustFloat 20s ease-in-out infinite;
+}
+
+@keyframes dustFloat {
+  0%, 100% { opacity: 0.4; transform: translateY(0); }
+  50% { opacity: 0.7; transform: translateY(-20px); }
+}
+
+.game-container {
+  max-width: 500px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  font-family: Georgia, serif;
+  background: linear-gradient(135deg, var(--royal-purple) 0%, var(--sapphire) 50%, var(--amber) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(155, 89, 182, 0.5);
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: white;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  background: rgba(155, 89, 182, 0.2);
+  border-color: var(--royal-purple);
 }
 
 .game-controls {
@@ -31,16 +144,29 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  background: linear-gradient(135deg, var(--royal-purple) 0%, var(--amethyst) 100%);
   padding: 0.5rem 1rem;
   border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+  box-shadow:
+    0 4px 15px rgba(155, 89, 182, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 20px rgba(155, 89, 182, 0.2);
   color: white;
   display: flex;
   gap: 0.5rem;
   align-items: center;
   font-size: 0.9rem;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(155, 89, 182, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 30px rgba(155, 89, 182, 0.3);
 }
 
 .stats-card span:first-child {
@@ -49,8 +175,9 @@ canvas {
 }
 
 .stats-card span:last-child {
-  color: #fff;
+  color: white;
   font-size: 1.1rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .color-palette {
@@ -62,29 +189,91 @@ canvas {
 }
 
 .color-btn {
-  width: 40px;
-  height: 40px;
-  border: 3px solid transparent;
+  width: 42px;
+  height: 42px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.3),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.color-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
+  border-radius: 5px 5px 0 0;
 }
 
 .color-btn:hover {
   transform: scale(1.1);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
 }
 
 .color-btn.selected {
   border-color: white;
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 0 20px rgba(255, 255, 255, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
   transform: scale(1.15);
 }
 
-.footer-controls {
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  background: linear-gradient(135deg, var(--cathedral-purple) 0%, var(--deep-violet) 100%);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 12px;
+  box-shadow:
+    0 0 50px rgba(155, 89, 182, 0.15),
+    inset 0 0 30px rgba(155, 89, 182, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--royal-purple);
+  margin-bottom: 1rem;
+  overflow: hidden;
   display: flex;
   justify-content: center;
-  gap: 1rem;
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 10px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border-radius: 10px;
 }
 
 .overlay {
@@ -93,12 +282,18 @@ canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.9);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(45, 31, 61, 0.95) 0%,
+    rgba(26, 20, 40, 0.98) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .overlay-content {
@@ -110,14 +305,25 @@ canvas {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #9b59b6;
-  text-shadow: 0 0 20px rgba(155, 89, 182, 0.5);
+  font-family: Georgia, serif;
+  background: linear-gradient(135deg, var(--royal-purple) 0%, var(--sapphire) 50%, var(--amber) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(155, 89, 182, 0.5));
 }
 
 .overlay-msg {
   font-size: 1rem;
   margin-bottom: 1.5rem;
-  color: #bdc3c7;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: var(--amber);
+  font-size: 0.85rem;
+  opacity: 0.9;
 }
 
 .btn {
@@ -128,45 +334,96 @@ canvas {
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: bold;
+  font-family: inherit;
   margin: 0.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  background: linear-gradient(135deg, var(--royal-purple) 0%, var(--amethyst) 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(155, 89, 182, 0.4);
 }
 
 .btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(155, 89, 182, 0.5);
+  box-shadow: 0 6px 25px rgba(155, 89, 182, 0.6);
 }
 
 .btn.success {
-  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  background: linear-gradient(135deg, var(--emerald) 0%, #1e8449 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
 }
 
 .btn.success:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.5);
+  box-shadow: 0 6px 25px rgba(39, 174, 96, 0.6);
 }
 
 .btn.warning {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: linear-gradient(135deg, var(--ruby) 0%, #c0392b 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
 }
 
 .btn.warning:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.5);
+  box-shadow: 0 6px 25px rgba(231, 76, 60, 0.6);
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  color: #9b59b6;
-  font-size: 0.85rem;
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
 }
 
 #next-btn {
   display: none;
+}
+
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .color-btn {
+    width: 36px;
+    height: 36px;
+  }
 }

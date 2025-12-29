@@ -31,6 +31,15 @@ interface GameState {
   lives: number;
 }
 
+export interface PendingEvents {
+  bugHit: { x: number; y: number; type: string }[];
+  bugKill: { x: number; y: number; type: string; points: number }[];
+  bugReach: { type: string }[];
+  start: boolean;
+  won: { wave: number; score: number; lives: number }[];
+  lost: { wave: number; score: number }[];
+}
+
 const WAVES: Wave[] = [
   // Wave 1 - Easy ants
   { bugCount: 8, types: ["ant"], spawnRate: 1500, speedMultiplier: 1 },
@@ -73,12 +82,32 @@ export class BugCrisisGame {
   private onStateChange?: (state: GameState) => void;
   private scale = 1;
 
+  public pendingEvents: PendingEvents = {
+    bugHit: [],
+    bugKill: [],
+    bugReach: [],
+    start: false,
+    won: [],
+    lost: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
 
     this.setupInput();
     this.draw();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      bugHit: [],
+      bugKill: [],
+      bugReach: [],
+      start: false,
+      won: [],
+      lost: [],
+    };
   }
 
   private setupInput() {
@@ -118,10 +147,12 @@ export class BugCrisisGame {
 
       if (dist < bug.size) {
         bug.health--;
+        this.pendingEvents.bugHit.push({ x: bug.x, y: bug.y, type: bug.type });
         if (bug.health <= 0) {
           const config = BUG_CONFIG[bug.type];
           this.score += config.points;
           this.bugsKilled++;
+          this.pendingEvents.bugKill.push({ x: bug.x, y: bug.y, type: bug.type, points: config.points });
           this.bugs.splice(i, 1);
           this.onStateChange?.({ status: "playing", score: this.score, lives: this.lives });
         }
@@ -157,6 +188,7 @@ export class BugCrisisGame {
     this.bugsSpawned = 0;
     this.bugsKilled = 0;
     this.lastSpawn = Date.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -231,12 +263,17 @@ export class BugCrisisGame {
 
       // Check if reached bottom
       if (bug.y > this.height + bug.size) {
+        this.pendingEvents.bugReach.push({ type: bug.type });
         this.bugs.splice(i, 1);
         this.lives--;
         this.onStateChange?.({ status: "playing", score: this.score, lives: this.lives });
 
         if (this.lives <= 0) {
           this.status = "lost";
+          this.pendingEvents.lost.push({
+            wave: this.currentWave + 1,
+            score: this.score,
+          });
           this.onStateChange?.({ status: "lost", score: this.score, lives: 0 });
           return;
         }
@@ -246,6 +283,11 @@ export class BugCrisisGame {
     // Check wave complete
     if (this.bugsSpawned >= wave.bugCount && this.bugs.length === 0) {
       this.status = "won";
+      this.pendingEvents.won.push({
+        wave: this.currentWave + 1,
+        score: this.score,
+        lives: this.lives,
+      });
       this.onStateChange?.({ status: "won", score: this.score, lives: this.lives });
     }
   }

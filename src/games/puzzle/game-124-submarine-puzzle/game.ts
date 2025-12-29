@@ -52,6 +52,8 @@ export class SubmarineGame {
   private animationId: number | null = null;
 
   private bubbles: { x: number; y: number; size: number; speed: number }[] = [];
+  private trailThrottle = 0;
+  private lastDepth = 200;
 
   private levels: LevelConfig[] = [
     // Level 1 - Simple obstacles
@@ -182,11 +184,33 @@ export class SubmarineGame {
   public moveUp() {
     if (this.status !== "playing") return;
     this.targetDepth = Math.max(50, this.targetDepth - 40);
+
+    // Emit depth change event
+    if (this.onStateChange) {
+      this.onStateChange({
+        depthChange: {
+          x: this.submarineX,
+          y: this.submarineDepth,
+          direction: -1,
+        },
+      });
+    }
   }
 
   public moveDown() {
     if (this.status !== "playing") return;
     this.targetDepth = Math.min(350, this.targetDepth + 40);
+
+    // Emit depth change event
+    if (this.onStateChange) {
+      this.onStateChange({
+        depthChange: {
+          x: this.submarineX,
+          y: this.submarineDepth,
+          direction: 1,
+        },
+      });
+    }
   }
 
   public start(level?: number) {
@@ -243,6 +267,19 @@ export class SubmarineGame {
           c.collected = true;
           if (c.type === "oxygen") {
             this.oxygen = Math.min(this.maxOxygen, this.oxygen + 25);
+            // Emit oxygen collect event
+            if (this.onStateChange) {
+              this.onStateChange({
+                oxygenCollect: { x: relX, y: c.depth },
+              });
+            }
+          } else if (c.type === "star") {
+            // Emit star collect event
+            if (this.onStateChange) {
+              this.onStateChange({
+                starCollect: { x: relX, y: c.depth },
+              });
+            }
           }
         }
       }
@@ -264,6 +301,13 @@ export class SubmarineGame {
         submarineBottom > obs.minDepth &&
         submarineTop < obs.maxDepth
       ) {
+        // Emit collision event
+        if (this.onStateChange) {
+          this.onStateChange({
+            collision: { x: this.submarineX, y: this.submarineDepth },
+          });
+        }
+
         this.status = "lost";
         this.stopAnimation();
         if (this.onStateChange) {
@@ -302,12 +346,24 @@ export class SubmarineGame {
       }
     });
 
+    // Emit submarine trail (throttled)
+    const now = Date.now();
+    if (now - this.trailThrottle > 100) {
+      this.trailThrottle = now;
+      if (this.onStateChange) {
+        this.onStateChange({
+          submarineTrail: { x: this.submarineX, y: this.submarineDepth },
+        });
+      }
+    }
+
     // Notify state
     if (this.onStateChange) {
       this.onStateChange({
         depth: Math.round(this.submarineDepth),
         oxygen: Math.round(this.oxygen),
         progress: Math.round((this.scrollX / this.levelLength) * 100),
+        scrollX: this.scrollX,
       });
     }
   }
@@ -655,6 +711,12 @@ export class SubmarineGame {
     this.stopAnimation();
     this.loadLevel(this.currentLevel);
     this.status = "playing";
+
+    // Emit reset event
+    if (this.onStateChange) {
+      this.onStateChange({ reset: true });
+    }
+
     this.gameLoop();
   }
 

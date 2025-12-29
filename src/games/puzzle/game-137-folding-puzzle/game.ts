@@ -118,6 +118,26 @@ export class FoldingPuzzleGame {
   private animationProgress: number = 0;
   private animatingLine: number = -1;
 
+  // Event state for WebGPU
+  private pendingEvents: {
+    foldStart?: { x: number; y: number; isHorizontal: boolean };
+    foldComplete?: { x: number; y: number };
+    layerCreated?: { x: number; y: number; count: number };
+    undo?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
+  private getNormalizedPos(paperX: number, paperY: number): { x: number; y: number } {
+    const level = LEVELS[this.currentLevel];
+    const offsetX = (this.width - level.width) / 2;
+    const offsetY = (this.height - level.height) / 2 - 30;
+
+    return {
+      x: (offsetX + paperX) / this.width,
+      y: (offsetY + paperY) / this.height,
+    };
+  }
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -149,13 +169,7 @@ export class FoldingPuzzleGame {
   private loadLevel(levelIndex: number) {
     if (levelIndex >= LEVELS.length) {
       this.status = "complete";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "complete",
-          level: levelIndex + 1,
-          moves: this.moves,
-        });
-      }
+      this.notifyState();
       return;
     }
 
@@ -181,16 +195,7 @@ export class FoldingPuzzleGame {
     this.animating = false;
 
     this.render();
-
-    if (this.onStateChange) {
-      this.onStateChange({
-        status: "playing",
-        level: levelIndex + 1,
-        moves: 0,
-        targetLayers: level.targetLayers,
-        currentLayers: 1,
-      });
-    }
+    this.notifyState();
   }
 
   public handleClick(x: number, y: number) {
@@ -237,11 +242,25 @@ export class FoldingPuzzleGame {
   }
 
   private fold(lineIndex: number) {
+    const level = LEVELS[this.currentLevel];
+    const line = level.foldLines[lineIndex];
+
     // Save state for undo
     this.history.push({
       layers: JSON.parse(JSON.stringify(this.layers)),
       foldedLines: new Set(this.foldedLines),
     });
+
+    // Emit fold start event
+    const centerX = (line.x1 + line.x2) / 2;
+    const centerY = (line.y1 + line.y2) / 2;
+    const pos = this.getNormalizedPos(centerX, centerY);
+    this.pendingEvents.foldStart = {
+      x: pos.x,
+      y: pos.y,
+      isHorizontal: line.type === "horizontal",
+    };
+    this.notifyState();
 
     this.animatingLine = lineIndex;
     this.animating = true;
@@ -256,19 +275,19 @@ export class FoldingPuzzleGame {
         this.performFold(lineIndex);
         this.foldedLines.add(lineIndex);
         this.moves++;
+
+        // Emit fold complete and layer created events
+        const completePos = this.getNormalizedPos(centerX, centerY);
+        this.pendingEvents.foldComplete = { x: completePos.x, y: completePos.y };
+        this.pendingEvents.layerCreated = {
+          x: completePos.x,
+          y: completePos.y,
+          count: this.layers.length,
+        };
+
         this.render();
         this.checkWin();
-
-        if (this.onStateChange) {
-          const level = LEVELS[this.currentLevel];
-          this.onStateChange({
-            status: this.status,
-            level: this.currentLevel + 1,
-            moves: this.moves,
-            targetLayers: level.targetLayers,
-            currentLayers: this.layers.length,
-          });
-        }
+        this.notifyState();
       } else {
         requestAnimationFrame(animate);
       }
@@ -373,13 +392,6 @@ export class FoldingPuzzleGame {
     const level = LEVELS[this.currentLevel];
     if (this.layers.length >= level.targetLayers) {
       this.status = "won";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "won",
-          level: this.currentLevel + 1,
-          moves: this.moves,
-        });
-      }
     }
   }
 
@@ -391,18 +403,11 @@ export class FoldingPuzzleGame {
     this.foldedLines = lastState.foldedLines;
     this.moves = Math.max(0, this.moves - 1);
 
-    this.render();
+    // Emit undo event
+    this.pendingEvents.undo = { x: 0.5, y: 0.5 };
 
-    if (this.onStateChange) {
-      const level = LEVELS[this.currentLevel];
-      this.onStateChange({
-        status: this.status,
-        level: this.currentLevel + 1,
-        moves: this.moves,
-        targetLayers: level.targetLayers,
-        currentLayers: this.layers.length,
-      });
-    }
+    this.render();
+    this.notifyState();
   }
 
   private render() {
@@ -506,12 +511,35 @@ export class FoldingPuzzleGame {
     ctx.fillText("layers", targetX + 25, targetY + 45);
   }
 
+  private getFoldProgress(): number {
+    const level = LEVELS[this.currentLevel];
+    if (!level) return 0;
+    return this.foldedLines.size / level.foldLines.length;
+  }
+
+  private notifyState() {
+    if (this.onStateChange) {
+      const level = LEVELS[this.currentLevel];
+      this.onStateChange({
+        status: this.status,
+        level: this.currentLevel + 1,
+        moves: this.moves,
+        targetLayers: level?.targetLayers ?? 0,
+        currentLayers: this.layers.length,
+        foldProgress: this.getFoldProgress(),
+        ...this.pendingEvents,
+      });
+      this.pendingEvents = {};
+    }
+  }
+
   public nextLevel() {
     this.currentLevel++;
     this.loadLevel(this.currentLevel);
   }
 
   public reset() {
+    this.pendingEvents.reset = true;
     this.loadLevel(this.currentLevel);
   }
 

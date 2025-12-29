@@ -1,8 +1,19 @@
 /**
  * Pinball Game
  * Game #160 - Physics-based Pinball
- * Classic pinball with flippers, bumpers, and targets
+ * Arcade / Neon / Chrome-Silver-Orange Theme
  */
+
+interface PendingEvents {
+  bumperHit: Array<{ x: number; y: number; points: number }>;
+  targetLit: Array<{ x: number; y: number }>;
+  launch: Array<{ x: number; y: number; power: number }>;
+  flipperHit: Array<{ x: number; y: number; side: 'left' | 'right' }>;
+  ballLost: Array<{ x: number; y: number }>;
+  gameOver: boolean;
+  victory: boolean;
+  start: boolean;
+}
 
 interface Ball {
   x: number;
@@ -61,6 +72,17 @@ export class PinballGame {
   lives = 3;
   level = 1;
   status: 'playing' | 'won' | 'lost' | 'paused' = 'paused';
+
+  pendingEvents: PendingEvents = {
+    bumperHit: [],
+    targetLit: [],
+    launch: [],
+    flipperHit: [],
+    ballLost: [],
+    gameOver: false,
+    victory: false,
+    start: false,
+  };
 
   onStateChange: ((state: any) => void) | null = null;
 
@@ -130,6 +152,7 @@ export class PinballGame {
     this.status = 'playing';
     this.lastTime = performance.now();
     this.prepareBall();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.emitState();
   }
@@ -199,6 +222,11 @@ export class PinballGame {
 
     // Launch ball
     if (this.ball.x > w * 0.88 && !this.launchPressed && this.launchPower > 0) {
+      this.pendingEvents.launch.push({
+        x: this.ball.x / w,
+        y: this.ball.y / h,
+        power: this.launchPower,
+      });
       this.ball.vy = -this.launchPower;
       this.ball.x = w * 0.85;
       this.launchPower = 0;
@@ -327,6 +355,15 @@ export class PinballGame {
       if (Math.abs(flipperVel) > 1) {
         this.ball.vx += flipperVel * ny * 0.5;
         this.ball.vy -= Math.abs(flipperVel) * 0.8;
+        // Emit flipper hit event
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        this.pendingEvents.flipperHit.push({
+          x: closestX / w,
+          y: closestY / h,
+          side: f.side,
+        });
+        this.emitState();
       }
     }
   }
@@ -355,6 +392,14 @@ export class PinballGame {
       // Score and animate
       this.score += b.points;
       b.hit = 10;
+      // Emit bumper hit event
+      const w = this.canvas.width;
+      const h = this.canvas.height;
+      this.pendingEvents.bumperHit.push({
+        x: b.x / w,
+        y: b.y / h,
+        points: b.points,
+      });
       this.emitState();
     }
   }
@@ -371,6 +416,13 @@ export class PinballGame {
       t.lit = true;
       this.score += t.points;
       this.ball.vy = Math.abs(this.ball.vy) * 0.5;
+      // Emit target lit event
+      const w = this.canvas.width;
+      const h = this.canvas.height;
+      this.pendingEvents.targetLit.push({
+        x: (t.x + t.width / 2) / w,
+        y: t.y / h,
+      });
       this.emitState();
     }
   }
@@ -388,6 +440,7 @@ export class PinballGame {
 
       if (this.level > 5) {
         this.status = 'won';
+        this.pendingEvents.victory = true;
         if (this.animationId) cancelAnimationFrame(this.animationId);
       } else {
         // Reset targets for next level
@@ -410,11 +463,20 @@ export class PinballGame {
   }
 
   private loseLife() {
+    // Emit ball lost event
+    if (this.ball) {
+      this.pendingEvents.ballLost.push({
+        x: this.ball.x / this.canvas.width,
+        y: 0.95,
+      });
+    }
+
     this.lives--;
     this.emitState();
 
     if (this.lives <= 0) {
       this.status = 'lost';
+      this.pendingEvents.gameOver = true;
       if (this.animationId) cancelAnimationFrame(this.animationId);
     } else {
       this.prepareBall();
@@ -637,6 +699,19 @@ export class PinballGame {
   setOnStateChange(cb: (state: any) => void) {
     this.onStateChange = cb;
     this.emitState();
+  }
+
+  clearPendingEvents() {
+    this.pendingEvents = {
+      bumperHit: [],
+      targetLit: [],
+      launch: [],
+      flipperHit: [],
+      ballLost: [],
+      gameOver: false,
+      victory: false,
+      start: false,
+    };
   }
 
   private emitState() {

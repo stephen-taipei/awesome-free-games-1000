@@ -48,6 +48,17 @@ interface Projectile {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  towerPlace: { x: number; y: number; type: string }[];
+  shoot: { x: number; y: number; type: string }[];
+  monsterKill: { x: number; y: number; type: string; gold: number }[];
+  monsterReach: { x: number; y: number }[];
+  waveComplete: { wave: number }[];
+  start: boolean;
+  won: { wave: number; gold: number }[];
+  gameOver: { wave: number; lives: number }[];
+}
+
 export class MonsterTDGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -83,10 +94,34 @@ export class MonsterTDGame {
     ice: 75,
   };
 
+  public pendingEvents: PendingEvents = {
+    towerPlace: [],
+    shoot: [],
+    monsterKill: [],
+    monsterReach: [],
+    waveComplete: [],
+    start: false,
+    won: [],
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.initPath();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      towerPlace: [],
+      shoot: [],
+      monsterKill: [],
+      monsterReach: [],
+      waveComplete: [],
+      start: false,
+      won: [],
+      gameOver: [],
+    };
   }
 
   private initPath() {
@@ -208,6 +243,7 @@ export class MonsterTDGame {
       damage: towerStats.damage,
     });
 
+    this.pendingEvents.towerPlace.push({ x: gridX, y: gridY, type: this.selectedTower });
     this.notifyState();
   }
 
@@ -237,6 +273,7 @@ export class MonsterTDGame {
     this.initPath();
 
     this.startWave();
+    this.pendingEvents.start = true;
     this.notifyState();
     this.lastTime = performance.now();
     this.loop();
@@ -355,12 +392,14 @@ export class MonsterTDGame {
 
       // Check if reached end
       if (m.pathIndex >= this.path.length) {
+        this.pendingEvents.monsterReach.push({ x: m.x, y: m.y });
         this.monsters.splice(i, 1);
         this.state.lives--;
         this.notifyState();
 
         if (this.state.lives <= 0) {
           this.state.status = "over";
+          this.pendingEvents.gameOver.push({ wave: this.state.wave, lives: 0 });
           this.notifyState();
           return;
         }
@@ -388,6 +427,7 @@ export class MonsterTDGame {
             type: tower.type,
             splash: tower.type === "cannon",
           });
+          this.pendingEvents.shoot.push({ x: tower.x * this.cellSize + this.cellSize / 2, y: tower.y * this.cellSize + this.cellSize / 2, type: tower.type });
         }
       }
     }
@@ -416,9 +456,12 @@ export class MonsterTDGame {
     if (this.monstersToSpawn === 0 && this.monsters.length === 0 && this.state.status === "playing") {
       if (this.state.wave >= this.maxWaves) {
         this.state.status = "won";
+        this.pendingEvents.waveComplete.push({ wave: this.state.wave });
+        this.pendingEvents.won.push({ wave: this.state.wave, gold: this.state.gold });
         this.notifyState();
       } else {
         this.state.status = "waveComplete";
+        this.pendingEvents.waveComplete.push({ wave: this.state.wave });
         this.notifyState();
       }
     }
@@ -463,8 +506,10 @@ export class MonsterTDGame {
         }
 
         if (m.health <= 0) {
+          const goldReward = this.getGoldReward(m.type);
+          this.pendingEvents.monsterKill.push({ x: m.x, y: m.y, type: m.type, gold: goldReward });
           this.monsters.splice(i, 1);
-          this.state.gold += this.getGoldReward(m.type);
+          this.state.gold += goldReward;
           this.notifyState();
         }
       } else if (!projectile.splash) {
@@ -480,8 +525,10 @@ export class MonsterTDGame {
           }
 
           if (m.health <= 0) {
+            const goldReward = this.getGoldReward(m.type);
+            this.pendingEvents.monsterKill.push({ x: m.x, y: m.y, type: m.type, gold: goldReward });
             this.monsters.splice(i, 1);
-            this.state.gold += this.getGoldReward(m.type);
+            this.state.gold += goldReward;
             this.notifyState();
           }
           break;

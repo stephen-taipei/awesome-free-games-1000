@@ -30,6 +30,13 @@ export interface GameState {
   maxHeight: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  bounce: { type: string; bounceCount: number }[];
+  platformBreak: boolean;
+  gameOver: { score: number; highScore: number }[];
+}
+
 const GRAVITY = 0.3;
 const BOUNCE_FORCE = -12;
 const BOOST_FORCE = -18;
@@ -39,6 +46,22 @@ export class BallBounceGame {
   onStateChange: ((state: GameState) => void) | null = null;
   private canvasWidth: number = 400;
   private canvasHeight: number = 500;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    bounce: [],
+    platformBreak: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      bounce: [],
+      platformBreak: false,
+      gameOver: [],
+    };
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -76,6 +99,7 @@ export class BallBounceGame {
     this.state.ball.x = this.canvasWidth / 2;
     this.state.ball.y = this.canvasHeight - 100;
     this.generateInitialPlatforms();
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -172,6 +196,7 @@ export class BallBounceGame {
           if (platform.type === "fragile") {
             platform.broken = true;
             ball.vy = BOUNCE_FORCE;
+            this.pendingEvents.platformBreak = true;
           } else if (platform.type === "boost") {
             ball.vy = BOOST_FORCE;
           } else {
@@ -179,6 +204,7 @@ export class BallBounceGame {
           }
 
           ball.bounceCount++;
+          this.pendingEvents.bounce.push({ type: platform.type, bounceCount: ball.bounceCount });
           break;
         }
       }
@@ -229,6 +255,7 @@ export class BallBounceGame {
       localStorage.setItem("ballBounceHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, highScore: this.state.highScore });
     this.emitState();
   }
 

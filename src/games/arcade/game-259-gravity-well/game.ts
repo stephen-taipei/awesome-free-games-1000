@@ -36,6 +36,16 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  particleCollected: { points: number }[];
+  particleLost: boolean;
+  wellPlaced: { count: number }[];
+  wellRemoved: { count: number }[];
+  victory: { score: number; collected: number }[];
+  gameOver: { score: number; collected: number }[];
+}
+
 const PARTICLE_COLORS = ["#6366f1", "#8b5cf6", "#a855f7", "#d946ef"];
 const GRAVITY_STRENGTH = 5000;
 const MAX_WELLS = 5;
@@ -59,6 +69,28 @@ export class GravityWellGame {
   private spawnTimer = 0;
   private particlesSpawned = 0;
   private size = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    particleCollected: [],
+    particleLost: false,
+    wellPlaced: [],
+    wellRemoved: [],
+    victory: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      particleCollected: [],
+      particleLost: false,
+      wellPlaced: [],
+      wellRemoved: [],
+      victory: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -84,6 +116,7 @@ export class GravityWellGame {
         const dist = Math.hypot(clickX - well.x, clickY - well.y);
         if (dist < well.radius) {
           this.wells.splice(i, 1);
+          this.pendingEvents.wellRemoved.push({ count: this.wells.length });
           return;
         }
       }
@@ -108,6 +141,7 @@ export class GravityWellGame {
           radius: 30,
           strength: GRAVITY_STRENGTH,
         });
+        this.pendingEvents.wellPlaced.push({ count: this.wells.length });
       }
     };
 
@@ -165,6 +199,7 @@ export class GravityWellGame {
 
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -289,11 +324,13 @@ export class GravityWellGame {
     this.particles.splice(index, 1);
     this.collected++;
     this.score += 100;
+    this.pendingEvents.particleCollected.push({ points: 100 });
   }
 
   private loseParticle(index: number) {
     this.particles.splice(index, 1);
     this.lost++;
+    this.pendingEvents.particleLost = true;
   }
 
   private victory() {
@@ -301,6 +338,7 @@ export class GravityWellGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.victory.push({ score: this.score, collected: this.collected });
     this.emitState();
   }
 
@@ -309,6 +347,7 @@ export class GravityWellGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, collected: this.collected });
     this.emitState();
   }
 

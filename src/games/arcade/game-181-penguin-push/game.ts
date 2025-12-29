@@ -18,6 +18,15 @@ interface GameState {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  move: { x: number; y: number }[];
+  push: { x: number; y: number }[];
+  enemyKill: { x: number; y: number }[];
+  levelComplete: { level: number }[];
+  gameComplete: { moves: number }[];
+  start: boolean;
+}
+
 const LEVELS: Level[] = [
   {
     map: [
@@ -108,9 +117,29 @@ export class PenguinPushGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  public pendingEvents: PendingEvents = {
+    move: [],
+    push: [],
+    enemyKill: [],
+    levelComplete: [],
+    gameComplete: [],
+    start: false,
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      move: [],
+      push: [],
+      enemyKill: [],
+      levelComplete: [],
+      gameComplete: [],
+      start: false,
+    };
   }
 
   setOnStateChange(callback: StateChangeCallback) {
@@ -193,7 +222,11 @@ export class PenguinPushGame {
   private getStatus(): "idle" | "playing" | "won" | "complete" {
     if (!this.isPlaying) return "idle";
     if (this.countEnemies() === 0) {
-      if (this.currentLevel >= LEVELS.length - 1) return "complete";
+      if (this.currentLevel >= LEVELS.length - 1) {
+        this.pendingEvents.gameComplete.push({ moves: this.moves });
+        return "complete";
+      }
+      this.pendingEvents.levelComplete.push({ level: this.currentLevel + 1 });
       return "won";
     }
     return "playing";
@@ -201,6 +234,7 @@ export class PenguinPushGame {
 
   start() {
     this.isPlaying = true;
+    this.pendingEvents.start = true;
     this.initLevel();
     this.draw();
   }
@@ -252,6 +286,7 @@ export class PenguinPushGame {
       this.playerY = newY;
       this.grid[newY][newX] = "player";
       this.moves++;
+      this.pendingEvents.move.push({ x: newX, y: newY });
     }
 
     this.draw();
@@ -280,6 +315,8 @@ export class PenguinPushGame {
         // Eliminate enemy
         this.grid[y][x] = "empty";
         this.grid[nextY][nextX] = "empty";
+        this.pendingEvents.push.push({ x: iceX, y: iceY });
+        this.pendingEvents.enemyKill.push({ x: nextX, y: nextY });
         return;
       }
 

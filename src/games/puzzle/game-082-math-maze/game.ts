@@ -1,7 +1,19 @@
 /**
  * Math Maze Game Engine
  * Game #082 - Navigate maze while doing math to reach target
+ * WebGPU Enhanced with Event Emissions
  */
+
+export interface GameState {
+  currentValue: number;
+  targetValue: number;
+  level: number;
+  maxLevel: number;
+  status: "playing" | "won" | "lost";
+  event?: "move" | "collectPlus" | "collectMinus" | "collectMultiply" | "wallHit" | "correct" | "wrong" | "victory" | "levelStart" | "reset";
+  eventX?: number;
+  eventY?: number;
+}
 
 interface Cell {
   type: "empty" | "wall" | "start" | "end" | "math";
@@ -41,7 +53,7 @@ export class MathMazeGame {
   currentLevel: number = 0;
   status: "playing" | "won" | "lost" = "playing";
 
-  onStateChange: ((state: any) => void) | null = null;
+  onStateChange: ((state: GameState) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -51,6 +63,7 @@ export class MathMazeGame {
   public start() {
     this.currentLevel = 0;
     this.loadLevel(this.currentLevel);
+    this.notifyState("levelStart");
     this.loop();
   }
 
@@ -183,8 +196,15 @@ export class MathMazeGame {
       return;
     }
 
+    // Calculate screen position for effects
+    const offsetX = (this.canvas.width - this.cellSize * this.gridSize) / 2;
+    const offsetY = (this.canvas.height - this.cellSize * this.gridSize) / 2;
+    const screenX = offsetX + newX * this.cellSize + this.cellSize / 2;
+    const screenY = offsetY + newY * this.cellSize + this.cellSize / 2;
+
     // Check wall
     if (this.grid[newY][newX].type === "wall") {
+      this.notifyState("wallHit", screenX, screenY);
       return;
     }
 
@@ -201,31 +221,36 @@ export class MathMazeGame {
         switch (cell.operator) {
           case "+":
             this.currentValue += cell.value;
+            this.notifyState("collectPlus", screenX, screenY);
             break;
           case "-":
             this.currentValue -= cell.value;
+            this.notifyState("collectMinus", screenX, screenY);
             break;
           case "*":
             this.currentValue *= cell.value;
+            this.notifyState("collectMultiply", screenX, screenY);
             break;
           case "/":
             this.currentValue = Math.floor(this.currentValue / cell.value);
+            this.notifyState("move", screenX, screenY);
             break;
         }
         cell.collected = true;
       }
-    }
-
-    // Check if reached end
-    if (cell.type === "end") {
+    } else if (cell.type === "end") {
+      // Check if reached end with correct value
       if (this.currentValue === this.targetValue) {
         this.status = "won";
+        this.notifyState("correct", screenX, screenY);
+        setTimeout(() => this.notifyState("victory"), 300);
       } else {
         this.status = "lost";
+        this.notifyState("wrong", screenX, screenY);
       }
+    } else {
+      this.notifyState("move", screenX, screenY);
     }
-
-    this.notifyState();
   }
 
   private draw() {
@@ -255,10 +280,16 @@ export class MathMazeGame {
     const px = offsetX + this.player.x * this.cellSize + this.cellSize / 2;
     const py = offsetY + this.player.y * this.cellSize + this.cellSize / 2;
 
+    // Player glow
+    this.ctx.shadowColor = "#fdcb6e";
+    this.ctx.shadowBlur = 15;
+
     this.ctx.fillStyle = "#fdcb6e";
     this.ctx.beginPath();
     this.ctx.arc(px, py, this.cellSize * 0.35, 0, Math.PI * 2);
     this.ctx.fill();
+
+    this.ctx.shadowBlur = 0;
 
     this.ctx.strokeStyle = "#f39c12";
     this.ctx.lineWidth = 3;
@@ -281,20 +312,29 @@ export class MathMazeGame {
 
     switch (cell.type) {
       case "empty":
-        this.ctx.fillStyle = "#636e72";
+        this.ctx.fillStyle = "rgba(99, 110, 114, 0.5)";
         this.ctx.fillRect(x + padding, y + padding, this.cellSize - padding * 2, this.cellSize - padding * 2);
         break;
 
       case "wall":
         this.ctx.fillStyle = "#2d3436";
         this.ctx.fillRect(x + padding, y + padding, this.cellSize - padding * 2, this.cellSize - padding * 2);
+        // Wall pattern
+        this.ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + padding, y + padding);
+        this.ctx.lineTo(x + this.cellSize - padding, y + this.cellSize - padding);
+        this.ctx.moveTo(x + this.cellSize - padding, y + padding);
+        this.ctx.lineTo(x + padding, y + this.cellSize - padding);
+        this.ctx.stroke();
         break;
 
       case "start":
         this.ctx.fillStyle = "#00b894";
         this.ctx.fillRect(x + padding, y + padding, this.cellSize - padding * 2, this.cellSize - padding * 2);
         this.ctx.fillStyle = "white";
-        this.ctx.font = `${this.cellSize * 0.4}px Arial`;
+        this.ctx.font = `bold ${this.cellSize * 0.4}px "Courier New"`;
         this.ctx.textAlign = "center";
         this.ctx.textBaseline = "middle";
         this.ctx.fillText("S", x + this.cellSize / 2, y + this.cellSize / 2);
@@ -304,7 +344,7 @@ export class MathMazeGame {
         this.ctx.fillStyle = "#e17055";
         this.ctx.fillRect(x + padding, y + padding, this.cellSize - padding * 2, this.cellSize - padding * 2);
         this.ctx.fillStyle = "white";
-        this.ctx.font = `bold ${this.cellSize * 0.35}px Arial`;
+        this.ctx.font = `${this.cellSize * 0.4}px Arial`;
         this.ctx.textAlign = "center";
         this.ctx.textBaseline = "middle";
         this.ctx.fillText("🏁", x + this.cellSize / 2, y + this.cellSize / 2);
@@ -312,15 +352,28 @@ export class MathMazeGame {
 
       case "math":
         if (cell.collected) {
-          this.ctx.fillStyle = "#636e72";
+          this.ctx.fillStyle = "rgba(99, 110, 114, 0.5)";
         } else {
-          this.ctx.fillStyle = "#74b9ff";
+          // Different colors for different operators
+          switch (cell.operator) {
+            case "+":
+              this.ctx.fillStyle = "#00b894";
+              break;
+            case "-":
+              this.ctx.fillStyle = "#e17055";
+              break;
+            case "*":
+              this.ctx.fillStyle = "#74b9ff";
+              break;
+            default:
+              this.ctx.fillStyle = "#fdcb6e";
+          }
         }
         this.ctx.fillRect(x + padding, y + padding, this.cellSize - padding * 2, this.cellSize - padding * 2);
 
         if (!cell.collected && cell.operator && cell.value !== undefined) {
           this.ctx.fillStyle = "white";
-          this.ctx.font = `bold ${this.cellSize * 0.35}px Arial`;
+          this.ctx.font = `bold ${this.cellSize * 0.35}px "Courier New"`;
           this.ctx.textAlign = "center";
           this.ctx.textBaseline = "middle";
           this.ctx.fillText(
@@ -337,6 +390,7 @@ export class MathMazeGame {
     if (this.currentLevel < LEVELS.length - 1) {
       this.currentLevel++;
       this.loadLevel(this.currentLevel);
+      this.notifyState("levelStart");
       this.loop();
     }
   }
@@ -352,17 +406,22 @@ export class MathMazeGame {
 
   public reset() {
     this.loadLevel(this.currentLevel);
+    this.notifyState("reset");
     if (this.status !== "playing") {
       this.status = "playing";
       this.loop();
     }
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 
-  private notifyState() {
+  private notifyState(
+    event?: GameState["event"],
+    eventX?: number,
+    eventY?: number
+  ) {
     if (this.onStateChange) {
       this.onStateChange({
         currentValue: this.currentValue,
@@ -370,6 +429,9 @@ export class MathMazeGame {
         level: this.currentLevel + 1,
         maxLevel: LEVELS.length,
         status: this.status,
+        event,
+        eventX,
+        eventY,
       });
     }
   }

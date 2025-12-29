@@ -1,3 +1,20 @@
+/**
+ * Rope Puzzle Styles
+ * Game #086
+ * Neon / String / Glow Theme
+ */
+
+:root {
+  --neon-purple: #667eea;
+  --neon-pink: #764ba2;
+  --neon-cyan: #00d4ff;
+  --neon-green: #2ecc71;
+  --dark-bg: #1a1a2e;
+  --darker-bg: #0f0f1a;
+  --glow-purple: rgba(102, 126, 234, 0.5);
+  --glow-pink: rgba(118, 75, 162, 0.5);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -6,7 +23,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-pink) 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -29,15 +46,21 @@ body {
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  text-shadow:
+    0 0 10px var(--glow-purple),
+    0 0 20px var(--glow-pink),
+    2px 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 2px;
 }
 
 .header-controls select {
   padding: 0.5rem;
   border-radius: 8px;
-  border: none;
-  background: white;
+  border: 2px solid var(--neon-purple);
+  background: rgba(255, 255, 255, 0.95);
   cursor: pointer;
+  font-weight: 500;
+  box-shadow: 0 0 10px var(--glow-purple);
 }
 
 .game-controls {
@@ -48,33 +71,54 @@ body {
 }
 
 .stats-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 0 15px var(--glow-purple),
+    0 4px 8px rgba(0, 0, 0, 0.2);
   display: flex;
   gap: 0.5rem;
+  color: var(--dark-bg);
+  border: 2px solid var(--neon-purple);
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: #1a1a2e;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  background: var(--dark-bg);
+  border-radius: 16px;
+  box-shadow:
+    0 0 30px var(--glow-purple),
+    0 0 60px var(--glow-pink),
+    inset 0 0 20px rgba(0, 0, 0, 0.5),
+    0 8px 32px rgba(0, 0, 0, 0.4);
   margin-bottom: 1rem;
   overflow: hidden;
+  border: 3px solid var(--neon-purple);
 }
 
-canvas {
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#game-canvas {
+  position: relative;
   width: 100%;
   height: 100%;
   cursor: grab;
+  z-index: 2;
 }
 
-canvas:active {
+#game-canvas:active {
   cursor: grabbing;
 }
 
@@ -84,65 +128,161 @@ canvas:active {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(15, 15, 26, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
+  border-radius: 16px;
 }
 
 .overlay-content {
   text-align: center;
   color: white;
   padding: 2rem;
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.2) 0%,
+    rgba(118, 75, 162, 0.2) 100%
+  );
+  border-radius: 16px;
+  border: 2px solid var(--neon-purple);
+  box-shadow:
+    0 0 20px var(--glow-purple),
+    inset 0 0 10px rgba(102, 126, 234, 0.1);
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink), var(--neon-cyan));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 0 10px var(--glow-purple));
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
   opacity: 0.9;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .controls-hint {
   margin-top: 1rem;
   opacity: 0.7;
+  font-size: 0.9rem;
 }
 
 .btn {
   padding: 0.75rem 1.5rem;
-  border: none;
+  border: 2px solid transparent;
   border-radius: 8px;
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 0 25px var(--glow-purple);
+}
+
+.btn:active {
+  transform: translateY(0);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
   color: white;
+  border-color: var(--neon-purple);
+  box-shadow:
+    0 0 15px var(--glow-purple),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .btn.warning {
-  background: #e74c3c;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: white;
+  box-shadow:
+    0 0 15px rgba(231, 76, 60, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+/* Animations */
+@keyframes neonPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 20px var(--glow-purple),
+      0 0 40px var(--glow-pink);
+  }
+  50% {
+    box-shadow:
+      0 0 30px var(--glow-purple),
+      0 0 60px var(--glow-pink);
+  }
+}
+
+@keyframes glowFloat {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+@keyframes stringVibrate {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+.game-area {
+  animation: neonPulse 3s ease-in-out infinite;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .game-controls {
+    gap: 0.75rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .game-area {
+    height: 380px;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
 }

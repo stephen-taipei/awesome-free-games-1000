@@ -1,12 +1,164 @@
 /**
  * Snowflake Puzzle Main Entry
+ * Winter Wonderland / Frozen Crystal Theme
  * Game #102
  */
 import { SnowflakeGame, GameState } from "./game";
 import { translations } from "./i18n";
 import { i18n, type Locale } from "../../../shared/i18n";
+import { WebGPURenderer } from "./webgpu";
 
-// Elements
+// ============ Audio System ============
+class AudioSystem {
+  private audioContext: AudioContext | null = null;
+
+  private initContext(): void {
+    if (!this.audioContext) {
+      this.audioContext = new AudioContext();
+    }
+    if (this.audioContext.state === "suspended") {
+      this.audioContext.resume();
+    }
+  }
+
+  private createOscillator(
+    type: OscillatorType,
+    frequency: number,
+    duration: number,
+    gainValue: number = 0.3,
+    delay: number = 0
+  ): void {
+    if (!this.audioContext) return;
+
+    const oscillator = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+
+    gain.gain.setValueAtTime(0, this.audioContext.currentTime + delay);
+    gain.gain.linearRampToValueAtTime(gainValue, this.audioContext.currentTime + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + delay + duration);
+
+    oscillator.connect(gain);
+    gain.connect(this.audioContext.destination);
+
+    oscillator.start(this.audioContext.currentTime + delay);
+    oscillator.stop(this.audioContext.currentTime + delay + duration);
+  }
+
+  private createNoise(duration: number, gainValue: number = 0.1): void {
+    if (!this.audioContext) return;
+
+    const bufferSize = this.audioContext.sampleRate * duration;
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.5;
+    }
+
+    const source = this.audioContext.createBufferSource();
+    const gain = this.audioContext.createGain();
+    const filter = this.audioContext.createBiquadFilter();
+
+    source.buffer = buffer;
+    filter.type = "highpass";
+    filter.frequency.value = 3000;
+
+    gain.gain.setValueAtTime(gainValue, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.audioContext.destination);
+
+    source.start();
+    source.stop(this.audioContext.currentTime + duration);
+  }
+
+  playToggle(isActive: boolean): void {
+    this.initContext();
+    if (isActive) {
+      // Crystal activation - bright icy ting
+      this.createOscillator("sine", 1200, 0.15, 0.2);
+      this.createOscillator("triangle", 1800, 0.1, 0.1, 0.02);
+      this.createOscillator("sine", 2400, 0.08, 0.08, 0.03);
+      this.createNoise(0.05, 0.05);
+    } else {
+      // Frost dissolve - soft descending
+      this.createOscillator("sine", 800, 0.12, 0.15);
+      this.createOscillator("triangle", 600, 0.1, 0.1, 0.02);
+    }
+  }
+
+  playRotate(): void {
+    this.initContext();
+    // Whooshing wind rotation
+    for (let i = 0; i < 6; i++) {
+      const freq = 400 + i * 50;
+      this.createOscillator("sine", freq, 0.08, 0.08, i * 0.03);
+    }
+    this.createNoise(0.2, 0.08);
+  }
+
+  playClear(): void {
+    this.initContext();
+    // Sweeping frost dissolution
+    for (let i = 0; i < 8; i++) {
+      const freq = 1000 - i * 80;
+      this.createOscillator("triangle", freq, 0.1, 0.1, i * 0.03);
+    }
+    this.createNoise(0.25, 0.06);
+  }
+
+  playMatch(): void {
+    this.initContext();
+    // Satisfying crystalline chime
+    this.createOscillator("sine", 880, 0.3, 0.25);
+    this.createOscillator("sine", 1320, 0.25, 0.15, 0.05);
+    this.createOscillator("triangle", 1760, 0.2, 0.1, 0.08);
+  }
+
+  playWin(): void {
+    this.initContext();
+    // Magical ice crystal melody
+    const notes = [523, 659, 784, 1047, 1319, 1568, 2093];
+    notes.forEach((freq, i) => {
+      this.createOscillator("sine", freq, 0.4, 0.2, i * 0.1);
+      this.createOscillator("triangle", freq * 1.5, 0.3, 0.1, i * 0.1 + 0.02);
+    });
+
+    // Sparkling overlay
+    for (let i = 0; i < 12; i++) {
+      const freq = 2000 + Math.random() * 1500;
+      this.createOscillator("sine", freq, 0.15, 0.08, i * 0.08);
+    }
+  }
+
+  playLevelStart(): void {
+    this.initContext();
+    // Ascending ice crystal tones
+    const notes = [392, 523, 659, 784];
+    notes.forEach((freq, i) => {
+      this.createOscillator("sine", freq, 0.2, 0.15, i * 0.12);
+      this.createOscillator("triangle", freq * 1.5, 0.15, 0.08, i * 0.12 + 0.02);
+    });
+    this.createNoise(0.1, 0.05);
+  }
+
+  playReset(): void {
+    this.initContext();
+    // Descending ice shatter
+    const notes = [784, 659, 523, 392];
+    notes.forEach((freq, i) => {
+      this.createOscillator("triangle", freq, 0.12, 0.12, i * 0.08);
+    });
+    this.createNoise(0.15, 0.06);
+  }
+}
+
+// ============ Main Application ============
 const languageSelect = document.getElementById("language-select") as HTMLSelectElement;
 const levelDisplay = document.getElementById("level-display")!;
 const branchesDisplay = document.getElementById("branches-display")!;
@@ -19,8 +171,31 @@ const startBtn = document.getElementById("start-btn")!;
 const resetBtn = document.getElementById("reset-btn")!;
 const rotateBtn = document.getElementById("rotate-btn")!;
 const clearBtn = document.getElementById("clear-btn")!;
+const webgpuCanvas = document.getElementById("webgpu-canvas") as HTMLCanvasElement;
 
 let game: SnowflakeGame;
+let renderer: WebGPURenderer | null = null;
+const audio = new AudioSystem();
+
+async function initWebGPU(): Promise<void> {
+  if (!webgpuCanvas) return;
+
+  webgpuCanvas.width = window.innerWidth;
+  webgpuCanvas.height = window.innerHeight;
+
+  renderer = new WebGPURenderer(webgpuCanvas);
+  const success = await renderer.init();
+
+  if (success) {
+    window.addEventListener("resize", () => {
+      if (renderer) {
+        renderer.resize(window.innerWidth, window.innerHeight);
+      }
+    });
+  } else {
+    console.log("WebGPU not available, using CSS fallback");
+  }
+}
 
 function initI18n(): void {
   Object.entries(translations).forEach(([locale, trans]) => {
@@ -58,6 +233,8 @@ function initGame(): void {
     updateUI(state);
 
     if (state.status === "won") {
+      audio.playWin();
+      renderer?.emitVictory();
       setTimeout(() => showWinOverlay(), 500);
     }
   };
@@ -82,29 +259,26 @@ function handleCanvasClick(e: MouseEvent): void {
   if (game.getState().status !== "playing") return;
 
   const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left - canvas.width / 2;
-  const y = e.clientY - rect.top - canvas.height / 2;
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+  const x = clickX - canvas.width / 2;
+  const y = clickY - canvas.height / 2;
 
   const state = game.getState();
   const centerRadius = 20;
   const layerHeight = (canvas.width / 2 - centerRadius - 20) / state.layers;
 
-  // Calculate polar coordinates
   const dist = Math.sqrt(x * x + y * y);
   let angle = Math.atan2(y, x);
   if (angle < 0) angle += Math.PI * 2;
 
-  // Determine which layer
   const layer = Math.floor((dist - centerRadius) / layerHeight);
   if (layer < 0 || layer >= state.layers) return;
 
-  // Determine which branch segment we're in
   const branchAngle = (Math.PI * 2) / state.branches;
   const branchIndex = Math.floor(angle / branchAngle);
   const angleInBranch = angle - branchIndex * branchAngle;
 
-  // Only process clicks in the first half of each branch (the "main" cells)
-  // The second half is mirrored
   const halfAngle = branchAngle / 2;
   const cellsInLayer = layer + 1;
   const cellAngle = halfAngle / cellsInLayer;
@@ -113,13 +287,24 @@ function handleCanvasClick(e: MouseEvent): void {
   if (angleInBranch < halfAngle) {
     cellIndex = Math.floor(angleInBranch / cellAngle);
   } else {
-    // Mirror side
     const mirrorAngle = branchAngle - angleInBranch;
     cellIndex = Math.floor(mirrorAngle / cellAngle);
   }
 
   if (cellIndex >= 0 && cellIndex <= layer) {
+    const wasActive = state.pattern[layer][cellIndex];
     game.toggleCell(layer, cellIndex);
+
+    // Emit particles at click position
+    const screenX = rect.left + clickX;
+    const screenY = rect.top + clickY;
+    audio.playToggle(!wasActive);
+    renderer?.emitToggle(screenX, screenY, !wasActive);
+
+    // Check if match
+    if (state.target[layer][cellIndex] === !wasActive) {
+      renderer?.emitMatch(screenX, screenY);
+    }
   }
 }
 
@@ -131,7 +316,6 @@ function render(state: GameState): void {
   const centerRadius = 20;
   const layerHeight = (maxRadius - centerRadius) / state.layers;
 
-  // Clear
   ctx.clearRect(0, 0, width, height);
 
   // Draw background circle
@@ -180,7 +364,6 @@ function render(state: GameState): void {
         const isActive = state.pattern[layer][i];
         const isTarget = state.target[layer][i];
 
-        // Draw on both sides (mirror)
         for (let mirror = 0; mirror < 2; mirror++) {
           let startAngle, endAngle;
 
@@ -209,7 +392,6 @@ function render(state: GameState): void {
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // Draw border
           ctx.strokeStyle = isTarget
             ? "rgba(135, 206, 235, 0.8)"
             : "rgba(135, 206, 235, 0.3)";
@@ -220,7 +402,6 @@ function render(state: GameState): void {
     }
   }
 
-  // Draw target preview (small, in corner)
   drawTargetPreview(state, 60, 60, 50);
 }
 
@@ -235,7 +416,6 @@ function drawTargetPreview(
   const layerH = (maxR - centerR) / state.layers;
   const branchAngle = (Math.PI * 2) / state.branches;
 
-  // Background
   ctx.beginPath();
   ctx.arc(x, y, size / 2, 0, Math.PI * 2);
   ctx.fillStyle = "rgba(26, 47, 78, 0.9)";
@@ -244,7 +424,6 @@ function drawTargetPreview(
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  // Draw target pattern
   for (let b = 0; b < state.branches; b++) {
     const baseAngle = b * branchAngle - Math.PI / 2;
 
@@ -280,7 +459,6 @@ function drawTargetPreview(
     }
   }
 
-  // Label
   ctx.fillStyle = "#e8f4fc";
   ctx.font = "10px Arial";
   ctx.textAlign = "center";
@@ -307,6 +485,8 @@ function showWinOverlay(): void {
     startBtn.onclick = () => {
       overlay.style.display = "none";
       game.nextLevel();
+      audio.playLevelStart();
+      renderer?.emitLevelStart();
     };
   }
 }
@@ -314,14 +494,38 @@ function showWinOverlay(): void {
 function startGame(level: number = 1): void {
   overlay.style.display = "none";
   game.start(level);
+  audio.playLevelStart();
+  renderer?.emitLevelStart();
 }
 
 // Event listeners
 startBtn.addEventListener("click", () => startGame());
-resetBtn.addEventListener("click", () => game.reset());
-rotateBtn.addEventListener("click", () => game.rotate());
-clearBtn.addEventListener("click", () => game.clear());
+
+resetBtn.addEventListener("click", () => {
+  game.reset();
+  audio.playReset();
+  renderer?.emitReset();
+});
+
+rotateBtn.addEventListener("click", () => {
+  game.rotate();
+  audio.playRotate();
+  const rect = canvas.getBoundingClientRect();
+  renderer?.emitRotate(
+    rect.left + rect.width / 2,
+    rect.top + rect.height / 2,
+    Math.min(rect.width, rect.height) / 2
+  );
+});
+
+clearBtn.addEventListener("click", () => {
+  game.clear();
+  audio.playClear();
+  const rect = canvas.getBoundingClientRect();
+  renderer?.emitClear(rect.left + rect.width / 2, rect.top + rect.height / 2);
+});
 
 // Initialize
 initI18n();
 initGame();
+initWebGPU();

@@ -12,6 +12,13 @@ export interface GameState {
   lastTime: number;
 }
 
+export interface PendingEvents {
+  react: { round: number; time: number }[];
+  tooSoon: { round: number }[];
+  start: boolean;
+  complete: { averageTime: number; bestTime: number }[];
+}
+
 const TOTAL_ROUNDS = 5;
 
 export class ReactionTestGame {
@@ -19,8 +26,24 @@ export class ReactionTestGame {
   onStateChange: ((state: GameState) => void) | null = null;
   private waitTimeout: number | null = null;
 
+  public pendingEvents: PendingEvents = {
+    react: [],
+    tooSoon: [],
+    start: false,
+    complete: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      react: [],
+      tooSoon: [],
+      start: false,
+      complete: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -44,6 +67,7 @@ export class ReactionTestGame {
       lastTime: 0,
     };
 
+    this.pendingEvents.start = true;
     this.startWaiting();
     this.emitState();
   }
@@ -70,6 +94,7 @@ export class ReactionTestGame {
         this.waitTimeout = null;
       }
       this.state.phase = "tooSoon";
+      this.pendingEvents.tooSoon.push({ round: this.state.round });
       this.emitState();
 
       // Restart this round after delay
@@ -82,12 +107,17 @@ export class ReactionTestGame {
       this.state.lastTime = reactionTime;
       this.state.times.push(reactionTime);
       this.state.phase = "clicked";
+      this.pendingEvents.react.push({ round: this.state.round, time: reactionTime });
       this.emitState();
 
       // Move to next round or complete
       setTimeout(() => {
         if (this.state.round >= this.state.totalRounds) {
           this.state.phase = "complete";
+          this.pendingEvents.complete.push({
+            averageTime: this.getAverageTime(),
+            bestTime: this.getBestTime(),
+          });
           this.emitState();
         } else {
           this.state.round++;

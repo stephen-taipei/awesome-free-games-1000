@@ -29,6 +29,16 @@ interface SliceEffect {
   halves: { x: number; y: number; vx: number; vy: number; rotation: number }[];
 }
 
+interface PendingEvents {
+  slice: Array<{ x: number; y: number; angle: number; fruitType: string }>;
+  bombHit: Array<{ x: number; y: number }>;
+  missed: Array<{ x: number; y: number }>;
+  combo: Array<{ x: number; y: number; count: number }>;
+  gameOver: boolean;
+  victory: boolean;
+  start: boolean;
+}
+
 export class FruitNinjaGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -66,6 +76,16 @@ export class FruitNinjaGame {
     bomb: { main: '#2c3e50', inner: '#34495e' }
   };
 
+  pendingEvents: PendingEvents = {
+    slice: [],
+    bombHit: [],
+    missed: [],
+    combo: [],
+    gameOver: false,
+    victory: false,
+    start: false,
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
@@ -80,6 +100,7 @@ export class FruitNinjaGame {
     this.combo = 0;
     this.spawnInterval = Math.max(40, 80 - this.level * 5);
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.emitState();
   }
@@ -165,12 +186,16 @@ export class FruitNinjaGame {
       // Fell off screen
       if (f.y > h + 100) {
         if (!f.sliced && f.type !== 'bomb') {
-          // Missed fruit
+          // Missed fruit - emit event
+          const nx = f.x / this.canvas.width;
+          const ny = 1.0;
+          this.pendingEvents.missed.push({ x: nx, y: ny });
           this.lives--;
           this.combo = 0;
           this.emitState();
           if (this.lives <= 0) {
             this.status = 'lost';
+            this.pendingEvents.gameOver = true;
             if (this.animationId) cancelAnimationFrame(this.animationId);
           }
         }
@@ -223,14 +248,27 @@ export class FruitNinjaGame {
         f.sliced = true;
         f.sliceAngle = Math.atan2(y2 - y1, x2 - x1);
 
+        const nx = f.x / this.canvas.width;
+        const ny = f.y / this.canvas.height;
+
         if (f.type === 'bomb') {
           // Hit bomb - game over
+          this.pendingEvents.bombHit.push({ x: nx, y: ny });
+          this.pendingEvents.gameOver = true;
           this.lives = 0;
           this.status = 'lost';
           if (this.animationId) cancelAnimationFrame(this.animationId);
           this.emitState();
           return;
         }
+
+        // Emit slice event
+        this.pendingEvents.slice.push({
+          x: nx,
+          y: ny,
+          angle: f.sliceAngle,
+          fruitType: f.type
+        });
 
         slicedThisFrame++;
         this.createSliceEffect(f);
@@ -244,6 +282,16 @@ export class FruitNinjaGame {
       // Combo bonus
       const points = slicedThisFrame * 10 * (1 + Math.floor(this.combo / 5) * 0.5);
       this.score += Math.floor(points);
+
+      // Emit combo event if combo > 2
+      if (this.combo > 2) {
+        this.pendingEvents.combo.push({
+          x: 0.5,
+          y: 0.1,
+          count: this.combo
+        });
+      }
+
       this.emitState();
     }
   }
@@ -296,6 +344,7 @@ export class FruitNinjaGame {
       this.level++;
       if (this.level > 10) {
         this.status = 'won';
+        this.pendingEvents.victory = true;
         if (this.animationId) cancelAnimationFrame(this.animationId);
       } else {
         this.spawnInterval = Math.max(35, 80 - this.level * 5);
@@ -555,5 +604,17 @@ export class FruitNinjaGame {
       combo: this.combo,
       status: this.status
     });
+  }
+
+  clearPendingEvents() {
+    this.pendingEvents = {
+      slice: [],
+      bombHit: [],
+      missed: [],
+      combo: [],
+      gameOver: false,
+      victory: false,
+      start: false,
+    };
   }
 }

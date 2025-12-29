@@ -1,29 +1,134 @@
-.game-container {
-  max-width: 550px;
+/**
+ * Film Reel Styles
+ * Cinema / Vintage Film Theme
+ * Game #133
+ */
+
+:root {
+  --cinema-dark: #1a1a2e;
+  --cinema-darker: #16213e;
+  --cinema-red: #c0392b;
+  --cinema-gold: #d4a520;
+  --film-white: #f5f5f0;
+  --sepia-dark: #5a4a3a;
+  --sepia-light: #d4c4a4;
+  --spotlight-yellow: #fff8e0;
+  --text-light: #ffffff;
+  --text-dim: #888899;
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.15);
 }
 
-.game-area {
-  position: relative;
-  width: 100%;
-  height: 450px;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(
+    180deg,
+    var(--cinema-dark) 0%,
+    var(--cinema-darker) 100%
+  );
+  min-height: 100vh;
   display: flex;
   justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
   overflow: hidden;
 }
 
-canvas {
+/* Film grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  cursor: grab;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+  pointer-events: none;
+  animation: filmGrainAnim 0.5s steps(4) infinite;
 }
 
-canvas:active {
-  cursor: grabbing;
+@keyframes filmGrainAnim {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-1px, 1px); }
+  50% { transform: translate(1px, -1px); }
+  75% { transform: translate(-1px, -1px); }
+}
+
+/* Projector light beam effect */
+body::after {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: 50%;
+  width: 100%;
+  height: 150%;
+  background: conic-gradient(
+    from 180deg at 50% 0%,
+    transparent 45%,
+    rgba(255, 248, 224, 0.03) 50%,
+    transparent 55%
+  );
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: projectorSway 8s ease-in-out infinite;
+}
+
+@keyframes projectorSway {
+  0%, 100% { transform: translateX(-50%) rotate(-2deg); }
+  50% { transform: translateX(-50%) rotate(2deg); }
+}
+
+.game-container {
+  max-width: 550px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: var(--text-light);
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  background: linear-gradient(
+    90deg,
+    var(--film-white),
+    var(--cinema-gold),
+    var(--film-white)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 3px;
+  text-shadow: 0 0 30px rgba(212, 165, 32, 0.3);
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .game-controls {
@@ -35,15 +140,28 @@ canvas:active {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-  color: white;
+  background: linear-gradient(
+    135deg,
+    #34495e 0%,
+    #2c3e50 100%
+  );
+  color: var(--text-light);
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(52, 73, 94, 0.3);
   display: flex;
   gap: 0.5rem;
-  transition: background 0.3s ease;
+  box-shadow:
+    0 4px 15px rgba(52, 73, 94, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(52, 73, 94, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .stats-card span:first-child {
@@ -51,15 +169,181 @@ canvas:active {
 }
 
 .stats-card.frames-card {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: linear-gradient(
+    135deg,
+    var(--cinema-red) 0%,
+    #a02a1f 100%
+  );
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.3);
 }
 
 .stats-card.frames-card.progress {
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  background: linear-gradient(
+    135deg,
+    #f39c12 0%,
+    #e67e22 100%
+  );
 }
 
 .stats-card.frames-card.success {
-  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  background: linear-gradient(
+    135deg,
+    #2ecc71 0%,
+    #27ae60 100%
+  );
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 450px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  border-radius: 12px;
+}
+
+#game-canvas:active {
+  cursor: grabbing;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(26, 26, 46, 0.98) 0%,
+    rgba(22, 33, 62, 0.98) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.overlay-content {
+  text-align: center;
+  color: var(--text-light);
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(
+    90deg,
+    var(--film-white),
+    var(--cinema-gold),
+    var(--film-white)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 4px;
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  opacity: 0.8;
+  font-size: 1.1rem;
+  color: var(--sepia-light);
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  opacity: 0.6;
+  color: var(--text-dim);
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:hover {
+  transform: translateY(-3px);
+}
+
+.btn.primary {
+  background: linear-gradient(
+    135deg,
+    var(--cinema-gold) 0%,
+    #c49510 100%
+  );
+  color: #1a1a2e;
+  box-shadow:
+    0 4px 15px rgba(212, 165, 32, 0.4),
+    0 0 30px rgba(212, 165, 32, 0.2);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 6px 20px rgba(212, 165, 32, 0.6),
+    0 0 40px rgba(212, 165, 32, 0.3);
+}
+
+.btn.warning {
+  background: linear-gradient(
+    135deg,
+    var(--cinema-red) 0%,
+    #a02a1f 100%
+  );
+  color: var(--text-light);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.3);
+}
+
+.btn.warning:hover {
+  box-shadow: 0 6px 20px rgba(192, 57, 43, 0.5);
 }
 
 .footer-controls {
@@ -68,11 +352,75 @@ canvas:active {
   gap: 1rem;
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  color: rgba(255, 255, 255, 0.7);
+/* Film strip perforation decoration */
+.game-area::before,
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 15px;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 15px,
+    rgba(0, 0, 0, 0.4) 15px,
+    rgba(0, 0, 0, 0.4) 25px,
+    transparent 25px,
+    transparent 30px
+  );
+  z-index: 5;
+  pointer-events: none;
 }
 
-.overlay {
-  background: rgba(26, 26, 46, 0.95);
+.game-area::before {
+  left: 0;
+  border-radius: 16px 0 0 16px;
+}
+
+.game-area::after {
+  right: 0;
+  border-radius: 0 16px 16px 0;
+}
+
+/* Film flicker effect on buttons */
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.btn:hover::before {
+  transform: translateY(100%);
+}
+
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
 }

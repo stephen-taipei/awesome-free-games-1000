@@ -197,11 +197,17 @@ export class SeasonChangeGame {
 
     // Check bounds
     if (newX < 0 || newX >= this.gridSize || newY < 0 || newY >= this.gridSize) {
+      if (this.onStateChange) {
+        this.onStateChange({ blocked: true });
+      }
       return;
     }
 
     // Check obstacles based on season
     if (this.isBlocked(newX, newY)) {
+      if (this.onStateChange) {
+        this.onStateChange({ blocked: true });
+      }
       return;
     }
 
@@ -209,8 +215,15 @@ export class SeasonChangeGame {
     this.playerPos.y = newY;
     this.moves++;
 
+    // Calculate pixel position for effects
+    const pixelX = newX * this.cellSize + this.cellSize / 2;
+    const pixelY = newY * this.cellSize + this.cellSize / 2;
+
     if (this.onStateChange) {
-      this.onStateChange({ moves: this.moves });
+      this.onStateChange({
+        moves: this.moves,
+        playerMove: { x: pixelX, y: pixelY },
+      });
     }
 
     this.draw();
@@ -251,7 +264,11 @@ export class SeasonChangeGame {
     this.moves++;
 
     if (this.onStateChange) {
-      this.onStateChange({ moves: this.moves, season });
+      this.onStateChange({
+        moves: this.moves,
+        season,
+        seasonChange: { season },
+      });
     }
 
     this.draw();
@@ -260,8 +277,16 @@ export class SeasonChangeGame {
   private checkWin() {
     if (this.playerPos.x === this.goalPos.x && this.playerPos.y === this.goalPos.y) {
       this.status = "won";
+
+      // Calculate pixel position for goal effects
+      const pixelX = this.goalPos.x * this.cellSize + this.cellSize / 2;
+      const pixelY = this.goalPos.y * this.cellSize + this.cellSize / 2;
+
       if (this.onStateChange) {
-        this.onStateChange({ status: "won" });
+        this.onStateChange({
+          status: "won",
+          goalReached: { x: pixelX, y: pixelY },
+        });
       }
     }
   }

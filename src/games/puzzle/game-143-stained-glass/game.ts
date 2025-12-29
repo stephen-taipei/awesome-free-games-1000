@@ -8,6 +8,7 @@ interface Region {
   path: Path2D;
   points: { x: number; y: number }[];
   color: string | null;
+  colorIndex: number;
   neighbors: number[];
   cx: number;
   cy: number;
@@ -26,7 +27,12 @@ interface GameState {
   selectedColor: string;
 }
 
-type StateChangeCallback = (state: GameState) => void;
+type StateChangeCallback = (state: GameState & {
+  regionFill?: { x: number; y: number; colorIndex: number };
+  validColoring?: { x: number; y: number };
+  invalidColoring?: boolean;
+  reset?: boolean;
+}) => void;
 
 const COLORS = [
   "#e74c3c", // Red
@@ -112,10 +118,18 @@ export class StainedGlassGame {
   private currentLevel: number = 0;
   private regions: Region[] = [];
   private selectedColor: string = COLORS[0];
+  private selectedColorIndex: number = 0;
   private availableColors: string[] = [];
   private isPlaying: boolean = false;
 
   private onStateChange: StateChangeCallback | null = null;
+
+  private pendingEvents: {
+    regionFill?: { x: number; y: number; colorIndex: number };
+    validColoring?: { x: number; y: number };
+    invalidColoring?: boolean;
+    reset?: boolean;
+  } = {};
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -140,6 +154,7 @@ export class StainedGlassGame {
 
   setSelectedColor(color: string) {
     this.selectedColor = color;
+    this.selectedColorIndex = this.availableColors.indexOf(color);
     this.emitState();
   }
 
@@ -162,6 +177,7 @@ export class StainedGlassGame {
     const level = LEVELS[this.currentLevel];
     this.availableColors = COLORS.slice(0, level.numColors);
     this.selectedColor = this.availableColors[0];
+    this.selectedColorIndex = 0;
     this.regions = [];
 
     const offsetX = (this.width - 300) / 2;
@@ -188,6 +204,7 @@ export class StainedGlassGame {
         path,
         points,
         color: null,
+        colorIndex: -1,
         neighbors: [...regionDef.neighbors],
         cx,
         cy,
@@ -206,7 +223,10 @@ export class StainedGlassGame {
         filledCount,
         totalRegions: this.regions.length,
         selectedColor: this.selectedColor,
+        ...this.pendingEvents,
       });
+
+      this.pendingEvents = {};
     }
   }
 
@@ -232,6 +252,15 @@ export class StainedGlassGame {
     return true;
   }
 
+  private checkRegionValid(region: Region): boolean {
+    if (!region.color) return true;
+    for (const neighborId of region.neighbors) {
+      const neighbor = this.regions[neighborId];
+      if (neighbor.color && neighbor.color === region.color) return false;
+    }
+    return true;
+  }
+
   start() {
     this.isPlaying = true;
     this.initLevel();
@@ -239,7 +268,11 @@ export class StainedGlassGame {
   }
 
   reset() {
-    this.regions.forEach((r) => (r.color = null));
+    this.regions.forEach((r) => {
+      r.color = null;
+      r.colorIndex = -1;
+    });
+    this.pendingEvents.reset = true;
     this.emitState();
     this.draw();
   }
@@ -265,6 +298,25 @@ export class StainedGlassGame {
     for (const region of this.regions) {
       if (this.ctx.isPointInPath(region.path, x * this.scale, y * this.scale)) {
         region.color = this.selectedColor;
+        region.colorIndex = this.selectedColorIndex;
+
+        // Emit fill event
+        this.pendingEvents.regionFill = {
+          x: region.cx,
+          y: region.cy,
+          colorIndex: this.selectedColorIndex,
+        };
+
+        // Check if this is a valid placement
+        if (this.checkRegionValid(region)) {
+          this.pendingEvents.validColoring = {
+            x: region.cx,
+            y: region.cy,
+          };
+        } else {
+          this.pendingEvents.invalidColoring = true;
+        }
+
         this.draw();
         this.emitState();
         break;
@@ -277,14 +329,14 @@ export class StainedGlassGame {
     ctx.clearRect(0, 0, this.width, this.height);
 
     const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
-    gradient.addColorStop(0, "#1a1a2e");
-    gradient.addColorStop(1, "#16213e");
+    gradient.addColorStop(0, "#2d1f3d");
+    gradient.addColorStop(1, "#1a1428");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, this.width, this.height);
 
     if (!this.isPlaying) {
       ctx.fillStyle = "#9b59b6";
-      ctx.font = "bold 24px sans-serif";
+      ctx.font = "bold 24px Georgia, serif";
       ctx.textAlign = "center";
       ctx.fillText("Stained Glass", this.width / 2, this.height / 2);
       return;
@@ -298,34 +350,52 @@ export class StainedGlassGame {
 
     for (const region of this.regions) {
       if (region.color) {
+        // Glass effect with color
+        ctx.save();
+        ctx.globalAlpha = 0.75;
         ctx.fillStyle = region.color;
-        ctx.globalAlpha = 0.7;
         ctx.fill(region.path);
         ctx.globalAlpha = 1;
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        // Glass highlight
+        ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
         ctx.fill(region.path);
+        ctx.restore();
       } else {
-        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+        // Empty region - frosted glass
+        ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
         ctx.fill(region.path);
       }
 
-      ctx.strokeStyle = "#2c3e50";
-      ctx.lineWidth = 3;
+      // Lead frame - outer
+      ctx.strokeStyle = "#1a1428";
+      ctx.lineWidth = 4;
       ctx.stroke(region.path);
 
-      ctx.strokeStyle = "#34495e";
-      ctx.lineWidth = 1;
+      // Lead frame - inner highlight
+      ctx.strokeStyle = "#3d2a4d";
+      ctx.lineWidth = 1.5;
       ctx.stroke(region.path);
     }
 
-    ctx.strokeStyle = "#1a1a2e";
-    ctx.lineWidth = 8;
+    // Window frame
+    ctx.strokeStyle = "#1a1428";
+    ctx.lineWidth = 10;
     ctx.strokeRect(
-      (this.width - 300) / 2 - 4,
-      16,
-      308,
-      this.height - 100
+      (this.width - 300) / 2 - 5,
+      15,
+      310,
+      this.height - 95
+    );
+
+    // Frame highlight
+    ctx.strokeStyle = "#3d2a4d";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(
+      (this.width - 300) / 2 - 5,
+      15,
+      310,
+      this.height - 95
     );
 
     this.drawDecorations();
@@ -335,11 +405,20 @@ export class StainedGlassGame {
     const ctx = this.ctx;
     const offsetX = (this.width - 300) / 2;
 
+    // Decorative rosette at bottom
     ctx.beginPath();
-    ctx.arc(offsetX + 150, this.height - 60, 15, 0, Math.PI * 2);
+    ctx.arc(offsetX + 150, this.height - 55, 18, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
     ctx.fill();
-    ctx.strokeStyle = "#34495e";
+
+    // Rosette inner circle
+    ctx.beginPath();
+    ctx.arc(offsetX + 150, this.height - 55, 10, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(155, 89, 182, 0.3)";
+    ctx.fill();
+
+    // Lead frame for rosette
+    ctx.strokeStyle = "#3d2a4d";
     ctx.lineWidth = 2;
     ctx.stroke();
   }

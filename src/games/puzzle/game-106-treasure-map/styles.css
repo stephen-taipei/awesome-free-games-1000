@@ -1,25 +1,99 @@
+/* Treasure Map - Pirate Adventure Theme */
+/* Game #106 - WebGPU Enhanced */
+
+:root {
+  --gold: #ffd700;
+  --gold-dark: #b8860b;
+  --parchment: #f5deb3;
+  --parchment-dark: #d4a76a;
+  --wood-brown: #8b4513;
+  --wood-light: #a0522d;
+  --ocean-blue: #1a5276;
+  --ocean-light: #3498db;
+  --treasure-red: #c0392b;
+  --compass-bronze: #cd7f32;
+  --glass-bg: rgba(139, 69, 19, 0.15);
+  --glass-border: rgba(255, 215, 0, 0.3);
+  --shadow-gold: rgba(255, 215, 0, 0.4);
+  --shadow-dark: rgba(0, 0, 0, 0.5);
+}
+
 .game-container {
   max-width: 600px;
+}
+
+.game-header h1 {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 50%, var(--gold) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: treasure-shimmer 3s ease-in-out infinite;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 4px var(--shadow-dark));
+}
+
+@keyframes treasure-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(135deg, #d4a76a 0%, #c4956a 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg,
+    var(--parchment-dark) 0%,
+    var(--parchment) 20%,
+    var(--parchment) 80%,
+    var(--ocean-light) 95%,
+    var(--ocean-blue) 100%
+  );
+  border-radius: 12px;
+  box-shadow:
+    0 4px 20px var(--shadow-dark),
+    inset 0 0 60px rgba(139, 69, 19, 0.2),
+    0 0 30px var(--shadow-gold);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  border: 3px solid var(--wood-brown);
 }
 
-canvas {
+.game-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 90% 10%, rgba(205, 127, 50, 0.3) 0%, transparent 30%),
+    radial-gradient(ellipse at 10% 90%, rgba(26, 82, 118, 0.2) 0%, transparent 25%);
+  pointer-events: none;
+  animation: compass-glow 4s ease-in-out infinite;
+}
+
+@keyframes compass-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+canvas#game-canvas {
   width: 100%;
   height: 100%;
   cursor: pointer;
+  position: relative;
+  z-index: 2;
 }
 
 .game-controls {
@@ -30,26 +104,86 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
-  color: #ffd700;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  color: var(--gold);
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.4);
+  box-shadow:
+    0 4px 15px rgba(139, 69, 19, 0.3),
+    inset 0 1px 0 rgba(255, 215, 0, 0.2);
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  animation: stats-float 3s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 215, 0, 0.1) 50%,
+    transparent 60%
+  );
+  animation: coin-shine 4s ease-in-out infinite;
+}
+
+@keyframes stats-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes coin-shine {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
 }
 
 .clue-display {
-  background: linear-gradient(135deg, #f5deb3 0%, #deb887 100%);
-  color: #5c4033;
-  padding: 1rem;
-  border-radius: 8px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid var(--wood-brown);
+  color: var(--wood-brown);
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
   margin-bottom: 1rem;
   font-weight: bold;
   text-align: center;
-  border: 2px solid #8b4513;
   font-family: 'Georgia', serif;
+  box-shadow:
+    0 4px 15px rgba(139, 69, 19, 0.2),
+    inset 0 0 20px rgba(245, 222, 179, 0.3);
+  position: relative;
+  animation: parchment-glow 3s ease-in-out infinite;
+}
+
+.clue-display::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 50 L50 10 L90 50 L50 90 Z' fill='none' stroke='%238b4513' stroke-width='0.5' opacity='0.1'/%3E%3C/svg%3E");
+  background-size: 30px 30px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+@keyframes parchment-glow {
+  0%, 100% { box-shadow: 0 4px 15px rgba(139, 69, 19, 0.2), inset 0 0 20px rgba(245, 222, 179, 0.3); }
+  50% { box-shadow: 0 4px 20px rgba(139, 69, 19, 0.3), inset 0 0 30px rgba(245, 222, 179, 0.4); }
 }
 
 .footer-controls {
@@ -58,6 +192,220 @@ canvas {
   gap: 1rem;
 }
 
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+  color: var(--wood-brown);
+  border: 2px solid var(--gold-dark);
+  box-shadow: 0 4px 15px var(--shadow-gold);
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 25px var(--shadow-gold);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, var(--wood-light) 0%, var(--wood-brown) 100%);
+  color: var(--parchment);
+  border: 2px solid var(--wood-brown);
+}
+
+.btn.warning:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(139, 69, 19, 0.4);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn:hover::after {
+  transform: translateX(100%);
+}
+
+.overlay {
+  background: radial-gradient(ellipse at center, rgba(139, 69, 19, 0.9) 0%, rgba(92, 64, 51, 0.95) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.overlay-content {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow:
+    0 8px 32px var(--shadow-dark),
+    0 0 40px var(--shadow-gold);
+  animation: chest-open 0.5s ease-out;
+}
+
+@keyframes chest-open {
+  0% {
+    transform: scale(0.8) rotateX(20deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05) rotateX(-5deg);
+  }
+  100% {
+    transform: scale(1) rotateX(0deg);
+    opacity: 1;
+  }
+}
+
+.overlay-title {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--parchment) 50%, var(--gold) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: treasure-shimmer 2s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px var(--shadow-dark));
+}
+
 .controls-hint small {
-  color: #5c4033;
+  color: var(--parchment);
+  opacity: 0.8;
+}
+
+/* Wave animation for ocean bottom */
+.game-area::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(180deg, transparent 0%, rgba(26, 82, 118, 0.3) 100%);
+  animation: ocean-wave 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ocean-wave {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-5px) scaleY(1.1); }
+}
+
+/* Discover animation */
+@keyframes discover-burst {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Victory gold shower */
+@keyframes gold-fall {
+  0% {
+    transform: translateY(-20px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Compass spin animation */
+@keyframes compass-spin {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50% { transform: rotate(180deg); }
+  75% { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* X marks the spot pulse */
+@keyframes x-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 5px var(--treasure-red));
+  }
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 15px var(--treasure-red));
+  }
+}
+
+/* Map scroll animation */
+@keyframes map-unfurl {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  100% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+}
+
+/* Anchor drop animation */
+@keyframes anchor-drop {
+  0% {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(10px);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Ship wheel rotation */
+@keyframes wheel-turn {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .game-area {
+    height: 380px;
+  }
+
+  .stats-card {
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .clue-display {
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
+  }
 }

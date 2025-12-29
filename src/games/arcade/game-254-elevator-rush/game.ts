@@ -38,6 +38,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  passengerDelivered: { floor: number; points: number }[];
+  passengerTimeout: boolean;
+  gameOver: { score: number; delivered: number; highScore: number }[];
+}
+
 const FLOOR_COUNT = 6;
 const PASSENGER_COLORS = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6", "#1abc9c"];
 
@@ -59,6 +66,22 @@ export class ElevatorRushGame {
   private spawnTimer = 0;
   private passengerIdCounter = 0;
   private selectedElevator: Elevator | null = null;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    passengerDelivered: [],
+    passengerTimeout: false,
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      passengerDelivered: [],
+      passengerTimeout: false,
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -192,6 +215,7 @@ export class ElevatorRushGame {
     this.initElevators();
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -241,6 +265,7 @@ export class ElevatorRushGame {
       if (passenger.waiting) {
         passenger.patience -= dt;
         if (passenger.patience <= 0) {
+          this.pendingEvents.passengerTimeout = true;
           this.gameOver();
           return;
         }
@@ -258,7 +283,9 @@ export class ElevatorRushGame {
       passenger.inElevator = -1;
       passenger.waiting = false;
       this.delivered++;
-      this.score += 50 + Math.floor(passenger.patience / passenger.maxPatience * 50);
+      const points = 50 + Math.floor(passenger.patience / passenger.maxPatience * 50);
+      this.score += points;
+      this.pendingEvents.passengerDelivered.push({ floor: elevator.floor, points });
 
       if (this.score > this.highScore) {
         this.highScore = this.score;
@@ -310,6 +337,7 @@ export class ElevatorRushGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, delivered: this.delivered, highScore: this.highScore });
     this.emitState();
   }
 

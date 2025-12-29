@@ -1,22 +1,34 @@
 /**
  * Combination Lock Styles
+ * Vault / Safe-Cracking / Heist Night Theme
  * Game #100
  */
 
 :root {
-  --bg-color: #1a1a2e;
-  --lock-body: #3d3d5c;
-  --lock-metal: #5a5a7a;
-  --dial-bg: #2d2d44;
-  --dial-number: #ffd700;
-  --dial-highlight: #ffeb3b;
-  --text-color: #e0e0e0;
-  --text-muted: #a0a0a0;
-  --btn-primary: #4caf50;
-  --btn-secondary: #607d8b;
-  --correct: #4caf50;
-  --wrong-position: #ff9800;
-  --wrong: #f44336;
+  --bg-dark: #0d1117;
+  --bg-deep: #161b22;
+  --vault-steel: #2d3748;
+  --vault-chrome: #4a5568;
+  --vault-gold: #d69e2e;
+  --vault-gold-bright: #ecc94b;
+  --vault-gold-glow: rgba(214, 158, 46, 0.5);
+  --dial-bg: #1a202c;
+  --dial-number: #ecc94b;
+  --dial-highlight: #f6e05e;
+  --dial-glow: rgba(236, 201, 75, 0.4);
+  --text-color: #e2e8f0;
+  --text-muted: #a0aec0;
+  --correct: #48bb78;
+  --correct-glow: rgba(72, 187, 120, 0.5);
+  --wrong-position: #ed8936;
+  --wrong-position-glow: rgba(237, 137, 54, 0.5);
+  --wrong: #f56565;
+  --wrong-glow: rgba(245, 101, 101, 0.5);
+  --btn-primary: #38a169;
+  --btn-secondary: #4a5568;
+  --glass-bg: rgba(26, 32, 44, 0.8);
+  --glass-border: rgba(214, 158, 46, 0.3);
+  --laser-red: rgba(229, 62, 62, 0.6);
 }
 
 * {
@@ -27,7 +39,7 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, var(--bg-color) 0%, #0f0f1a 100%);
+  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-deep) 50%, #0d1420 100%);
   color: var(--text-color);
   min-height: 100vh;
   display: flex;
@@ -43,6 +55,17 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 20px;
+  position: relative;
+}
+
+#webgpu-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .game-header {
@@ -52,22 +75,55 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .title {
   font-size: 1.8rem;
   font-weight: bold;
-  color: var(--dial-number);
+  color: var(--vault-gold);
+  text-shadow:
+    0 0 10px var(--vault-gold-glow),
+    0 0 20px var(--vault-gold-glow),
+    0 0 40px var(--vault-gold-glow);
+  letter-spacing: 2px;
+  animation: title-pulse 3s ease-in-out infinite;
+}
+
+@keyframes title-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 10px var(--vault-gold-glow),
+      0 0 20px var(--vault-gold-glow);
+  }
+  50% {
+    text-shadow:
+      0 0 20px var(--vault-gold-glow),
+      0 0 40px var(--vault-gold-glow),
+      0 0 60px var(--vault-gold-glow);
+  }
 }
 
 .header-controls select {
   padding: 8px 12px;
-  border: none;
+  border: 1px solid var(--glass-border);
   border-radius: 6px;
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
   color: var(--text-color);
   font-size: 0.9rem;
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  border-color: var(--vault-gold);
+  box-shadow: 0 0 15px var(--vault-gold-glow);
+}
+
+.header-controls select option {
+  background: var(--bg-deep);
 }
 
 .game-info {
@@ -75,9 +131,14 @@ body {
   display: flex;
   justify-content: center;
   gap: 40px;
-  background: var(--lock-body);
+  background: var(--glass-bg);
+  backdrop-filter: blur(15px);
   padding: 12px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
 }
 
 .info-item {
@@ -89,18 +150,21 @@ body {
   font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .info-value {
   display: block;
   font-size: 1.4rem;
   font-weight: bold;
-  color: var(--dial-number);
+  color: var(--vault-gold);
+  text-shadow: 0 0 10px var(--vault-gold-glow);
 }
 
 .game-area {
   position: relative;
   width: 100%;
+  z-index: 1;
 }
 
 .lock-container {
@@ -108,10 +172,61 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 24px;
-  padding: 20px;
-  background: var(--lock-body);
+  padding: 24px;
+  background: linear-gradient(180deg, var(--vault-steel) 0%, var(--bg-deep) 100%);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(45, 55, 72, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+}
+
+/* Animated border for vault */
+.lock-container::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 18px;
+  background: linear-gradient(
+    45deg,
+    var(--vault-gold),
+    var(--vault-chrome),
+    var(--vault-gold-bright),
+    var(--vault-gold)
+  );
+  background-size: 400% 400%;
+  z-index: -1;
+  animation: border-flow 8s ease infinite;
+  opacity: 0.5;
+}
+
+@keyframes border-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Laser sweep effect */
+.lock-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--laser-red), transparent);
+  animation: laser-sweep 4s ease-in-out infinite;
+  opacity: 0.7;
+  border-radius: 16px 16px 0 0;
+}
+
+@keyframes laser-sweep {
+  0%, 100% { transform: translateY(0); opacity: 0.7; }
+  50% { transform: translateY(200px); opacity: 0.3; }
 }
 
 .lock {
@@ -122,46 +237,90 @@ body {
 
 .lock-body {
   position: relative;
-  background: linear-gradient(180deg, var(--lock-metal), #4a4a6a);
-  padding: 20px;
-  padding-top: 40px;
-  border-radius: 12px;
+  background: linear-gradient(180deg, var(--vault-chrome) 0%, var(--vault-steel) 100%);
+  padding: 24px;
+  padding-top: 50px;
+  border-radius: 16px;
   box-shadow:
     inset 0 2px 4px rgba(255, 255, 255, 0.1),
-    0 4px 16px rgba(0, 0, 0, 0.4);
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(74, 85, 104, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Steel texture overlay */
+.lock-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.02) 2px,
+      rgba(255, 255, 255, 0.02) 4px
+    );
+  border-radius: 14px;
+  pointer-events: none;
 }
 
 .lock-shackle {
   position: absolute;
-  top: -30px;
+  top: -35px;
   left: 50%;
   transform: translateX(-50%);
-  width: 80px;
-  height: 50px;
-  border: 12px solid var(--lock-metal);
+  width: 90px;
+  height: 55px;
+  border: 14px solid var(--vault-chrome);
   border-bottom: none;
-  border-radius: 40px 40px 0 0;
-  transition: all 0.5s ease;
+  border-radius: 45px 45px 0 0;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(74, 85, 104, 0.4);
 }
 
 .lock-shackle.unlocked {
-  transform: translateX(-50%) rotate(-30deg);
+  transform: translateX(-50%) rotate(-35deg) translateY(-10px);
   transform-origin: bottom left;
+  border-color: var(--vault-gold);
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.3),
+    0 0 30px var(--vault-gold-glow);
 }
 
 .dials-container {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .dial {
   position: relative;
-  width: 60px;
-  height: 80px;
-  background: var(--dial-bg);
-  border-radius: 8px;
+  width: 64px;
+  height: 85px;
+  background: linear-gradient(180deg, var(--dial-bg) 0%, #0d1117 100%);
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.6),
+    0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dial::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--vault-gold), transparent);
+  transform: translateY(-50%);
+  opacity: 0.3;
 }
 
 .dial-inner {
@@ -169,19 +328,22 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  transition: transform 0.2s ease;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .dial-number {
   width: 100%;
-  height: 80px;
+  height: 85px;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   font-weight: bold;
   color: var(--dial-number);
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  text-shadow:
+    0 0 15px var(--dial-glow),
+    0 0 30px var(--dial-glow);
+  font-family: 'Courier New', monospace;
 }
 
 .dial-controls {
@@ -208,30 +370,39 @@ body {
 }
 
 .dial-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(236, 201, 75, 0.1);
   color: var(--dial-highlight);
 }
 
 .dial-btn:active {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(236, 201, 75, 0.2);
+  transform: scale(0.95);
 }
 
 .dial-indicator {
   position: absolute;
-  left: -4px;
-  right: -4px;
+  left: -6px;
+  right: -6px;
   top: 50%;
   transform: translateY(-50%);
-  height: 4px;
-  background: var(--dial-highlight);
-  border-radius: 2px;
+  height: 5px;
+  background: linear-gradient(90deg, var(--vault-gold), var(--dial-highlight), var(--vault-gold));
+  border-radius: 3px;
   pointer-events: none;
-  box-shadow: 0 0 8px var(--dial-highlight);
+  box-shadow:
+    0 0 10px var(--vault-gold-glow),
+    0 0 20px var(--vault-gold-glow);
+  animation: indicator-glow 2s ease-in-out infinite;
+}
+
+@keyframes indicator-glow {
+  0%, 100% { box-shadow: 0 0 10px var(--vault-gold-glow); }
+  50% { box-shadow: 0 0 20px var(--vault-gold-glow), 0 0 30px var(--vault-gold-glow); }
 }
 
 .hints-container {
   width: 100%;
-  max-width: 350px;
+  max-width: 380px;
 }
 
 .hints-title {
@@ -239,53 +410,72 @@ body {
   color: var(--text-muted);
   margin-bottom: 12px;
   text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .hints-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .hint-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 10px 16px;
-  border-radius: 8px;
+  gap: 14px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.hint-row:hover {
+  border-color: var(--glass-border);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
 }
 
 .hint-code {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
 .hint-digit {
-  width: 28px;
-  height: 32px;
+  width: 30px;
+  height: 36px;
   display: flex;
   justify-content: center;
   align-items: center;
   background: var(--dial-bg);
-  border-radius: 4px;
+  border-radius: 6px;
   font-weight: bold;
   font-size: 1.1rem;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
 }
 
 .hint-digit.correct {
-  background: var(--correct);
+  background: linear-gradient(145deg, #68d391, var(--correct));
   color: white;
+  box-shadow: 0 0 15px var(--correct-glow);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .hint-digit.wrong-position {
-  background: var(--wrong-position);
+  background: linear-gradient(145deg, #f6ad55, var(--wrong-position));
   color: white;
+  box-shadow: 0 0 15px var(--wrong-position-glow);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .hint-digit.wrong {
-  background: var(--wrong);
+  background: linear-gradient(145deg, #fc8181, var(--wrong));
   color: white;
+  box-shadow: 0 0 10px var(--wrong-glow);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .hint-text {
@@ -300,7 +490,8 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(26, 26, 46, 0.95);
+  background: rgba(13, 17, 23, 0.95);
+  backdrop-filter: blur(20px);
   border-radius: 16px;
   display: flex;
   justify-content: center;
@@ -316,7 +507,11 @@ body {
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 16px;
-  color: var(--dial-number);
+  color: var(--vault-gold);
+  text-shadow:
+    0 0 20px var(--vault-gold-glow),
+    0 0 40px var(--vault-gold-glow);
+  letter-spacing: 3px;
 }
 
 .overlay-msg {
@@ -330,52 +525,77 @@ body {
   display: flex;
   gap: 12px;
   justify-content: center;
+  position: relative;
+  z-index: 1;
 }
 
 .btn {
   padding: 14px 28px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1.1rem;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn-primary {
-  background: var(--btn-primary);
+  background: linear-gradient(135deg, #48bb78, var(--btn-primary));
   color: white;
+  box-shadow: 0 4px 15px rgba(56, 161, 105, 0.4);
 }
 
 .btn-primary:hover {
-  background: #66bb6a;
+  background: linear-gradient(135deg, #68d391, #48bb78);
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(56, 161, 105, 0.5);
 }
 
 .btn-secondary {
-  background: var(--btn-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
   color: var(--text-color);
+  border: 1px solid var(--glass-border);
 }
 
 .btn-secondary:hover {
-  background: #78909c;
+  background: rgba(74, 85, 104, 0.8);
+  border-color: var(--vault-gold);
+  box-shadow: 0 0 15px var(--vault-gold-glow);
 }
 
 /* Responsive */
 @media (max-width: 400px) {
   .dial {
-    width: 50px;
-    height: 70px;
+    width: 52px;
+    height: 72px;
   }
 
   .dial-number {
-    height: 70px;
-    font-size: 2rem;
+    height: 72px;
+    font-size: 2.2rem;
   }
 
   .hint-digit {
-    width: 24px;
-    height: 28px;
+    width: 26px;
+    height: 32px;
     font-size: 1rem;
   }
 
@@ -385,5 +605,17 @@ body {
 
   .title {
     font-size: 1.5rem;
+  }
+
+  .lock-body {
+    padding: 18px;
+    padding-top: 45px;
+  }
+
+  .lock-shackle {
+    width: 75px;
+    height: 45px;
+    border-width: 12px;
+    top: -30px;
   }
 }

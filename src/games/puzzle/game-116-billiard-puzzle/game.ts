@@ -181,7 +181,14 @@ export class BilliardPuzzleGame {
           this.status = "moving";
 
           if (this.onStateChange) {
-            this.onStateChange({ shots: this.shotsLeft });
+            this.onStateChange({
+              shots: this.shotsLeft,
+              cueShot: {
+                x: cue.x,
+                y: cue.y,
+                power: power,
+              },
+            });
           }
 
           this.animate();
@@ -301,21 +308,31 @@ export class BilliardPuzzleGame {
     const top = this.padding + ball.radius;
     const bottom = this.tableHeight + this.padding - ball.radius;
 
+    let bounced = false;
+
     if (ball.x < left) {
       ball.x = left;
       ball.vx *= -0.8;
+      bounced = true;
     }
     if (ball.x > right) {
       ball.x = right;
       ball.vx *= -0.8;
+      bounced = true;
     }
     if (ball.y < top) {
       ball.y = top;
       ball.vy *= -0.8;
+      bounced = true;
     }
     if (ball.y > bottom) {
       ball.y = bottom;
       ball.vy *= -0.8;
+      bounced = true;
+    }
+
+    if (bounced && this.onStateChange) {
+      this.onStateChange({ wallBounce: { x: ball.x, y: ball.y } });
     }
   }
 
@@ -357,6 +374,25 @@ export class BilliardPuzzleGame {
           b1.y -= (overlap / 2) * ny;
           b2.x += (overlap / 2) * nx;
           b2.y += (overlap / 2) * ny;
+
+          // Emit collision event
+          if (this.onStateChange) {
+            const collisionX = (b1.x + b2.x) / 2;
+            const collisionY = (b1.y + b2.y) / 2;
+            const force = Math.min(Math.abs(dvn) / 10, 1);
+            const colorR = this.colorToR(b2.isCue ? b1.color : b2.color);
+            const colorG = this.colorToG(b2.isCue ? b1.color : b2.color);
+
+            this.onStateChange({
+              ballCollision: {
+                x: collisionX,
+                y: collisionY,
+                force: force,
+                colorR: colorR,
+                colorG: colorG,
+              },
+            });
+          }
         }
       }
     }
@@ -372,10 +408,34 @@ export class BilliardPuzzleGame {
           ball.pocketed = true;
           ball.vx = 0;
           ball.vy = 0;
+
+          // Emit pocketed event
+          if (this.onStateChange && !ball.isCue) {
+            this.onStateChange({
+              pocketed: { x: pocket.x, y: pocket.y },
+            });
+          }
           break;
         }
       }
     });
+  }
+
+  // Color utility functions
+  private colorToR(color: string): number {
+    if (color.startsWith("#")) {
+      const r = parseInt(color.slice(1, 3), 16);
+      return r / 255;
+    }
+    return 1;
+  }
+
+  private colorToG(color: string): number {
+    if (color.startsWith("#")) {
+      const g = parseInt(color.slice(3, 5), 16);
+      return g / 255;
+    }
+    return 0.3;
   }
 
   private checkGameState() {

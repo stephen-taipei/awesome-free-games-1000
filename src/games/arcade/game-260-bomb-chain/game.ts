@@ -36,6 +36,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  explode: { chain: number; points: number }[];
+  chainComplete: { maxChain: number; bombsExploded: number }[];
+  gameOver: { score: number; maxChain: number }[];
+}
+
 const BOMB_COLORS = ["#ff6600", "#ff3300", "#ff9900", "#ffcc00", "#ff0066"];
 const EXPLOSION_RADIUS = 80;
 const EXPLOSION_DURATION = 0.5;
@@ -54,6 +61,22 @@ export class BombChainGame {
   private animationId: number | null = null;
   private lastTime = 0;
   private explodingCount = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    explode: [],
+    chainComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      explode: [],
+      chainComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -108,7 +131,9 @@ export class BombChainGame {
     if (this.chain > this.maxChain) this.maxChain = this.chain;
 
     // Score based on chain
-    this.score += 10 * this.chain;
+    const points = 10 * this.chain;
+    this.score += points;
+    this.pendingEvents.explode.push({ chain: this.chain, points });
 
     // Create explosion particles
     for (let i = 0; i < 20; i++) {
@@ -165,6 +190,7 @@ export class BombChainGame {
 
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -278,6 +304,8 @@ export class BombChainGame {
 
     // Check if explosions finished
     if (this.status === "exploding" && !stillExploding) {
+      const explodedCount = this.bombs.filter((b) => b.exploded).length;
+      this.pendingEvents.chainComplete.push({ maxChain: this.maxChain, bombsExploded: explodedCount });
       // Check if we can still click
       const unexploded = this.bombs.filter((b) => !b.exploded).length;
       if (this.bombsLeft <= 0 || unexploded === 0) {
@@ -295,6 +323,7 @@ export class BombChainGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, maxChain: this.maxChain });
     this.emitState();
   }
 

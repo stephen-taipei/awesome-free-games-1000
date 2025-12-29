@@ -107,6 +107,19 @@ export class HourglassGame {
   private hourglassAngle: number = 0;
   private sandParticles: { x: number; y: number; vy: number }[] = [];
 
+  private pendingEvents: {
+    flip?: { x: number; y: number };
+    starAppear?: { x: number; y: number };
+    starCollect?: { x: number; y: number };
+    sandFlow?: { x: number; y: number };
+    timeWarning?: boolean;
+    reset?: boolean;
+  } = {};
+
+  private visibleStars: Set<number> = new Set();
+  private lastWarningTime: number = 0;
+  private sandFlowCounter: number = 0;
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -158,6 +171,9 @@ export class HourglassGame {
     this.hourglassAngle = 0;
     this.sandParticles = [];
     this.status = "playing";
+    this.visibleStars.clear();
+    this.lastWarningTime = 0;
+    this.sandFlowCounter = 0;
 
     this.render();
 
@@ -202,6 +218,35 @@ export class HourglassGame {
     // Update sand particles
     this.updateSandParticles(delta);
 
+    // Track star appearances
+    this.stars.forEach((star, index) => {
+      const isVisible =
+        this.currentTime >= star.appearTime &&
+        this.currentTime <= star.disappearTime &&
+        !star.collected;
+
+      if (isVisible && !this.visibleStars.has(index)) {
+        this.visibleStars.add(index);
+        this.pendingEvents.starAppear = { x: star.x, y: star.y };
+      } else if (!isVisible && this.visibleStars.has(index)) {
+        this.visibleStars.delete(index);
+      }
+    });
+
+    // Sand flow particles
+    this.sandFlowCounter += delta;
+    if (this.sandFlowCounter > 0.3 && this.sandAmount > 0.05 && this.sandAmount < 0.95) {
+      this.sandFlowCounter = 0;
+      this.pendingEvents.sandFlow = { x: this.width / 2, y: this.height / 2 };
+    }
+
+    // Time warning
+    const remaining = level.totalTime - this.currentTime;
+    if (remaining < 3 && remaining > 0 && this.currentTime - this.lastWarningTime > 0.8) {
+      this.lastWarningTime = this.currentTime;
+      this.pendingEvents.timeWarning = true;
+    }
+
     // Check time bounds
     if (this.currentTime >= level.totalTime) {
       this.currentTime = level.totalTime;
@@ -210,17 +255,26 @@ export class HourglassGame {
       this.currentTime = 0;
     }
 
-    if (this.onStateChange) {
-      this.onStateChange({
-        status: this.status,
-        level: this.currentLevel + 1,
-        time: Math.max(0, this.currentTime),
-        totalTime: level.totalTime,
-        starsCollected: this.stars.filter((s) => s.collected).length,
-        totalStars: this.stars.length,
-        flipsRemaining: this.flipsRemaining,
-      });
-    }
+    this.notifyState();
+  }
+
+  private notifyState() {
+    if (!this.onStateChange) return;
+
+    const level = LEVELS[this.currentLevel];
+    const state: any = {
+      status: this.status,
+      level: this.currentLevel + 1,
+      time: Math.max(0, this.currentTime),
+      totalTime: level.totalTime,
+      starsCollected: this.stars.filter((s) => s.collected).length,
+      totalStars: this.stars.length,
+      flipsRemaining: this.flipsRemaining,
+      ...this.pendingEvents,
+    };
+
+    this.onStateChange(state);
+    this.pendingEvents = {};
   }
 
   private updateSandParticles(delta: number) {
@@ -246,7 +300,7 @@ export class HourglassGame {
     if (this.status !== "playing") return;
 
     // Check star clicks
-    this.stars.forEach((star) => {
+    this.stars.forEach((star, index) => {
       if (star.collected) return;
       if (
         this.currentTime >= star.appearTime &&
@@ -256,6 +310,9 @@ export class HourglassGame {
         const dy = y - star.y;
         if (dx * dx + dy * dy < 30 * 30) {
           star.collected = true;
+          this.visibleStars.delete(index);
+          this.pendingEvents.starCollect = { x: star.x, y: star.y };
+          this.notifyState();
           this.checkWinLose();
         }
       }
@@ -267,6 +324,9 @@ export class HourglassGame {
 
     this.flipsRemaining--;
     this.isFlipped = !this.isFlipped;
+
+    // Emit flip event
+    this.pendingEvents.flip = { x: this.width / 2, y: this.height / 2 };
 
     // Animate hourglass rotation
     const startAngle = this.hourglassAngle;
@@ -287,19 +347,7 @@ export class HourglassGame {
     };
 
     animateFlip();
-
-    if (this.onStateChange) {
-      const level = LEVELS[this.currentLevel];
-      this.onStateChange({
-        status: this.status,
-        level: this.currentLevel + 1,
-        time: this.currentTime,
-        totalTime: level.totalTime,
-        starsCollected: this.stars.filter((s) => s.collected).length,
-        totalStars: this.stars.length,
-        flipsRemaining: this.flipsRemaining,
-      });
-    }
+    this.notifyState();
   }
 
   private checkWinLose() {
@@ -542,6 +590,8 @@ export class HourglassGame {
   }
 
   public reset() {
+    this.pendingEvents.reset = true;
+    this.notifyState();
     this.loadLevel(this.currentLevel);
   }
 

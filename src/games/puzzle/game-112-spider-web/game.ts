@@ -217,9 +217,19 @@ export class SpiderWebGame {
 
     this.threads.push({ from: fromId, to: toId });
 
+    // Get node positions for thread animation
+    const fromNode = this.nodes.find((n) => n.id === fromId)!;
+    const toNode = this.nodes.find((n) => n.id === toId)!;
+
     if (this.onStateChange) {
       this.onStateChange({
         threads: `${this.threads.length}/${this.requiredThreads.length}`,
+        threadCreated: {
+          x1: fromNode.x,
+          y1: fromNode.y,
+          x2: toNode.x,
+          y2: toNode.y,
+        },
       });
     }
 

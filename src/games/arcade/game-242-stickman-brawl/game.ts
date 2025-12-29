@@ -29,6 +29,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  attack: { type: "punch" | "kick"; hit: boolean; damage: number }[];
+  playerHit: { damage: number; hpLeft: number }[];
+  roundWin: { round: number; score: number }[];
+  gameOver: { score: number; round: number }[];
+}
+
 const GROUND_Y = 0.8;
 const GRAVITY = 0.5;
 const MOVE_SPEED = 4;
@@ -50,6 +58,24 @@ export class StickmanBrawlGame {
   private groundY = 0;
 
   private keys: Set<string> = new Set();
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    attack: [],
+    playerHit: [],
+    roundWin: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      attack: [],
+      playerHit: [],
+      roundWin: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -129,7 +155,10 @@ export class StickmanBrawlGame {
       this.enemy.stateTimer = 15;
       this.enemy.vx = this.player.facing * 8;
       this.score += damage * 10;
+      this.pendingEvents.attack.push({ type, hit: true, damage });
       this.emitState();
+    } else {
+      this.pendingEvents.attack.push({ type, hit: false, damage: 0 });
     }
   }
 
@@ -164,6 +193,7 @@ export class StickmanBrawlGame {
     this.round = 1;
     this.status = "playing";
 
+    this.pendingEvents.start = true;
     this.resetRound();
     this.emitState();
     this.gameLoop();
@@ -202,6 +232,7 @@ export class StickmanBrawlGame {
     if (this.enemy.hp <= 0) {
       this.round++;
       this.score += 500;
+      this.pendingEvents.roundWin.push({ round: this.round, score: this.score });
       this.resetRound();
       this.emitState();
     }
@@ -211,6 +242,7 @@ export class StickmanBrawlGame {
       if (this.animationId) {
         cancelAnimationFrame(this.animationId);
       }
+      this.pendingEvents.gameOver.push({ score: this.score, round: this.round });
       this.emitState();
     }
   }
@@ -301,6 +333,7 @@ export class StickmanBrawlGame {
           this.player.state = "hit";
           this.player.stateTimer = 15;
           this.player.vx = -this.enemy.facing * 6;
+          this.pendingEvents.playerHit.push({ damage, hpLeft: this.player.hp });
           this.emitState();
         }
       }

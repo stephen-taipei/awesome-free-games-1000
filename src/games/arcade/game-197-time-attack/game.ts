@@ -11,6 +11,14 @@ export interface LevelConfig {
   timeLimit: number;
 }
 
+export interface PendingEvents {
+  starCollect: { x: number; y: number }[];
+  goalReach: { level: number; time: number }[];
+  start: boolean;
+  won: { level: number; time: number; bestTime: number | null }[];
+  lost: { level: number; timeExpired: boolean }[];
+}
+
 export class TimeAttackGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -35,6 +43,14 @@ export class TimeAttackGame {
   private animationId: number | null = null;
   private lastTime = 0;
   private frameCount = 0;
+
+  public pendingEvents: PendingEvents = {
+    starCollect: [],
+    goalReach: [],
+    start: false,
+    won: [],
+    lost: [],
+  };
 
   private levels: LevelConfig[] = [
     // Level 1 - Simple path
@@ -150,6 +166,16 @@ export class TimeAttackGame {
     this.setupInput();
   }
 
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      starCollect: [],
+      goalReach: [],
+      start: false,
+      won: [],
+      lost: [],
+    };
+  }
+
   private setupInput() {
     window.addEventListener("keydown", (e) => {
       this.keys[e.key.toLowerCase()] = true;
@@ -168,6 +194,7 @@ export class TimeAttackGame {
     this.loadLevel(this.currentLevel);
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -247,6 +274,7 @@ export class TimeAttackGame {
     for (const star of this.stars) {
       if (!star.collected && this.checkStarCollision(star)) {
         star.collected = true;
+        this.pendingEvents.starCollect.push({ x: star.x, y: star.y });
       }
     }
 
@@ -303,6 +331,16 @@ export class TimeAttackGame {
       this.bestTime[this.currentLevel] = this.elapsedTime;
     }
 
+    this.pendingEvents.goalReach.push({
+      level: this.currentLevel + 1,
+      time: this.elapsedTime,
+    });
+    this.pendingEvents.won.push({
+      level: this.currentLevel + 1,
+      time: this.elapsedTime,
+      bestTime: this.bestTime[this.currentLevel] || null,
+    });
+
     if (this.onStateChange) {
       this.onStateChange({
         status: "won",
@@ -315,6 +353,10 @@ export class TimeAttackGame {
   private lose() {
     this.status = "lost";
     this.stopAnimation();
+    this.pendingEvents.lost.push({
+      level: this.currentLevel + 1,
+      timeExpired: true,
+    });
     if (this.onStateChange) {
       this.onStateChange({ status: "lost" });
     }

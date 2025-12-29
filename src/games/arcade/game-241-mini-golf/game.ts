@@ -44,6 +44,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  stroke: { power: number; holeNumber: number }[];
+  holeComplete: { holeNumber: number; strokes: number; par: number }[];
+  complete: { totalStrokes: number }[];
+}
+
 const BALL_RADIUS = 8;
 const HOLE_RADIUS = 12;
 const FRICTION = 0.985;
@@ -71,6 +78,22 @@ export class MiniGolfGame {
   private dragStartY = 0;
   private dragEndX = 0;
   private dragEndY = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    stroke: [],
+    holeComplete: [],
+    complete: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      stroke: [],
+      holeComplete: [],
+      complete: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -200,6 +223,7 @@ export class MiniGolfGame {
       this.strokes++;
       this.totalStrokes++;
       this.status = "moving";
+      this.pendingEvents.stroke.push({ power, holeNumber: this.currentHole });
       this.emitState();
     } else {
       this.status = "playing";
@@ -243,6 +267,7 @@ export class MiniGolfGame {
     this.generateLevels();
     this.loadHole();
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -394,8 +419,16 @@ export class MiniGolfGame {
   }
 
   private holeComplete() {
+    const level = this.levels[this.currentHole - 1];
+    this.pendingEvents.holeComplete.push({
+      holeNumber: this.currentHole,
+      strokes: this.strokes,
+      par: level.par
+    });
+
     if (this.currentHole >= TOTAL_HOLES) {
       this.status = "complete";
+      this.pendingEvents.complete.push({ totalStrokes: this.totalStrokes });
       if (this.animationId) {
         cancelAnimationFrame(this.animationId);
       }

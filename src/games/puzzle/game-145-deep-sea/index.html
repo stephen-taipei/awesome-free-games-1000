@@ -31,7 +31,7 @@
           <span id="depth-display">0m</span>
         </div>
         <div class="stats-card">
-          <span data-i18n="game.oxygen">O₂</span>
+          <span data-i18n="game.oxygen">O2</span>
           <span id="oxygen-display">30</span>
         </div>
         <div class="stats-card">
@@ -47,7 +47,10 @@
       </div>
 
       <main class="game-area">
-        <canvas id="game-canvas"></canvas>
+        <div class="canvas-container">
+          <canvas id="webgpu-canvas"></canvas>
+          <canvas id="game-canvas"></canvas>
+        </div>
 
         <div id="game-overlay" class="overlay" style="display: flex">
           <div class="overlay-content">

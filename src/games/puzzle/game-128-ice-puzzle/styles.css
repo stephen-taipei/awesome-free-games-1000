@@ -1,25 +1,147 @@
-.game-container {
-  max-width: 550px;
+/**
+ * Ice Puzzle Styles
+ * Arctic / Ice Theme
+ * Game #128
+ */
+
+:root {
+  --ice-white: #ffffff;
+  --ice-pale: #e5f6ff;
+  --ice-blue: #8ecae6;
+  --ice-cyan: #00bcd4;
+  --ice-deep: #2b4a5e;
+  --frost-white: #f2f9ff;
+  --frost-blue: #b3e0f2;
+  --sky-dark: #1a2e3d;
+  --aurora-green: #66e6b3;
+  --aurora-pink: #cc99ff;
+  --glass-bg: rgba(255, 255, 255, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --text-primary: #ffffff;
+  --text-accent: #b3e0f2;
 }
 
-.game-area {
-  position: relative;
-  width: 100%;
-  height: 450px;
-  background: linear-gradient(180deg, #e0f7fa 0%, #b2ebf2 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(
+    180deg,
+    var(--sky-dark) 0%,
+    #2d5167 50%,
+    var(--ice-pale) 100%
+  );
+  min-height: 100vh;
   display: flex;
   justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
   overflow: hidden;
 }
 
-canvas {
+/* Snowfall effect */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 10%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    radial-gradient(2px 2px at 30% 25%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+    radial-gradient(3px 3px at 50% 15%, rgba(255, 255, 255, 0.9) 0%, transparent 100%),
+    radial-gradient(2px 2px at 70% 30%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
+    radial-gradient(2px 2px at 90% 20%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+    radial-gradient(2px 2px at 20% 45%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+    radial-gradient(3px 3px at 40% 55%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    radial-gradient(2px 2px at 60% 40%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
+    radial-gradient(2px 2px at 80% 50%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+    radial-gradient(2px 2px at 15% 70%, rgba(255, 255, 255, 0.6) 0%, transparent 100%);
+  animation: snowfall 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10%);
+  }
+  100% {
+    transform: translateY(110%);
+  }
+}
+
+/* Aurora effect */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(102, 230, 179, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 30%, rgba(204, 153, 255, 0.1) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 15%, rgba(142, 202, 230, 0.12) 0%, transparent 45%);
+  animation: auroraDrift 12s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes auroraDrift {
+  0% {
+    opacity: 0.5;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scaleX(1.1);
+  }
+}
+
+.game-container {
+  max-width: 550px;
   width: 100%;
-  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  text-shadow:
+    0 0 10px rgba(142, 202, 230, 0.5),
+    0 0 20px rgba(142, 202, 230, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 2px;
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text-primary);
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: var(--ice-cyan);
 }
 
 .game-controls {
@@ -31,15 +153,28 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
-  color: white;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text-primary);
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(0, 188, 212, 0.3);
   display: flex;
   gap: 0.5rem;
-  transition: background 0.3s ease;
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 15px rgba(142, 202, 230, 0.3);
 }
 
 .stats-card span:first-child {
@@ -47,7 +182,153 @@ canvas {
 }
 
 .stats-card.moves-card {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  border-color: rgba(0, 188, 212, 0.4);
+  box-shadow:
+    0 4px 16px rgba(0, 188, 212, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 450px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--glass-border);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(43, 74, 94, 0.95) 0%,
+    rgba(26, 46, 61, 0.98) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.overlay-content {
+  text-align: center;
+  color: var(--text-primary);
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--text-accent);
+  text-shadow:
+    0 0 20px rgba(142, 202, 230, 0.5),
+    0 0 40px rgba(142, 202, 230, 0.3);
+  letter-spacing: 3px;
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+  font-size: 1.1rem;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  opacity: 0.7;
+  color: var(--ice-cyan);
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:hover {
+  transform: translateY(-3px);
+}
+
+.btn.primary {
+  background: linear-gradient(
+    135deg,
+    var(--ice-cyan) 0%,
+    #0097a7 100%
+  );
+  color: var(--text-primary);
+  box-shadow:
+    0 4px 15px rgba(0, 188, 212, 0.4),
+    0 0 30px rgba(0, 188, 212, 0.2);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 6px 20px rgba(0, 188, 212, 0.6),
+    0 0 40px rgba(0, 188, 212, 0.3);
+}
+
+.btn.warning {
+  background: linear-gradient(
+    135deg,
+    #ff7043 0%,
+    #e64a19 100%
+  );
+  color: var(--text-primary);
+  box-shadow: 0 4px 15px rgba(255, 112, 67, 0.3);
+}
+
+.btn.warning:hover {
+  box-shadow: 0 6px 20px rgba(255, 112, 67, 0.5);
 }
 
 .footer-controls {
@@ -56,11 +337,84 @@ canvas {
   gap: 1rem;
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  color: rgba(255, 255, 255, 0.7);
+/* Ice crystal pattern on game area */
+.game-area::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(60deg, transparent 48%, rgba(255, 255, 255, 0.05) 50%, transparent 52%),
+    linear-gradient(-60deg, transparent 48%, rgba(255, 255, 255, 0.05) 50%, transparent 52%),
+    linear-gradient(180deg, transparent 48%, rgba(255, 255, 255, 0.03) 50%, transparent 52%);
+  background-size: 30px 30px;
+  pointer-events: none;
+  animation: iceShimmer 5s ease-in-out infinite;
 }
 
-.overlay {
-  background: rgba(0, 150, 167, 0.9);
+@keyframes iceShimmer {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Frost edge effect */
+.game-area::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 16px;
+  box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+/* Button ice glow */
+.btn.primary::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle,
+    rgba(142, 202, 230, 0.3) 0%,
+    transparent 70%
+  );
+  transform: translate(-50%, -50%);
+  border-radius: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn.primary:hover::before {
+  opacity: 1;
+}
+
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
 }

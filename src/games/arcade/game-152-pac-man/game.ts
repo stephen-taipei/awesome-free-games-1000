@@ -18,12 +18,21 @@ interface Ghost {
   color: string;
   direction: Direction;
   scared: boolean;
+  index: number;
 }
 
 interface GameState {
   score: number;
   lives: number;
   status: "idle" | "playing" | "won" | "over";
+  dotEat?: { x: number; y: number };
+  powerUp?: { x: number; y: number };
+  powerEnd?: boolean;
+  ghostEat?: { x: number; y: number; ghostIndex: number };
+  pacmanMove?: { x: number; y: number };
+  ghostMoves?: { x: number; y: number; ghostIndex: number }[];
+  gameOver?: { x: number; y: number };
+  win?: boolean;
 }
 
 type StateCallback = (state: GameState) => void;
@@ -70,6 +79,17 @@ export class PacManGame {
   private moveTimer = 0;
   private moveInterval = 200;
 
+  private pendingEvents: {
+    dotEat?: { x: number; y: number };
+    powerUp?: { x: number; y: number };
+    powerEnd?: boolean;
+    ghostEat?: { x: number; y: number; ghostIndex: number };
+    pacmanMove?: { x: number; y: number };
+    ghostMoves?: { x: number; y: number; ghostIndex: number }[];
+    gameOver?: { x: number; y: number };
+    win?: boolean;
+  } = {};
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -81,11 +101,17 @@ export class PacManGame {
 
   private emitState() {
     if (this.onStateChange) {
-      this.onStateChange({
+      const state: GameState = {
         score: this.score,
         lives: this.lives,
         status: this.status,
-      });
+        ...this.pendingEvents,
+      };
+
+      this.onStateChange(state);
+
+      // Clear pending events after emission
+      this.pendingEvents = {};
     }
   }
 
@@ -119,9 +145,9 @@ export class PacManGame {
 
     // Reset ghosts
     this.ghosts = [
-      { x: 6, y: 7, color: GHOST_COLORS[0], direction: "up", scared: false },
-      { x: 7, y: 7, color: GHOST_COLORS[1], direction: "up", scared: false },
-      { x: 8, y: 7, color: GHOST_COLORS[2], direction: "up", scared: false },
+      { x: 6, y: 7, color: GHOST_COLORS[0], direction: "up", scared: false, index: 0 },
+      { x: 7, y: 7, color: GHOST_COLORS[1], direction: "up", scared: false, index: 1 },
+      { x: 8, y: 7, color: GHOST_COLORS[2], direction: "up", scared: false, index: 2 },
     ];
 
     this.powerTimer = 0;
@@ -169,6 +195,7 @@ export class PacManGame {
       this.powerTimer -= this.moveInterval;
       if (this.powerTimer <= 0) {
         this.ghosts.forEach((g) => (g.scared = false));
+        this.pendingEvents.powerEnd = true;
       }
     }
 
@@ -190,17 +217,31 @@ export class PacManGame {
         if (this.pacman.x < 0) this.pacman.x = MAZE[0].length - 1;
         if (this.pacman.x >= MAZE[0].length) this.pacman.x = 0;
 
+        // Emit pacman move
+        this.pendingEvents.pacmanMove = {
+          x: this.pacman.x * this.cellSize + this.cellSize / 2,
+          y: this.pacman.y * this.cellSize + this.cellSize / 2,
+        };
+
         // Eat dots
         const tile = this.maze[this.pacman.y][this.pacman.x];
         if (tile === 1) {
           this.maze[this.pacman.y][this.pacman.x] = 3;
           this.score += 10;
+          this.pendingEvents.dotEat = {
+            x: this.pacman.x * this.cellSize + this.cellSize / 2,
+            y: this.pacman.y * this.cellSize + this.cellSize / 2,
+          };
           this.emitState();
         } else if (tile === 2) {
           this.maze[this.pacman.y][this.pacman.x] = 3;
           this.score += 50;
           this.powerTimer = 5000;
           this.ghosts.forEach((g) => (g.scared = true));
+          this.pendingEvents.powerUp = {
+            x: this.pacman.x * this.cellSize + this.cellSize / 2,
+            y: this.pacman.y * this.cellSize + this.cellSize / 2,
+          };
           this.emitState();
         }
       }
@@ -214,6 +255,11 @@ export class PacManGame {
       if (ghost.x === this.pacman.x && ghost.y === this.pacman.y) {
         if (ghost.scared) {
           // Eat ghost
+          this.pendingEvents.ghostEat = {
+            x: ghost.x * this.cellSize + this.cellSize / 2,
+            y: ghost.y * this.cellSize + this.cellSize / 2,
+            ghostIndex: ghost.index,
+          };
           ghost.x = 7;
           ghost.y = 7;
           ghost.scared = false;
@@ -222,6 +268,10 @@ export class PacManGame {
         } else {
           // Die
           this.lives--;
+          this.pendingEvents.gameOver = {
+            x: this.pacman.x * this.cellSize + this.cellSize / 2,
+            y: this.pacman.y * this.cellSize + this.cellSize / 2,
+          };
           this.emitState();
           if (this.lives <= 0) {
             this.status = "over";
@@ -244,6 +294,7 @@ export class PacManGame {
       }
     }
     if (!dotsRemaining) {
+      this.pendingEvents.win = true;
       this.status = "won";
       this.emitState();
     }
@@ -266,6 +317,7 @@ export class PacManGame {
 
   private moveGhosts() {
     const dirs: Direction[] = ["up", "down", "left", "right"];
+    const ghostMoves: { x: number; y: number; ghostIndex: number }[] = [];
 
     for (const ghost of this.ghosts) {
       // Random movement with some chase behavior
@@ -304,8 +356,17 @@ export class PacManGame {
         if (this.canMove(next.x, next.y)) {
           ghost.x = next.x;
           ghost.y = next.y;
+          ghostMoves.push({
+            x: ghost.x * this.cellSize + this.cellSize / 2,
+            y: ghost.y * this.cellSize + this.cellSize / 2,
+            ghostIndex: ghost.index,
+          });
         }
       }
+    }
+
+    if (ghostMoves.length > 0) {
+      this.pendingEvents.ghostMoves = ghostMoves;
     }
   }
 
@@ -314,9 +375,8 @@ export class PacManGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Background
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, w, h);
+    // Clear with transparent for WebGPU background
+    ctx.clearRect(0, 0, w, h);
 
     // Draw maze
     for (let y = 0; y < this.maze.length; y++) {
@@ -326,21 +386,36 @@ export class PacManGame {
         const cy = y * this.cellSize + this.cellSize / 2;
 
         if (cell === 0) {
-          // Wall
-          ctx.fillStyle = "#0984e3";
+          // Wall with glow
+          const gradient = ctx.createLinearGradient(
+            x * this.cellSize,
+            y * this.cellSize,
+            x * this.cellSize + this.cellSize,
+            y * this.cellSize + this.cellSize
+          );
+          gradient.addColorStop(0, "#0984e3");
+          gradient.addColorStop(1, "#0652DD");
+          ctx.fillStyle = gradient;
           ctx.fillRect(x * this.cellSize + 2, y * this.cellSize + 2, this.cellSize - 4, this.cellSize - 4);
         } else if (cell === 1) {
-          // Dot
+          // Dot with glow
+          ctx.shadowColor = "#f39c12";
+          ctx.shadowBlur = 5;
           ctx.fillStyle = "#f39c12";
           ctx.beginPath();
           ctx.arc(cx, cy, this.cellSize * 0.1, 0, Math.PI * 2);
           ctx.fill();
+          ctx.shadowBlur = 0;
         } else if (cell === 2) {
-          // Power pellet
+          // Power pellet with pulsing glow
+          const pulse = Math.sin(Date.now() * 0.005) * 0.3 + 0.7;
+          ctx.shadowColor = "#f39c12";
+          ctx.shadowBlur = 15 * pulse;
           ctx.fillStyle = "#f39c12";
           ctx.beginPath();
-          ctx.arc(cx, cy, this.cellSize * 0.25, 0, Math.PI * 2);
+          ctx.arc(cx, cy, this.cellSize * 0.25 * pulse, 0, Math.PI * 2);
           ctx.fill();
+          ctx.shadowBlur = 0;
         }
       }
     }
@@ -377,12 +452,18 @@ export class PacManGame {
         break;
     }
 
+    // Glow effect
+    ctx.shadowColor = "#fdcb6e";
+    ctx.shadowBlur = 15;
+
     ctx.fillStyle = "#fdcb6e";
     ctx.beginPath();
     ctx.arc(cx, cy, radius, angle + this.mouthAngle, angle + Math.PI * 2 - this.mouthAngle);
     ctx.lineTo(cx, cy);
     ctx.closePath();
     ctx.fill();
+
+    ctx.shadowBlur = 0;
 
     // Eye
     const eyeX = cx + Math.cos(angle - Math.PI / 4) * radius * 0.4;
@@ -398,6 +479,10 @@ export class PacManGame {
     const cx = ghost.x * this.cellSize + this.cellSize / 2;
     const cy = ghost.y * this.cellSize + this.cellSize / 2;
     const radius = this.cellSize * 0.4;
+
+    // Glow effect
+    ctx.shadowColor = ghost.scared ? "#3498db" : ghost.color;
+    ctx.shadowBlur = 10;
 
     // Body
     ctx.fillStyle = ghost.scared ? "#3498db" : ghost.color;
@@ -415,6 +500,8 @@ export class PacManGame {
 
     ctx.closePath();
     ctx.fill();
+
+    ctx.shadowBlur = 0;
 
     // Eyes
     ctx.fillStyle = "white";

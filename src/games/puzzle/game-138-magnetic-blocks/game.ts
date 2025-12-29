@@ -148,6 +148,13 @@ export class MagneticBlocksGame {
 
   private animating: boolean = false;
 
+  private pendingEvents: {
+    blockMove?: { x: number; y: number; isPositive: boolean };
+    attraction?: { x: number; y: number };
+    repulsion?: { x: number; y: number; isPositive: boolean };
+    reset?: boolean;
+  } = {};
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -189,13 +196,7 @@ export class MagneticBlocksGame {
   private loadLevel(levelIndex: number) {
     if (levelIndex >= LEVELS.length) {
       this.status = "complete";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "complete",
-          level: levelIndex + 1,
-          moves: this.moves,
-        });
-      }
+      this.notifyState();
       return;
     }
 
@@ -208,14 +209,7 @@ export class MagneticBlocksGame {
 
     this.calculateCellSize();
     this.render();
-
-    if (this.onStateChange) {
-      this.onStateChange({
-        status: "playing",
-        level: levelIndex + 1,
-        moves: 0,
-      });
-    }
+    this.notifyState();
   }
 
   public move(direction: Direction) {
@@ -225,11 +219,41 @@ export class MagneticBlocksGame {
 
     // Move all blocks
     this.blocks.forEach((block) => {
-      const { newX, newY } = this.calculateNewPosition(block, direction);
+      const { newX, newY, hitBlock } = this.calculateNewPosition(block, direction);
       if (newX !== block.x || newY !== block.y) {
         block.targetX = newX;
         block.targetY = newY;
         moved = true;
+
+        // Emit block move event
+        const pos = this.blockToNormalized({ ...block, x: newX, y: newY });
+        this.pendingEvents.blockMove = {
+          x: pos.x,
+          y: pos.y,
+          isPositive: block.type === "red",
+        };
+
+        // Check for magnetic interaction
+        if (hitBlock) {
+          const hitPos = this.blockToNormalized(hitBlock);
+          if (
+            (block.type === "red" && hitBlock.type === "blue") ||
+            (block.type === "blue" && hitBlock.type === "red")
+          ) {
+            // Attraction
+            this.pendingEvents.attraction = {
+              x: (pos.x + hitPos.x) / 2,
+              y: (pos.y + hitPos.y) / 2,
+            };
+          } else if (block.type !== "neutral" && hitBlock.type === block.type) {
+            // Repulsion
+            this.pendingEvents.repulsion = {
+              x: (pos.x + hitPos.x) / 2,
+              y: (pos.y + hitPos.y) / 2,
+              isPositive: block.type === "red",
+            };
+          }
+        }
       }
     });
 
@@ -240,9 +264,10 @@ export class MagneticBlocksGame {
     }
   }
 
-  private calculateNewPosition(block: Block, direction: Direction): { newX: number; newY: number } {
+  private calculateNewPosition(block: Block, direction: Direction): { newX: number; newY: number; hitBlock: Block | null } {
     let newX = block.x;
     let newY = block.y;
+    let lastHitBlock: Block | null = null;
 
     const dx = direction === "left" ? -1 : direction === "right" ? 1 : 0;
     const dy = direction === "up" ? -1 : direction === "down" ? 1 : 0;
@@ -268,6 +293,7 @@ export class MagneticBlocksGame {
         (b) => b !== block && b.x === nextX && b.y === nextY
       );
       if (hitBlock) {
+        lastHitBlock = hitBlock;
         // Magnetic interaction
         if (
           (block.type === "red" && hitBlock.type === "blue") ||
@@ -288,7 +314,7 @@ export class MagneticBlocksGame {
       newY = nextY;
     }
 
-    return { newX, newY };
+    return { newX, newY, hitBlock: lastHitBlock };
   }
 
   private animateMove() {
@@ -317,14 +343,7 @@ export class MagneticBlocksGame {
     if (allDone) {
       this.animating = false;
       this.checkWin();
-
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: this.status,
-          level: this.currentLevel + 1,
-          moves: this.moves,
-        });
-      }
+      this.notifyState();
     } else {
       requestAnimationFrame(() => this.animateMove());
     }
@@ -350,13 +369,6 @@ export class MagneticBlocksGame {
 
     if (allPaired && redBlocks.length > 0 && blueBlocks.length > 0) {
       this.status = "won";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "won",
-          level: this.currentLevel + 1,
-          moves: this.moves,
-        });
-      }
     }
   }
 
@@ -513,6 +525,7 @@ export class MagneticBlocksGame {
   }
 
   public reset() {
+    this.pendingEvents.reset = true;
     this.loadLevel(this.currentLevel);
   }
 
@@ -523,6 +536,33 @@ export class MagneticBlocksGame {
 
   public setOnStateChange(cb: (state: any) => void) {
     this.onStateChange = cb;
+  }
+
+  private notifyState() {
+    if (this.onStateChange) {
+      this.onStateChange({
+        status: this.status,
+        level: this.currentLevel + 1,
+        moves: this.moves,
+        ...this.pendingEvents,
+      });
+    }
+    this.pendingEvents = {};
+  }
+
+  private getGridCenter(): { x: number; y: number } {
+    const level = LEVELS[this.currentLevel];
+    if (!level) return { x: 0.5, y: 0.5 };
+    return { x: 0.5, y: 0.5 };
+  }
+
+  private blockToNormalized(block: Block): { x: number; y: number } {
+    const level = LEVELS[this.currentLevel];
+    if (!level) return { x: 0.5, y: 0.5 };
+    return {
+      x: (block.x + 0.5) / level.width,
+      y: (block.y + 0.5) / level.height,
+    };
   }
 
   public getTotalLevels(): number {

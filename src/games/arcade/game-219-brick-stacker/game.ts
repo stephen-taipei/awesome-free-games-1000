@@ -23,6 +23,12 @@ export interface GameState {
   perfectStreak: number;
 }
 
+export interface PendingEvents {
+  place: { isPerfect: boolean; overlapWidth: number; score: number }[];
+  start: boolean;
+  gameOver: { score: number; highScore: number; isNewHighScore: boolean }[];
+}
+
 const BRICK_HEIGHT = 25;
 const INITIAL_WIDTH = 120;
 const INITIAL_SPEED = 3;
@@ -48,8 +54,22 @@ export class BrickStackerGame {
   private canvasWidth: number = 350;
   private canvasHeight: number = 500;
 
+  public pendingEvents: PendingEvents = {
+    place: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      place: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -87,6 +107,7 @@ export class BrickStackerGame {
       ],
     };
 
+    this.pendingEvents.start = true;
     this.spawnBrick();
     this.emitState();
   }
@@ -151,12 +172,14 @@ export class BrickStackerGame {
       // Perfect placement - keep same width and add bonus
       current.x = last.x;
       this.state.score += 2;
+      this.pendingEvents.place.push({ isPerfect: true, overlapWidth: current.width, score: 2 });
     } else {
       this.state.perfectStreak = 0;
       // Trim the brick to the overlap area
       current.x = overlapLeft;
       current.width = overlapWidth;
       this.state.score += 1;
+      this.pendingEvents.place.push({ isPerfect: false, overlapWidth, score: 1 });
     }
 
     current.placed = true;
@@ -172,12 +195,18 @@ export class BrickStackerGame {
   private gameOver(): void {
     this.state.phase = "gameOver";
     this.state.currentBrick = null;
+    const isNewHighScore = this.state.score > this.state.highScore;
 
-    if (this.state.score > this.state.highScore) {
+    if (isNewHighScore) {
       this.state.highScore = this.state.score;
       localStorage.setItem("brickStackerHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      isNewHighScore,
+    });
     this.emitState();
   }
 

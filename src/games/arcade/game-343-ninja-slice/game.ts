@@ -33,6 +33,14 @@ export interface GameState {
   level: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  fruitSliced: { combo: number; points: number }[];
+  bombSliced: { livesRemaining: number }[];
+  fruitMissed: { livesRemaining: number }[];
+  gameOver: { score: number; highScore: number; maxCombo: number }[];
+}
+
 const GRAVITY = 0.2;
 const FRUIT_TYPES = ["apple", "orange", "watermelon", "banana", "grape"];
 
@@ -44,6 +52,24 @@ export class NinjaSliceGame {
   private spawnTimer: number = 0;
   private objectId: number = 0;
   private lastSlicePoint: { x: number; y: number } | null = null;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    fruitSliced: [],
+    bombSliced: [],
+    fruitMissed: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      fruitSliced: [],
+      bombSliced: [],
+      fruitMissed: [],
+      gameOver: [],
+    };
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -77,6 +103,7 @@ export class NinjaSliceGame {
     this.spawnTimer = 0;
     this.objectId = 0;
     this.lastSlicePoint = null;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -122,6 +149,7 @@ export class NinjaSliceGame {
             this.state.lives--;
             obj.sliced = true;
             this.state.combo = 0;
+            this.pendingEvents.bombSliced.push({ livesRemaining: this.state.lives });
 
             if (this.state.lives <= 0) {
               this.gameOver();
@@ -131,8 +159,10 @@ export class NinjaSliceGame {
             obj.sliced = true;
             obj.sliceAngle = sliceAngle;
             this.state.combo++;
-            this.state.score += 10 * this.state.combo;
+            const points = 10 * this.state.combo;
+            this.state.score += points;
             this.state.maxCombo = Math.max(this.state.maxCombo, this.state.combo);
+            this.pendingEvents.fruitSliced.push({ combo: this.state.combo, points });
           }
         }
       }
@@ -200,6 +230,7 @@ export class NinjaSliceGame {
       if (!obj.sliced && obj.type === "fruit" && obj.y > this.canvasHeight + 50) {
         this.state.combo = 0;
         this.state.lives--;
+        this.pendingEvents.fruitMissed.push({ livesRemaining: this.state.lives });
 
         if (this.state.lives <= 0) {
           this.gameOver();
@@ -273,6 +304,7 @@ export class NinjaSliceGame {
       localStorage.setItem("ninjaSliceHighScore", this.state.highScore.toString());
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, highScore: this.state.highScore, maxCombo: this.state.maxCombo });
     this.emitState();
   }
 

@@ -3,6 +3,21 @@
  * Game #450 - Ultimate endless runner challenge with multiple mechanics
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slideStart: boolean;
+  slideEnd: boolean;
+  laneChange: { direction: string }[];
+  powerUpCollected: { type: string }[];
+  powerUpEnded: { type: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  obstaclePassed: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; highScore: number; distance: number; coins: number }[];
+}
+
 export type PowerUpType = 'speed' | 'magnet' | 'shield' | 'double';
 
 export interface Player {
@@ -70,6 +85,29 @@ export class UltimateRunnerGame {
   private spawnTimer = 0;
   private gameTime = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slideStart: false,
+      slideEnd: false,
+      laneChange: [],
+      powerUpCollected: [],
+      powerUpEnded: [],
+      collectibleCollected: [],
+      obstaclePassed: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -132,6 +170,7 @@ export class UltimateRunnerGame {
     this.collectibleId = 0;
     this.spawnTimer = 0;
     this.gameTime = 0;
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -142,6 +181,7 @@ export class UltimateRunnerGame {
     if (player.isGrounded && !player.isSliding) {
       player.velocityY = JUMP_FORCE;
       player.isGrounded = false;
+      this.pendingEvents.jump = true;
     }
     this.emitState();
   }
@@ -153,7 +193,11 @@ export class UltimateRunnerGame {
     if (active && player.isGrounded) {
       player.isSliding = true;
       player.height = 25;
+      this.pendingEvents.slideStart = true;
     } else {
+      if (player.isSliding) {
+        this.pendingEvents.slideEnd = true;
+      }
       player.isSliding = false;
       player.height = 50;
     }
@@ -165,6 +209,7 @@ export class UltimateRunnerGame {
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
       this.state.player.x = this.state.lanePositions[this.state.player.lane] - 17;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
     this.emitState();
   }
@@ -174,6 +219,7 @@ export class UltimateRunnerGame {
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
       this.state.player.x = this.state.lanePositions[this.state.player.lane] - 17;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
     this.emitState();
   }
@@ -191,8 +237,12 @@ export class UltimateRunnerGame {
 
     // Power-up timer
     if (player.powerUpTime > 0) {
+      const prevPowerUp = player.powerUp;
       player.powerUpTime -= 1 / 60;
       if (player.powerUpTime <= 0) {
+        if (prevPowerUp) {
+          this.pendingEvents.powerUpEnded.push({ type: prevPowerUp });
+        }
         player.powerUp = null;
         player.multiplier = 1;
       }
@@ -227,6 +277,7 @@ export class UltimateRunnerGame {
         this.state.score += 10 * player.multiplier;
         this.state.combo++;
         this.state.comboTimer = 2;
+        this.pendingEvents.obstaclePassed = true;
       }
       return obs.x > -obs.width;
     });
@@ -255,15 +306,18 @@ export class UltimateRunnerGame {
         if (col.type === 'coin') {
           this.state.coins++;
           this.state.score += 5 * player.multiplier;
+          this.pendingEvents.collectibleCollected.push({ type: col.type, score: 5 * player.multiplier });
         } else if (col.type === 'gem') {
           this.state.coins += 5;
           this.state.score += 25 * player.multiplier;
+          this.pendingEvents.collectibleCollected.push({ type: col.type, score: 25 * player.multiplier });
         } else if (col.type === 'powerup' && col.powerUpType) {
           player.powerUp = col.powerUpType;
           player.powerUpTime = 8;
           if (col.powerUpType === 'double') {
             player.multiplier = 2;
           }
+          this.pendingEvents.powerUpCollected.push({ type: col.powerUpType });
         }
       }
       return col.x > -20 && !col.collected;
@@ -284,7 +338,9 @@ export class UltimateRunnerGame {
           player.powerUp = null;
           player.powerUpTime = 0;
           obs.passed = true;
+          this.pendingEvents.shieldBroken = true;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -383,6 +439,12 @@ export class UltimateRunnerGame {
       this.state.highScore = this.state.score;
       localStorage.setItem('ultimateRunnerHighScore', this.state.highScore.toString());
     }
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      highScore: this.state.highScore,
+      distance: Math.floor(this.state.distance),
+      coins: this.state.coins,
+    });
     this.emitState();
   }
 

@@ -1,6 +1,7 @@
 /**
  * Key Collection Game Engine
  * Game #087 - Collect all keys to open the door
+ * WebGPU Enhanced with Event Emissions
  */
 
 export type CellType = "empty" | "wall" | "player" | "key" | "door" | "doorOpen";
@@ -8,6 +9,17 @@ export type CellType = "empty" | "wall" | "player" | "key" | "door" | "doorOpen"
 export interface Level {
   map: string[];
   keys: number;
+}
+
+export interface GameState {
+  event?: "move" | "keyCollect" | "doorUnlock" | "doorBlocked" | "victory" | "levelStart" | "reset";
+  x?: number;
+  y?: number;
+  colorIndex?: number;
+  moves?: number;
+  keys?: string;
+  status?: "playing" | "won";
+  level?: number;
 }
 
 export class KeyCollectionGame {
@@ -26,7 +38,7 @@ export class KeyCollectionGame {
   private currentLevel = 0;
   private status: "playing" | "won" = "playing";
 
-  private onStateChange: ((state: any) => void) | null = null;
+  private onStateChange: ((state: GameState) => void) | null = null;
 
   private levels: Level[] = [
     // Level 1 - Simple introduction
@@ -116,6 +128,19 @@ export class KeyCollectionGame {
     this.ctx = canvas.getContext("2d")!;
   }
 
+  private emitState(state: GameState) {
+    if (this.onStateChange) {
+      this.onStateChange(state);
+    }
+  }
+
+  private getScreenPos(gridX: number, gridY: number): { x: number; y: number } {
+    return {
+      x: gridX * this.cellSize + this.cellSize / 2,
+      y: gridY * this.cellSize + this.cellSize / 2,
+    };
+  }
+
   public start(level?: number) {
     this.currentLevel = level ?? this.currentLevel;
     this.moves = 0;
@@ -123,6 +148,14 @@ export class KeyCollectionGame {
     this.status = "playing";
     this.loadLevel(this.currentLevel);
     this.draw();
+
+    const pos = this.getScreenPos(this.playerPos.x, this.playerPos.y);
+    this.emitState({
+      event: "levelStart",
+      x: pos.x,
+      y: pos.y,
+      colorIndex: 0,
+    });
   }
 
   private loadLevel(levelIndex: number) {
@@ -177,7 +210,22 @@ export class KeyCollectionGame {
     if (targetCell === "door") {
       if (this.keysCollected >= this.totalKeys) {
         this.grid[newY][newX] = "doorOpen";
+        const pos = this.getScreenPos(newX, newY);
+        this.emitState({
+          event: "doorUnlock",
+          x: pos.x,
+          y: pos.y,
+          colorIndex: 0,
+        });
       } else {
+        // Door blocked
+        const pos = this.getScreenPos(newX, newY);
+        this.emitState({
+          event: "doorBlocked",
+          x: pos.x,
+          y: pos.y,
+          colorIndex: 3,
+        });
         return; // Can't pass through locked door
       }
     }
@@ -186,30 +234,48 @@ export class KeyCollectionGame {
     this.playerPos = { x: newX, y: newY };
     this.moves++;
 
+    const pos = this.getScreenPos(newX, newY);
+
     // Collect key
     if (targetCell === "key") {
       this.keysCollected++;
       this.grid[newY][newX] = "empty";
+      this.emitState({
+        event: "keyCollect",
+        x: pos.x,
+        y: pos.y,
+        colorIndex: 0, // Gold
+      });
+    } else if (targetCell !== "door") {
+      // Normal move
+      this.emitState({
+        event: "move",
+        x: pos.x,
+        y: pos.y,
+        colorIndex: 5,
+      });
     }
 
     // Check win (on open door)
     if (targetCell === "doorOpen" || this.grid[newY][newX] === "doorOpen") {
       this.status = "won";
-      if (this.onStateChange) {
-        this.onStateChange({
-          status: "won",
-          moves: this.moves,
-          level: this.currentLevel,
-        });
-      }
-    }
-
-    if (this.onStateChange) {
-      this.onStateChange({
+      this.emitState({
+        event: "victory",
+        x: pos.x,
+        y: pos.y,
+        colorIndex: 0,
+      });
+      this.emitState({
+        status: "won",
         moves: this.moves,
-        keys: `${this.keysCollected}/${this.totalKeys}`,
+        level: this.currentLevel,
       });
     }
+
+    this.emitState({
+      moves: this.moves,
+      keys: `${this.keysCollected}/${this.totalKeys}`,
+    });
 
     this.draw();
   }
@@ -221,9 +287,8 @@ export class KeyCollectionGame {
 
     this.cellSize = Math.min(w, h) / this.gridSize;
 
-    // Clear
-    ctx.fillStyle = "#0f0f1a";
-    ctx.fillRect(0, 0, w, h);
+    // Clear with transparency for WebGPU background
+    ctx.clearRect(0, 0, w, h);
 
     // Draw grid
     for (let y = 0; y < this.gridSize; y++) {
@@ -257,44 +322,69 @@ export class KeyCollectionGame {
         ctx.strokeStyle = "#1a252f";
         ctx.lineWidth = 1;
         ctx.strokeRect(px + padding, py + padding, size - padding * 2, size - padding * 2);
+        // Stone texture
+        ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+        ctx.fillRect(px + size * 0.3, py + padding, 1, size - padding * 2);
+        ctx.fillRect(px + size * 0.6, py + padding, 1, size - padding * 2);
         break;
 
       case "empty":
-        ctx.fillStyle = "#1a1a2e";
+        // Transparent floor to show WebGPU background
+        ctx.fillStyle = "rgba(26, 26, 46, 0.6)";
         ctx.fillRect(px + padding, py + padding, size - padding * 2, size - padding * 2);
         break;
 
       case "key":
-        // Floor
-        ctx.fillStyle = "#1a1a2e";
+        // Transparent floor
+        ctx.fillStyle = "rgba(26, 26, 46, 0.6)";
         ctx.fillRect(px + padding, py + padding, size - padding * 2, size - padding * 2);
-        // Key
+        // Key with glow
+        ctx.shadowColor = "#f1c40f";
+        ctx.shadowBlur = 15;
         this.drawKey(ctx, px + size / 2, py + size / 2, size * 0.35);
+        ctx.shadowBlur = 0;
         break;
 
       case "door":
         // Locked door
-        ctx.fillStyle = "#8b4513";
+        const doorGradient = ctx.createLinearGradient(px, py, px + size, py + size);
+        doorGradient.addColorStop(0, "#8b4513");
+        doorGradient.addColorStop(0.5, "#a0522d");
+        doorGradient.addColorStop(1, "#654321");
+        ctx.fillStyle = doorGradient;
         ctx.fillRect(px + padding, py + padding, size - padding * 2, size - padding * 2);
-        // Lock
+        // Door frame
+        ctx.strokeStyle = "#5d3a1a";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(px + padding + 2, py + padding + 2, size - padding * 2 - 4, size - padding * 2 - 4);
+        // Lock with glow
+        ctx.shadowColor = "#f1c40f";
+        ctx.shadowBlur = 10;
         ctx.fillStyle = "#f1c40f";
         ctx.beginPath();
         ctx.arc(px + size / 2, py + size / 2, size * 0.15, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.fillStyle = "#0f0f1a";
         ctx.fillRect(px + size / 2 - size * 0.05, py + size / 2, size * 0.1, size * 0.2);
         break;
 
       case "doorOpen":
         // Open door (green)
-        ctx.fillStyle = "#27ae60";
+        const openGradient = ctx.createLinearGradient(px, py, px + size, py + size);
+        openGradient.addColorStop(0, "#27ae60");
+        openGradient.addColorStop(1, "#1e8449");
+        ctx.fillStyle = openGradient;
         ctx.fillRect(px + padding, py + padding, size - padding * 2, size - padding * 2);
-        // Open symbol
+        // Open symbol with glow
+        ctx.shadowColor = "#2ecc71";
+        ctx.shadowBlur = 15;
         ctx.fillStyle = "white";
         ctx.font = `${size * 0.4}px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("✓", px + size / 2, py + size / 2);
+        ctx.shadowBlur = 0;
         break;
     }
   }
@@ -303,8 +393,14 @@ export class KeyCollectionGame {
     ctx.save();
     ctx.translate(x, y);
 
+    // Key gradient
+    const keyGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+    keyGradient.addColorStop(0, "#ffd700");
+    keyGradient.addColorStop(0.5, "#f1c40f");
+    keyGradient.addColorStop(1, "#d4a50a");
+
     // Key head (circle)
-    ctx.fillStyle = "#f1c40f";
+    ctx.fillStyle = keyGradient;
     ctx.beginPath();
     ctx.arc(-size * 0.3, 0, size * 0.4, 0, Math.PI * 2);
     ctx.fill();
@@ -316,7 +412,7 @@ export class KeyCollectionGame {
     ctx.fill();
 
     // Key shaft
-    ctx.fillStyle = "#f1c40f";
+    ctx.fillStyle = keyGradient;
     ctx.fillRect(-size * 0.1, -size * 0.1, size * 0.8, size * 0.2);
 
     // Key teeth
@@ -333,11 +429,12 @@ export class KeyCollectionGame {
 
     // Glow effect
     ctx.shadowColor = "#3498db";
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 20;
 
-    // Player body
-    const gradient = ctx.createRadialGradient(x, y, 0, x, y, size);
-    gradient.addColorStop(0, "#5dade2");
+    // Player body gradient
+    const gradient = ctx.createRadialGradient(x, y - size * 0.2, 0, x, y, size);
+    gradient.addColorStop(0, "#7ecbf5");
+    gradient.addColorStop(0.5, "#5dade2");
     gradient.addColorStop(1, "#2980b9");
 
     ctx.fillStyle = gradient;
@@ -373,6 +470,9 @@ export class KeyCollectionGame {
   }
 
   public reset() {
+    this.emitState({
+      event: "reset",
+    });
     this.start(this.currentLevel);
   }
 
@@ -397,7 +497,7 @@ export class KeyCollectionGame {
     return `${this.keysCollected}/${this.totalKeys}`;
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 }

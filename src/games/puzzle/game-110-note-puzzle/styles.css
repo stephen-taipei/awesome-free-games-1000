@@ -1,25 +1,116 @@
+/* Note Puzzle - Music / Concert Hall Theme */
+/* Game #110 - WebGPU Enhanced */
+
+:root {
+  --stage-dark: #1a0a25;
+  --stage-purple: #2c1445;
+  --spotlight-gold: #ffd700;
+  --spotlight-pink: #ff69b4;
+  --note-purple: #9b59b6;
+  --note-violet: #8e44ad;
+  --staff-silver: #c0c0c0;
+  --concert-red: #8b0000;
+  --velvet-red: #722f37;
+  --ivory-white: #fffff0;
+  --glass-bg: rgba(155, 89, 182, 0.15);
+  --glass-border: rgba(255, 215, 0, 0.3);
+  --shadow-purple: rgba(155, 89, 182, 0.4);
+  --shadow-dark: rgba(0, 0, 0, 0.5);
+}
+
 .game-container {
   max-width: 600px;
+}
+
+.game-header h1 {
+  background: linear-gradient(135deg, var(--spotlight-gold) 0%, var(--spotlight-pink) 50%, var(--spotlight-gold) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: spotlight-sweep 3s ease-in-out infinite;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 4px var(--shadow-dark));
+}
+
+@keyframes spotlight-sweep {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg,
+    var(--stage-dark) 0%,
+    var(--stage-purple) 50%,
+    var(--stage-dark) 100%
+  );
+  border-radius: 12px;
+  box-shadow:
+    0 4px 20px var(--shadow-purple),
+    inset 0 0 60px rgba(155, 89, 182, 0.1),
+    0 0 30px var(--shadow-purple);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
+  border: 3px solid var(--note-violet);
 }
 
-canvas {
+.game-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(255, 215, 0, 0.15) 0%, transparent 30%),
+    radial-gradient(ellipse at 80% 30%, rgba(255, 105, 180, 0.1) 0%, transparent 25%),
+    radial-gradient(ellipse at 50% 10%, rgba(255, 255, 255, 0.1) 0%, transparent 20%);
+  pointer-events: none;
+  animation: stage-lights 6s ease-in-out infinite;
+}
+
+@keyframes stage-lights {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Staff lines decoration */
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 40%;
+  left: 5%;
+  right: 5%;
+  height: 20%;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 8px,
+    rgba(192, 192, 192, 0.1) 8px,
+    rgba(192, 192, 192, 0.1) 10px
+  );
+  pointer-events: none;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+canvas#game-canvas {
   width: 100%;
   height: 100%;
   cursor: pointer;
+  position: relative;
+  z-index: 2;
 }
 
 .game-controls {
@@ -30,14 +121,49 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  color: var(--spotlight-gold);
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.4);
+  box-shadow:
+    0 4px 15px var(--shadow-purple),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  animation: note-pulse 2s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 215, 0, 0.1) 50%,
+    transparent 60%
+  );
+  animation: gold-shine 3s ease-in-out infinite;
+}
+
+@keyframes note-pulse {
+  0%, 100% { box-shadow: 0 4px 15px var(--shadow-purple), inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+  50% { box-shadow: 0 4px 20px var(--shadow-purple), inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 15px rgba(255, 215, 0, 0.2); }
+}
+
+@keyframes gold-shine {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
 }
 
 .footer-controls {
@@ -46,11 +172,171 @@ canvas {
   gap: 1rem;
 }
 
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--note-purple) 0%, var(--note-violet) 100%);
+  color: white;
+  border: 2px solid var(--note-violet);
+  box-shadow: 0 4px 15px rgba(155, 89, 182, 0.4);
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 25px rgba(155, 89, 182, 0.5);
+}
+
 .btn.secondary {
   background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
   color: white;
+  border: 2px solid #2980b9;
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.btn.secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(52, 152, 219, 0.4);
+}
+
+.btn.warning {
+  background: linear-gradient(135deg, var(--velvet-red) 0%, var(--concert-red) 100%);
+  color: white;
+  border: 2px solid var(--concert-red);
+}
+
+.btn.warning:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(139, 0, 0, 0.4);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn:hover::after {
+  transform: translateX(100%);
+}
+
+.overlay {
+  background: radial-gradient(ellipse at center, rgba(44, 20, 69, 0.9) 0%, rgba(26, 10, 37, 0.95) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.overlay-content {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow:
+    0 8px 32px var(--shadow-dark),
+    0 0 40px var(--shadow-purple);
+  animation: curtain-rise 0.5s ease-out;
+}
+
+@keyframes curtain-rise {
+  0% {
+    transform: translateY(50px) scale(0.9);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-10px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.overlay-title {
+  background: linear-gradient(135deg, var(--spotlight-gold) 0%, var(--ivory-white) 50%, var(--spotlight-gold) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: spotlight-sweep 2s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px var(--shadow-dark));
 }
 
 .controls-hint small {
-  color: #a0aec0;
+  color: #b8a0c8;
+}
+
+/* Musical animations */
+@keyframes note-float {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-10px) rotate(5deg); }
+}
+
+@keyframes vibrato {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes crescendo {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.2); opacity: 1; }
+}
+
+@keyframes sound-wave {
+  0% { transform: scale(0); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* Treble clef decoration would go here with pseudo-elements */
+
+/* Victory fanfare */
+@keyframes fanfare {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.1) rotate(-2deg);
+    filter: brightness(1.3);
+  }
+  50% {
+    transform: scale(1.15) rotate(2deg);
+    filter: brightness(1.5);
+  }
+  75% {
+    transform: scale(1.1) rotate(-1deg);
+    filter: brightness(1.3);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .game-area {
+    height: 380px;
+  }
+
+  .stats-card {
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .footer-controls {
+    flex-wrap: wrap;
+  }
 }

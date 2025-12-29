@@ -124,6 +124,7 @@ export class BalloonGame {
 
   public loadLevel(levelIndex: number) {
     const level = LEVELS[levelIndex] || LEVELS[0];
+    const isComplete = levelIndex >= LEVELS.length;
 
     this.balloon = {
       x: level.balloon.x,
@@ -140,7 +141,15 @@ export class BalloonGame {
     this.status = "playing";
     this.windParticles = [];
 
-    this.notifyState();
+    if (this.onStateChange) {
+      this.onStateChange({
+        level: levelIndex + 1,
+        moves: this.moves,
+        status: this.status,
+        maxLevel: LEVELS.length,
+        event: "levelStart",
+      });
+    }
   }
 
   private loop = () => {
@@ -198,22 +207,39 @@ export class BalloonGame {
 
   private handleBoundaryCollision() {
     const r = this.balloon.radius;
+    let bounced = false;
 
     if (this.balloon.x - r < 0) {
       this.balloon.x = r;
       this.balloon.vx *= -0.5;
+      bounced = true;
     }
     if (this.balloon.x + r > this.canvas.width) {
       this.balloon.x = this.canvas.width - r;
       this.balloon.vx *= -0.5;
+      bounced = true;
     }
     if (this.balloon.y - r < 0) {
       this.balloon.y = r;
       this.balloon.vy *= -0.5;
+      bounced = true;
     }
     if (this.balloon.y + r > this.canvas.height) {
       this.balloon.y = this.canvas.height - r;
       this.balloon.vy *= -0.5;
+      bounced = true;
+    }
+
+    if (bounced && this.onStateChange) {
+      this.onStateChange({
+        level: this.currentLevel + 1,
+        moves: this.moves,
+        status: this.status,
+        maxLevel: LEVELS.length,
+        event: "bounce",
+        x: this.balloon.x,
+        y: this.balloon.y,
+      });
     }
   }
 
@@ -223,12 +249,33 @@ export class BalloonGame {
         if (this.circleRectCollision(this.balloon, obs)) {
           // Bounce off
           this.resolveRectCollision(obs);
+          if (this.onStateChange) {
+            this.onStateChange({
+              level: this.currentLevel + 1,
+              moves: this.moves,
+              status: this.status,
+              maxLevel: LEVELS.length,
+              event: "bounce",
+              x: this.balloon.x,
+              y: this.balloon.y,
+            });
+          }
         }
       } else if (obs.type === "spike" && obs.width && obs.height) {
         if (this.circleRectCollision(this.balloon, obs)) {
           // Game over
           this.status = "lost";
-          this.notifyState();
+          if (this.onStateChange) {
+            this.onStateChange({
+              level: this.currentLevel + 1,
+              moves: this.moves,
+              status: this.status,
+              maxLevel: LEVELS.length,
+              event: "gameOver",
+              x: this.balloon.x,
+              y: this.balloon.y,
+            });
+          }
         }
       } else if (obs.type === "circle" && obs.radius) {
         const dist = Math.hypot(this.balloon.x - obs.x, this.balloon.y - obs.y);
@@ -237,6 +284,17 @@ export class BalloonGame {
           const angle = Math.atan2(this.balloon.y - obs.y, this.balloon.x - obs.x);
           this.balloon.vx = Math.cos(angle) * 2;
           this.balloon.vy = Math.sin(angle) * 2;
+          if (this.onStateChange) {
+            this.onStateChange({
+              level: this.currentLevel + 1,
+              moves: this.moves,
+              status: this.status,
+              maxLevel: LEVELS.length,
+              event: "bounce",
+              x: this.balloon.x,
+              y: this.balloon.y,
+            });
+          }
         }
       }
     });
@@ -282,7 +340,26 @@ export class BalloonGame {
     const dist = Math.hypot(this.balloon.x - this.goal.x, this.balloon.y - this.goal.y);
     if (dist < this.balloon.radius + this.goal.radius) {
       this.status = "won";
-      this.notifyState();
+      if (this.onStateChange) {
+        // Emit goalReached first
+        this.onStateChange({
+          level: this.currentLevel + 1,
+          moves: this.moves,
+          status: this.status,
+          maxLevel: LEVELS.length,
+          event: "goalReached",
+          x: this.goal.x,
+          y: this.goal.y,
+        });
+        // Then emit victory
+        this.onStateChange({
+          level: this.currentLevel + 1,
+          moves: this.moves,
+          status: this.status,
+          maxLevel: LEVELS.length,
+          event: "victory",
+        });
+      }
     }
   }
 
@@ -324,7 +401,19 @@ export class BalloonGame {
     }
 
     this.moves++;
-    this.notifyState();
+
+    // Emit wind force event
+    if (this.onStateChange) {
+      this.onStateChange({
+        level: this.currentLevel + 1,
+        moves: this.moves,
+        status: this.status,
+        maxLevel: LEVELS.length,
+        event: "windForce",
+        x: x,
+        y: y,
+      });
+    }
   }
 
   private draw() {
@@ -527,6 +616,17 @@ export class BalloonGame {
   }
 
   public reset() {
+    // Emit reset event before loading level
+    if (this.onStateChange) {
+      this.onStateChange({
+        level: this.currentLevel + 1,
+        moves: this.moves,
+        status: this.status,
+        maxLevel: LEVELS.length,
+        event: "reset",
+      });
+    }
+
     this.loadLevel(this.currentLevel);
     if (this.status !== "playing") {
       this.status = "playing";

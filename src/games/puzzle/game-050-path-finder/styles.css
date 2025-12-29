@@ -1,22 +1,117 @@
+/**
+ * Path Finder Styles
+ * Neon Circuit / Electronic Data Flow Theme
+ * Game #050
+ */
+
+:root {
+  --circuit-black: #020408;
+  --circuit-dark: #040810;
+  --circuit-deep: #081018;
+  --circuit-trace: #0a1520;
+  --neon-cyan: #00e5ff;
+  --neon-green: #39ff14;
+  --neon-purple: #bf40ff;
+  --neon-blue: #00bfff;
+  --data-yellow: #ffe100;
+  --signal-white: #f0f8ff;
+  --path-blue: #4dd2ff;
+  --start-green: #00ff88;
+  --goal-red: #ff3366;
+  --wall-gray: #1a2030;
+  --glow-cyan: rgba(0, 229, 255, 0.5);
+  --glow-green: rgba(57, 255, 20, 0.5);
+  --glow-purple: rgba(191, 64, 255, 0.4);
+}
+
 .game-container {
-  max-width: 600px;
+  max-width: 650px;
+  background: linear-gradient(180deg, var(--circuit-black) 0%, var(--circuit-dark) 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Circuit trace pattern overlay */
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(90deg, transparent 49%, rgba(0, 229, 255, 0.03) 50%, transparent 51%),
+    linear-gradient(0deg, transparent 49%, rgba(0, 229, 255, 0.03) 50%, transparent 51%);
+  background-size: 30px 30px;
+  pointer-events: none;
+  animation: traceFlicker 4s ease-in-out infinite;
+}
+
+@keyframes traceFlicker {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Connection node decoration */
+.game-container::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  background: var(--neon-cyan);
+  border-radius: 50%;
+  box-shadow:
+    0 0 10px var(--glow-cyan),
+    0 0 20px var(--glow-cyan),
+    20px 0 0 var(--neon-green),
+    20px 0 10px var(--glow-green),
+    40px 0 0 var(--neon-purple),
+    40px 0 10px var(--glow-purple);
+  animation: nodePulse 2s ease-in-out infinite;
+}
+
+@keyframes nodePulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 .game-area {
   position: relative;
   width: 100%;
   height: 450px;
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+  background:
+    radial-gradient(ellipse at 30% 70%, rgba(0, 229, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 30%, rgba(57, 255, 20, 0.06) 0%, transparent 50%),
+    linear-gradient(180deg, var(--circuit-deep) 0%, var(--circuit-black) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  box-shadow:
+    0 0 40px rgba(0, 229, 255, 0.15),
+    inset 0 0 60px rgba(0, 0, 0, 0.5);
+  margin-bottom: 1.5rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   overflow: hidden;
 }
 
-canvas {
+#bg-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 12px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   cursor: crosshair;
@@ -26,36 +121,302 @@ canvas {
   display: flex;
   justify-content: center;
   gap: 2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
-  color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: 8px;
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(242, 153, 74, 0.4);
+  background: linear-gradient(135deg, var(--circuit-trace) 0%, var(--circuit-deep) 100%);
+  backdrop-filter: blur(10px);
+  color: var(--signal-white);
+  padding: 0.75rem 1.75rem;
+  border-radius: 25px;
+  font-weight: 600;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  box-shadow:
+    0 4px 20px rgba(0, 229, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Data flow animation in stats */
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50px;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 229, 255, 0.3),
+    transparent
+  );
+  animation: dataFlow 3s linear infinite;
+}
+
+@keyframes dataFlow {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+.stats-card .label {
+  color: rgba(0, 229, 255, 0.8);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.stats-card .value {
+  color: var(--neon-cyan);
+  font-size: 1.1rem;
+  font-family: 'Consolas', 'Monaco', monospace;
+  text-shadow: 0 0 10px var(--glow-cyan);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
+.footer-controls button {
+  background: linear-gradient(135deg, var(--circuit-trace) 0%, var(--circuit-deep) 100%);
+  color: var(--signal-white);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Consolas', 'Monaco', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.85rem;
+}
+
+.footer-controls button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, var(--glow-cyan) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  transition: all 0.4s ease;
+  opacity: 0;
+}
+
+.footer-controls button:hover {
+  transform: translateY(-2px);
+  border-color: var(--neon-cyan);
+  box-shadow:
+    0 6px 25px rgba(0, 229, 255, 0.3),
+    0 0 20px var(--glow-cyan);
+}
+
+.footer-controls button:hover::before {
+  width: 200%;
+  height: 200%;
+  opacity: 0.3;
+}
+
+.footer-controls button:active {
+  transform: translateY(0);
+}
+
 .btn.info {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, rgba(191, 64, 255, 0.3) 0%, rgba(0, 191, 255, 0.3) 100%);
+  border-color: rgba(191, 64, 255, 0.5);
 }
 
 .btn.info:hover {
-  opacity: 0.9;
+  border-color: var(--neon-purple);
+  box-shadow:
+    0 6px 25px rgba(191, 64, 255, 0.3),
+    0 0 20px var(--glow-purple);
+}
+
+.controls-hint {
+  text-align: center;
+  margin-top: 1rem;
 }
 
 .controls-hint small {
-  color: #a0aec0;
+  color: rgba(0, 229, 255, 0.6);
+  font-size: 0.85rem;
+  font-family: 'Consolas', 'Monaco', monospace;
+  letter-spacing: 0.5px;
+}
+
+/* Game overlay - circuit interface style */
+.game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse at center, rgba(4, 8, 16, 0.95) 0%, rgba(2, 4, 8, 0.98) 100%);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 12px;
+}
+
+.game-overlay h2 {
+  font-size: 2.5rem;
+  font-family: 'Consolas', 'Monaco', monospace;
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green), var(--neon-purple));
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+  animation: circuitGlow 3s ease-in-out infinite;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+@keyframes circuitGlow {
+  0%, 100% { background-position: 0% 50%; filter: brightness(1); }
+  50% { background-position: 100% 50%; filter: brightness(1.2); }
+}
+
+.game-overlay p {
+  color: rgba(0, 229, 255, 0.8);
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.game-overlay button {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2) 0%, rgba(57, 255, 20, 0.2) 100%);
+  color: var(--signal-white);
+  border: 2px solid var(--neon-cyan);
+  padding: 1rem 3rem;
+  border-radius: 30px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  box-shadow:
+    0 0 30px var(--glow-cyan),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1);
+}
+
+.game-overlay button:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.4) 0%, rgba(57, 255, 20, 0.4) 100%);
+  box-shadow:
+    0 0 50px var(--glow-cyan),
+    0 0 30px var(--glow-green);
+}
+
+/* Circuit corner decorations */
+.game-overlay::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 60px;
+  height: 60px;
+  border-left: 2px solid var(--neon-cyan);
+  border-top: 2px solid var(--neon-cyan);
+  opacity: 0.6;
+}
+
+.game-overlay::after {
+  content: '';
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-right: 2px solid var(--neon-green);
+  border-bottom: 2px solid var(--neon-green);
+  opacity: 0.6;
+}
+
+/* Scanline effect */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.1) 2px,
+    rgba(0, 0, 0, 0.1) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 12px;
+  opacity: 0.3;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .game-container {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .game-area {
+    height: 380px;
+  }
+
+  .game-controls {
+    gap: 1rem;
+  }
+
+  .stats-card {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .footer-controls {
+    gap: 0.5rem;
+  }
+
+  .footer-controls button {
+    padding: 0.6rem 1rem;
+    font-size: 0.75rem;
+  }
+
+  .game-overlay h2 {
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+  }
+
+  .game-overlay button {
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    letter-spacing: 2px;
+  }
+
+  .game-overlay::before,
+  .game-overlay::after {
+    width: 40px;
+    height: 40px;
+  }
 }

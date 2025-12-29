@@ -27,7 +27,13 @@ interface GameState {
   selectedCrop: CropType;
 }
 
-type StateChangeCallback = (state: GameState) => void;
+type StateChangeCallback = (state: GameState & {
+  cropPlace?: { x: number; y: number; crop: CropType };
+  cropRemove?: { x: number; y: number };
+  validPlacement?: { x: number; y: number };
+  invalidPlacement?: { x: number; y: number };
+  reset?: boolean;
+}) => void;
 
 const CROP_COLORS: Record<string, string> = {
   carrot: "#e67e22",
@@ -132,6 +138,14 @@ export class MiniFarmGame {
 
   private onStateChange: StateChangeCallback | null = null;
 
+  private pendingEvents: {
+    cropPlace?: { x: number; y: number; crop: CropType };
+    cropRemove?: { x: number; y: number };
+    validPlacement?: { x: number; y: number };
+    invalidPlacement?: { x: number; y: number };
+    reset?: boolean;
+  } = {};
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -228,7 +242,10 @@ export class MiniFarmGame {
         placedCount,
         totalCells,
         selectedCrop: this.selectedCrop,
+        ...this.pendingEvents,
       });
+
+      this.pendingEvents = {};
     }
   }
 
@@ -273,6 +290,36 @@ export class MiniFarmGame {
     return true;
   }
 
+  private hasAdjacentConflict(row: number, col: number): boolean {
+    const cell = this.grid[row][col];
+    if (!cell.crop) return false;
+
+    const neighbors = [
+      [row - 1, col],
+      [row + 1, col],
+      [row, col - 1],
+      [row, col + 1],
+    ];
+
+    for (const [nr, nc] of neighbors) {
+      if (nr >= 0 && nr < this.grid.length && nc >= 0 && nc < this.grid[0].length) {
+        if (this.grid[nr][nc].crop === cell.crop) return true;
+      }
+    }
+    return false;
+  }
+
+  private getCellCenter(row: number, col: number): { x: number; y: number } {
+    const level = LEVELS[this.currentLevel];
+    const gridSize = level.gridSize;
+    const offsetX = (this.width - gridSize * CELL_SIZE) / 2;
+    const offsetY = 30;
+    return {
+      x: offsetX + col * CELL_SIZE + CELL_SIZE / 2,
+      y: offsetY + row * CELL_SIZE + CELL_SIZE / 2,
+    };
+  }
+
   start() {
     this.isPlaying = true;
     this.initLevel();
@@ -280,7 +327,6 @@ export class MiniFarmGame {
   }
 
   reset() {
-    const level = LEVELS[this.currentLevel];
     for (const row of this.grid) {
       for (const cell of row) {
         if (!cell.locked) {
@@ -288,6 +334,7 @@ export class MiniFarmGame {
         }
       }
     }
+    this.pendingEvents.reset = true;
     this.emitState();
     this.draw();
   }
@@ -321,11 +368,29 @@ export class MiniFarmGame {
     if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
       const cell = this.grid[row][col];
       if (!cell.locked) {
+        const center = this.getCellCenter(row, col);
+
         if (cell.crop === this.selectedCrop) {
+          // Removing crop
           cell.crop = null;
+          this.pendingEvents.cropRemove = { x: center.x, y: center.y };
         } else {
+          // Placing crop
           cell.crop = this.selectedCrop;
+          this.pendingEvents.cropPlace = {
+            x: center.x,
+            y: center.y,
+            crop: this.selectedCrop,
+          };
+
+          // Check if this placement causes conflict
+          if (this.hasAdjacentConflict(row, col)) {
+            this.pendingEvents.invalidPlacement = { x: center.x, y: center.y };
+          } else {
+            this.pendingEvents.validPlacement = { x: center.x, y: center.y };
+          }
         }
+
         this.draw();
         this.emitState();
       }
@@ -399,25 +464,6 @@ export class MiniFarmGame {
         }
       }
     }
-  }
-
-  private hasAdjacentConflict(row: number, col: number): boolean {
-    const cell = this.grid[row][col];
-    if (!cell.crop) return false;
-
-    const neighbors = [
-      [row - 1, col],
-      [row + 1, col],
-      [row, col - 1],
-      [row, col + 1],
-    ];
-
-    for (const [nr, nc] of neighbors) {
-      if (nr >= 0 && nr < this.grid.length && nc >= 0 && nc < this.grid[0].length) {
-        if (this.grid[nr][nc].crop === cell.crop) return true;
-      }
-    }
-    return false;
   }
 
   private drawRequirements() {

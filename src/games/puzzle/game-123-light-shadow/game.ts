@@ -112,8 +112,16 @@ export class LightShadowGame {
 
       if (dist < 40) {
         this.dragging = true;
+        // Emit light grab event
+        if (this.onStateChange) {
+          this.onStateChange({
+            lightGrab: { x: this.lightPos.x, y: this.lightPos.y },
+          });
+        }
       }
     };
+
+    let dragThrottle = 0;
 
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!this.dragging) return;
@@ -124,11 +132,34 @@ export class LightShadowGame {
       this.lightPos.x = Math.max(50, Math.min(this.canvas.width - 50, pos.x));
       this.lightPos.y = Math.max(50, Math.min(this.wallY - 100, pos.y));
 
+      // Emit light position update
+      if (this.onStateChange) {
+        this.onStateChange({
+          lightPosition: { x: this.lightPos.x, y: this.lightPos.y },
+        });
+      }
+
+      // Throttled drag trail event
+      const now = Date.now();
+      if (now - dragThrottle > 80) {
+        dragThrottle = now;
+        if (this.onStateChange) {
+          this.onStateChange({
+            lightDrag: { x: this.lightPos.x, y: this.lightPos.y },
+          });
+        }
+      }
+
       this.updateMatch();
       this.draw();
     };
 
     const handleEnd = () => {
+      if (this.dragging && this.onStateChange) {
+        this.onStateChange({
+          lightRelease: { x: this.lightPos.x, y: this.lightPos.y },
+        });
+      }
       this.dragging = false;
     };
 

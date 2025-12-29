@@ -37,6 +37,15 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  start: boolean;
+  correctSort: { bin: string; points: number; combo: number }[];
+  wrongSort: { livesLeft: number }[];
+  levelUp: { level: number }[];
+  packageMissed: { livesLeft: number }[];
+  gameOver: { score: number; level: number; highScore: number }[];
+}
+
 const BIN_COLORS = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12"];
 const BIN_LABELS = ["A", "B", "C", "D"];
 
@@ -62,6 +71,26 @@ export class PackageSortGame {
   private particles: { x: number; y: number; vx: number; vy: number; life: number; color: string }[] = [];
   private combo = 0;
   private lastTime = 0;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    correctSort: [],
+    wrongSort: [],
+    levelUp: [],
+    packageMissed: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      correctSort: [],
+      wrongSort: [],
+      levelUp: [],
+      packageMissed: [],
+      gameOver: [],
+    };
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -189,6 +218,7 @@ export class PackageSortGame {
           this.score += points;
           bin.packages++;
           bin.flash = 1;
+          this.pendingEvents.correctSort.push({ bin: bin.label, points, combo: this.combo });
 
           if (this.score > this.highScore) {
             this.highScore = this.score;
@@ -216,6 +246,7 @@ export class PackageSortGame {
           // Wrong bin
           this.combo = 0;
           this.lives--;
+          this.pendingEvents.wrongSort.push({ livesLeft: this.lives });
 
           // Error particles
           for (let j = 0; j < 10; j++) {
@@ -251,6 +282,7 @@ export class PackageSortGame {
     this.level++;
     this.spawnInterval = Math.max(800, 2000 - this.level * 150);
     this.bins.forEach((bin) => (bin.packages = 0));
+    this.pendingEvents.levelUp.push({ level: this.level });
     this.emitState();
   }
 
@@ -266,6 +298,7 @@ export class PackageSortGame {
     this.initBins();
     this.status = "playing";
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -299,6 +332,7 @@ export class PackageSortGame {
         if (pkg.y > this.height) {
           this.lives--;
           this.combo = 0;
+          this.pendingEvents.packageMissed.push({ livesLeft: this.lives });
           const idx = this.packages.indexOf(pkg);
           if (idx !== -1) {
             this.packages.splice(idx, 1);
@@ -350,6 +384,7 @@ export class PackageSortGame {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    this.pendingEvents.gameOver.push({ score: this.score, level: this.level, highScore: this.highScore });
     this.emitState();
   }
 

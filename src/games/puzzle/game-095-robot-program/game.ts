@@ -6,6 +6,30 @@
 export type Command = "up" | "down" | "left" | "right";
 export type CellType = "empty" | "wall" | "goal" | "hazard";
 
+export interface GameState {
+  event?:
+    | "addCommand"
+    | "removeCommand"
+    | "clearCommands"
+    | "run"
+    | "move"
+    | "wallHit"
+    | "goalReached"
+    | "victory"
+    | "levelStart"
+    | "reset";
+  commands?: string;
+  commandList?: Command[];
+  executingIndex?: number;
+  robotX?: number;
+  robotY?: number;
+  direction?: string;
+  goalX?: number;
+  goalY?: number;
+  level?: number;
+  status?: "idle" | "running" | "won" | "failed";
+}
+
 export interface LevelConfig {
   grid: string[];
   start: { x: number; y: number };
@@ -32,7 +56,7 @@ export class RobotProgramGame {
   private status: "idle" | "running" | "won" | "failed" = "idle";
   private animationId = 0;
 
-  private onStateChange: ((state: any) => void) | null = null;
+  private onStateChange: ((state: GameState) => void) | null = null;
 
   private levels: LevelConfig[] = [
     // Level 1 - Simple straight path
@@ -114,6 +138,18 @@ export class RobotProgramGame {
     this.status = "idle";
     this.loadLevel(this.currentLevel);
     this.draw();
+
+    // Emit level start
+    const robotPixelX = this.robotPos.x * this.cellSize + this.cellSize / 2;
+    const robotPixelY = this.robotPos.y * this.cellSize + this.cellSize / 2;
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "levelStart",
+        robotX: robotPixelX,
+        robotY: robotPixelY,
+        level: this.currentLevel,
+      });
+    }
   }
 
   private loadLevel(levelIndex: number) {
@@ -164,6 +200,7 @@ export class RobotProgramGame {
 
     if (this.onStateChange) {
       this.onStateChange({
+        event: "addCommand",
         commands: `${this.commands.length}/${this.maxCommands}`,
         commandList: [...this.commands],
       });
@@ -179,6 +216,7 @@ export class RobotProgramGame {
 
     if (this.onStateChange) {
       this.onStateChange({
+        event: "removeCommand",
         commands: `${this.commands.length}/${this.maxCommands}`,
         commandList: [...this.commands],
       });
@@ -192,6 +230,7 @@ export class RobotProgramGame {
 
     if (this.onStateChange) {
       this.onStateChange({
+        event: "clearCommands",
         commands: `${this.commands.length}/${this.maxCommands}`,
         commandList: [],
       });
@@ -205,6 +244,17 @@ export class RobotProgramGame {
     this.robotPos = { ...this.startPos };
     this.executingIndex = -1;
 
+    // Emit run event
+    const robotPixelX = this.robotPos.x * this.cellSize + this.cellSize / 2;
+    const robotPixelY = this.robotPos.y * this.cellSize + this.cellSize / 2;
+    if (this.onStateChange) {
+      this.onStateChange({
+        event: "run",
+        robotX: robotPixelX,
+        robotY: robotPixelY,
+      });
+    }
+
     for (let i = 0; i < this.commands.length; i++) {
       this.executingIndex = i;
 
@@ -216,20 +266,46 @@ export class RobotProgramGame {
       const moved = await this.executeCommand(cmd);
 
       if (!moved) {
-        // Hit a wall
-        this.status = "failed";
+        // Hit a wall - emit wall hit event
+        const hitX = this.robotPos.x * this.cellSize + this.cellSize / 2;
+        const hitY = this.robotPos.y * this.cellSize + this.cellSize / 2;
         if (this.onStateChange) {
-          this.onStateChange({ status: "failed" });
+          this.onStateChange({
+            event: "wallHit",
+            robotX: hitX,
+            robotY: hitY,
+            status: "failed",
+          });
         }
+        this.status = "failed";
         return;
       }
 
       // Check if reached goal
       if (this.robotPos.x === this.goalPos.x && this.robotPos.y === this.goalPos.y) {
-        this.status = "won";
+        const goalPixelX = this.goalPos.x * this.cellSize + this.cellSize / 2;
+        const goalPixelY = this.goalPos.y * this.cellSize + this.cellSize / 2;
+
+        // Emit goal reached
         if (this.onStateChange) {
-          this.onStateChange({ status: "won", level: this.currentLevel });
+          this.onStateChange({
+            event: "goalReached",
+            goalX: goalPixelX,
+            goalY: goalPixelY,
+          });
         }
+
+        // Then victory
+        setTimeout(() => {
+          this.status = "won";
+          if (this.onStateChange) {
+            this.onStateChange({
+              event: "victory",
+              status: "won",
+              level: this.currentLevel,
+            });
+          }
+        }, 300);
         return;
       }
     }
@@ -287,6 +363,19 @@ export class RobotProgramGame {
           this.robotPos.x = newX;
           this.robotPos.y = newY;
           this.draw();
+
+          // Emit move event
+          const robotPixelX = this.robotPos.x * this.cellSize + this.cellSize / 2;
+          const robotPixelY = this.robotPos.y * this.cellSize + this.cellSize / 2;
+          if (this.onStateChange) {
+            this.onStateChange({
+              event: "move",
+              robotX: robotPixelX,
+              robotY: robotPixelY,
+              direction: cmd,
+            });
+          }
+
           setTimeout(() => resolve(true), 100);
         }
       };
@@ -302,9 +391,8 @@ export class RobotProgramGame {
 
     this.cellSize = Math.min(w, h) / this.gridSize;
 
-    // Clear
-    ctx.fillStyle = "#151525";
-    ctx.fillRect(0, 0, w, h);
+    // Clear with transparency for WebGPU background
+    ctx.clearRect(0, 0, w, h);
 
     // Draw grid
     for (let y = 0; y < this.gridSize; y++) {
@@ -341,7 +429,7 @@ export class RobotProgramGame {
     const padding = 2;
 
     // Grid lines
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.strokeStyle = "rgba(0, 217, 255, 0.15)";
     ctx.lineWidth = 1;
     ctx.strokeRect(px, py, size, size);
 
@@ -439,6 +527,7 @@ export class RobotProgramGame {
 
     if (this.onStateChange) {
       this.onStateChange({
+        event: "reset",
         commands: `0/${this.maxCommands}`,
         commandList: [],
         executingIndex: -1,
@@ -467,7 +556,7 @@ export class RobotProgramGame {
     return this.maxCommands;
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 }

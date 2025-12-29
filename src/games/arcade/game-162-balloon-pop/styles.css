@@ -1,25 +1,125 @@
-.game-container {
-  max-width: 550px;
+/**
+ * Balloon Pop Styles
+ * Sky / Carnival / Colorful Balloons Theme
+ * Game #162
+ */
+
+:root {
+  --sky-blue: #87ceeb;
+  --sky-light: #e0f7fa;
+  --sky-deep: #5dade2;
+  --balloon-red: #e74c3c;
+  --balloon-blue: #3498db;
+  --balloon-green: #2ecc71;
+  --balloon-yellow: #f39c12;
+  --balloon-pink: #ff69b4;
+  --balloon-purple: #9b59b6;
+  --bonus-gold: #ffd700;
+  --dart-brown: #8b4513;
+  --cloud-white: rgba(255, 255, 255, 0.9);
+  --bg-dark: #1a3a52;
+  --bg-darker: #0d1f2d;
 }
 
-.game-area {
-  position: relative;
-  width: 100%;
-  height: 450px;
-  background: linear-gradient(180deg, #87ceeb 0%, #e0f7fa 70%, #b2ebf2 100%);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+body {
+  font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
+  background: linear-gradient(180deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+  min-height: 100vh;
   display: flex;
   justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
   overflow: hidden;
-  cursor: crosshair;
 }
 
-canvas {
+/* Floating balloons background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(231, 76, 60, 0.08) 0%, transparent 25%),
+    radial-gradient(circle at 85% 15%, rgba(52, 152, 219, 0.08) 0%, transparent 25%),
+    radial-gradient(circle at 20% 80%, rgba(46, 204, 113, 0.08) 0%, transparent 25%),
+    radial-gradient(circle at 75% 70%, rgba(243, 156, 18, 0.08) 0%, transparent 25%),
+    radial-gradient(circle at 50% 40%, rgba(155, 89, 182, 0.08) 0%, transparent 30%);
+  pointer-events: none;
+  z-index: 0;
+  animation: floatBalloons 8s ease-in-out infinite;
+}
+
+@keyframes floatBalloons {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-10px); opacity: 1; }
+}
+
+/* Cloud texture */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(255, 255, 255, 0.05) 0%, transparent 20%),
+    radial-gradient(ellipse at 60% 5%, rgba(255, 255, 255, 0.05) 0%, transparent 25%),
+    radial-gradient(ellipse at 85% 15%, rgba(255, 255, 255, 0.04) 0%, transparent 15%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.game-container {
+  max-width: 550px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(90deg, rgba(135, 206, 235, 0.2) 0%, rgba(93, 173, 226, 0.2) 100%);
+  border-radius: 8px;
+  border: 3px solid var(--sky-deep);
+  box-shadow: 0 0 15px rgba(93, 173, 226, 0.3);
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  color: var(--balloon-red);
+  text-shadow:
+    2px 2px 0 var(--balloon-yellow),
+    0 0 10px rgba(231, 76, 60, 0.5);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 2px solid var(--sky-deep);
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--sky-blue);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.header-controls select:hover {
+  box-shadow: 0 0 10px var(--sky-blue);
 }
 
 .game-controls {
@@ -31,23 +131,194 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+  background: linear-gradient(135deg, rgba(93, 173, 226, 0.9) 0%, rgba(52, 152, 219, 0.95) 100%);
+  border: 2px solid var(--cloud-white);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 8px rgba(135, 206, 235, 0.3),
+    inset 0 0 10px rgba(255, 255, 255, 0.1);
   display: flex;
   gap: 0.5rem;
-  transition: background 0.3s ease;
 }
 
 .stats-card span:first-child {
-  opacity: 0.8;
+  opacity: 0.9;
+  color: var(--sky-light);
 }
 
 .stats-card.lives-card {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.9) 0%, rgba(192, 57, 43, 0.95) 100%);
+  border-color: #ff8080;
+}
+
+.stats-card.lives-card span:first-child {
+  color: #ffcccc;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 450px;
+  background: linear-gradient(180deg, var(--sky-deep) 0%, var(--sky-blue) 40%, var(--sky-light) 100%);
+  border-radius: 8px;
+  box-shadow:
+    0 0 20px rgba(135, 206, 235, 0.3),
+    0 0 40px rgba(93, 173, 226, 0.2),
+    inset 0 0 30px rgba(255, 255, 255, 0.1);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border: 4px solid var(--sky-deep);
+  cursor: crosshair;
+}
+
+/* Cloud layer effect */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(255, 255, 255, 0.2) 0%, transparent 30%),
+    radial-gradient(ellipse at 70% 15%, rgba(255, 255, 255, 0.15) 0%, transparent 25%),
+    radial-gradient(ellipse at 40% 35%, rgba(255, 255, 255, 0.1) 0%, transparent 20%);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 4px;
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 4px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: 4px;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--balloon-red);
+  text-shadow:
+    0 0 10px var(--balloon-yellow),
+    3px 3px 0 var(--balloon-blue);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  animation: titleFloat 2s ease-in-out infinite;
+}
+
+@keyframes titleFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.02);
+  }
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  color: var(--sky-blue);
+  text-shadow: 0 0 5px var(--sky-blue);
+  font-size: 1.1rem;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: 3px solid var(--sky-deep);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: transparent;
+  color: var(--sky-blue);
+}
+
+.btn:hover {
+  box-shadow:
+    0 0 15px var(--sky-blue),
+    0 0 30px rgba(135, 206, 235, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--balloon-red) 0%, #c0392b 100%);
+  border-color: var(--balloon-yellow);
+  color: white;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, var(--bonus-gold) 0%, #f39c12 100%);
+  border-color: var(--balloon-red);
+  color: var(--bg-darker);
+  box-shadow:
+    0 0 20px var(--bonus-gold),
+    0 0 40px rgba(255, 215, 0, 0.5);
+}
+
+.btn.warning {
+  border-color: var(--balloon-purple);
+  color: var(--balloon-purple);
+  text-shadow: 0 0 5px var(--balloon-purple);
+}
+
+.btn.warning:hover {
+  box-shadow:
+    0 0 15px var(--balloon-purple),
+    0 0 30px rgba(155, 89, 182, 0.3);
 }
 
 .footer-controls {
@@ -56,16 +327,23 @@ canvas {
   gap: 1rem;
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  color: rgba(255, 255, 255, 0.7);
-}
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+  }
 
-.overlay {
-  background: rgba(0, 0, 0, 0.85);
-}
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
 
-.overlay-title {
-  color: #3498db;
-  text-shadow: 0 0 10px #3498db;
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+  }
 }

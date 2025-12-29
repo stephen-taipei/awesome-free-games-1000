@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cell Division - Awesome Free Games 1000</title>
-    <link rel="stylesheet" href="../../shared/styles.css" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -36,7 +35,10 @@
       </div>
 
       <main class="game-area">
-        <canvas id="game-canvas"></canvas>
+        <div class="canvas-container">
+          <canvas id="webgpu-canvas"></canvas>
+          <canvas id="game-canvas"></canvas>
+        </div>
 
         <div id="game-overlay" class="overlay" style="display: flex">
           <div class="overlay-content">
@@ -50,7 +52,10 @@
               Start Game
             </button>
             <div class="controls-hint">
-              <small>Tap a cell with 2+ energy, then tap adjacent empty space to divide</small>
+              <small data-i18n="game.hint"
+                >Tap a cell with 2+ energy, then tap adjacent empty space to
+                divide</small
+              >
             </div>
           </div>
         </div>
@@ -60,7 +65,12 @@
         <button id="reset-btn" class="btn warning" data-i18n="game.reset">
           Reset
         </button>
-        <button id="next-btn" class="btn primary" data-i18n="game.nextLevel" style="display: none">
+        <button
+          id="next-btn"
+          class="btn primary"
+          data-i18n="game.nextLevel"
+          style="display: none"
+        >
           Next Level
         </button>
       </div>

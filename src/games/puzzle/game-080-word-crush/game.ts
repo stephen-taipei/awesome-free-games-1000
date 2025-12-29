@@ -1,6 +1,7 @@
 /**
  * Word Crush Game Engine
  * Game #080 - Connect letters to form words
+ * Literary / Typography Theme
  */
 
 // Simple word list (common 3-6 letter English words)
@@ -58,6 +59,16 @@ interface Cell {
   selected: boolean;
 }
 
+export interface GameState {
+  score: number;
+  wordsFound: number;
+  currentWord: string;
+  event?: "select" | "continue" | "validWord" | "invalidWord" | "letterRemove" | "newLetter" | "selectionEnd" | "gameStart" | "reset";
+  cellX?: number;
+  cellY?: number;
+  wordLength?: number;
+}
+
 export class WordCrushGame {
   gridSize: number = 5;
   grid: Cell[][] = [];
@@ -66,7 +77,7 @@ export class WordCrushGame {
   score: number = 0;
   isSelecting: boolean = false;
 
-  onStateChange: ((state: any) => void) | null = null;
+  onStateChange: ((state: GameState) => void) | null = null;
   onGridUpdate: (() => void) | null = null;
 
   // Weighted letter distribution for better word formation
@@ -120,7 +131,7 @@ export class WordCrushGame {
       }
     }
 
-    this.notifyState();
+    this.notifyState("gameStart");
     if (this.onGridUpdate) this.onGridUpdate();
   }
 
@@ -151,7 +162,7 @@ export class WordCrushGame {
     cell.selected = true;
     this.selectedCells.push(cell);
 
-    this.notifyState();
+    this.notifyState("select", x, y);
     if (this.onGridUpdate) this.onGridUpdate();
   }
 
@@ -167,7 +178,7 @@ export class WordCrushGame {
       if (this.selectedCells.length > 1 && this.selectedCells[this.selectedCells.length - 2] === cell) {
         const lastCell = this.selectedCells.pop()!;
         lastCell.selected = false;
-        this.notifyState();
+        this.notifyState("continue", lastCell.x, lastCell.y);
         if (this.onGridUpdate) this.onGridUpdate();
       }
       return;
@@ -181,7 +192,7 @@ export class WordCrushGame {
     if (dx <= 1 && dy <= 1 && (dx + dy > 0)) {
       cell.selected = true;
       this.selectedCells.push(cell);
-      this.notifyState();
+      this.notifyState("continue", x, y);
       if (this.onGridUpdate) this.onGridUpdate();
     }
   }
@@ -197,20 +208,27 @@ export class WordCrushGame {
       // Score: word length squared
       this.score += word.length * word.length * 10;
 
+      this.notifyState("validWord", undefined, undefined, word.length);
+
       // Remove selected cells and drop new ones
       this.removeSelectedCells();
+    } else if (word.length >= 3) {
+      this.notifyState("invalidWord");
     }
 
+    this.notifyState("selectionEnd");
     this.clearSelection();
-    this.notifyState();
     if (this.onGridUpdate) this.onGridUpdate();
 
     return { valid, word };
   }
 
   private removeSelectedCells() {
-    // Mark positions to remove
-    const toRemove = this.selectedCells.map((c) => ({ x: c.x, y: c.y }));
+    // Mark positions to remove and emit effects
+    const toRemove = this.selectedCells.map((c) => {
+      this.notifyState("letterRemove", c.x, c.y);
+      return { x: c.x, y: c.y };
+    });
 
     // For each column, drop letters down
     for (let x = 0; x < this.gridSize; x++) {
@@ -231,6 +249,7 @@ export class WordCrushGame {
           this.grid[y][x].letter = remaining.shift()!;
         } else {
           this.grid[y][x].letter = this.getRandomLetter();
+          this.notifyState("newLetter", x, y);
         }
         this.grid[y][x].selected = false;
       }
@@ -247,10 +266,11 @@ export class WordCrushGame {
   }
 
   public reset() {
+    this.notifyState("reset");
     this.start();
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 
@@ -258,12 +278,16 @@ export class WordCrushGame {
     this.onGridUpdate = cb;
   }
 
-  private notifyState() {
+  private notifyState(event?: GameState["event"], cellX?: number, cellY?: number, wordLength?: number) {
     if (this.onStateChange) {
       this.onStateChange({
         score: this.score,
         wordsFound: this.foundWords.size,
         currentWord: this.getCurrentWord(),
+        event,
+        cellX,
+        cellY,
+        wordLength,
       });
     }
   }

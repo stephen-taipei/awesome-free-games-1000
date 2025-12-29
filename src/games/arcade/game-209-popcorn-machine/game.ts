@@ -25,6 +25,14 @@ export interface GameState {
   status: "idle" | "playing" | "gameOver";
 }
 
+export interface PendingEvents {
+  catch: { x: number; y: number; type: string; points: number }[];
+  miss: { x: number; y: number; type: string }[];
+  spawn: { x: number; y: number; type: string }[];
+  start: boolean;
+  gameOver: { score: number; caught: number; missed: number }[];
+}
+
 const BUCKET_WIDTH = 80;
 const BUCKET_Y = 400;
 const GAME_TIME = 45;
@@ -40,8 +48,26 @@ export class PopcornMachineGame {
   private popcornId: number = 0;
   private canvasWidth: number = 400;
 
+  public pendingEvents: PendingEvents = {
+    catch: [],
+    miss: [],
+    spawn: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      catch: [],
+      miss: [],
+      spawn: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   private createInitialState(): GameState {
@@ -75,6 +101,7 @@ export class PopcornMachineGame {
     this.lastTime = performance.now();
     this.lastSpawnTime = this.lastTime;
 
+    this.pendingEvents.start = true;
     this.startTimer();
     this.startGameLoop();
     this.emitState();
@@ -142,14 +169,19 @@ export class PopcornMachineGame {
         p.y <= BUCKET_Y + 20 &&
         Math.abs(p.x - this.state.bucketX) < BUCKET_WIDTH / 2
       ) {
+        let points = 0;
         if (p.type === "golden") {
-          this.state.score += 50;
+          points = 50;
+          this.state.score += points;
         } else if (p.type === "burnt") {
+          points = -20;
           this.state.score = Math.max(0, this.state.score - 20);
         } else {
-          this.state.score += 10;
+          points = 10;
+          this.state.score += points;
         }
         this.state.caught++;
+        this.pendingEvents.catch.push({ x: p.x, y: p.y, type: p.type, points });
         return false;
       }
 
@@ -157,6 +189,7 @@ export class PopcornMachineGame {
       if (p.y > 500) {
         if (p.type !== "burnt") {
           this.state.missed++;
+          this.pendingEvents.miss.push({ x: p.x, y: p.y, type: p.type });
         }
         return false;
       }
@@ -177,7 +210,7 @@ export class PopcornMachineGame {
     if (rand < 0.1) type = "golden";
     else if (rand < 0.2) type = "burnt";
 
-    this.state.popcorns.push({
+    const popcorn: Popcorn = {
       id: this.popcornId++,
       x: machineX + (Math.random() - 0.5) * 60,
       y: machineY,
@@ -187,7 +220,10 @@ export class PopcornMachineGame {
       rotationSpeed: (Math.random() - 0.5) * 0.2,
       size: 15 + Math.random() * 10,
       type,
-    });
+    };
+
+    this.state.popcorns.push(popcorn);
+    this.pendingEvents.spawn.push({ x: popcorn.x, y: popcorn.y, type });
   }
 
   public moveBucket(x: number): void {
@@ -209,6 +245,11 @@ export class PopcornMachineGame {
 
   private endGame(): void {
     this.state.status = "gameOver";
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      caught: this.state.caught,
+      missed: this.state.missed,
+    });
     if (this.gameLoop) cancelAnimationFrame(this.gameLoop);
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.emitState();

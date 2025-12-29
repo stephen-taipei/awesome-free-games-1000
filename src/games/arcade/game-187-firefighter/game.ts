@@ -22,6 +22,14 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  personCatch: { x: number; y: number; points: number; floor: number }[];
+  personMiss: { x: number; y: number }[];
+  personJump: { x: number; y: number; floor: number }[];
+  start: boolean;
+  gameOver: { score: number; saved: number; missed: number }[];
+}
+
 const PERSON_COLORS = ["#f39c12", "#3498db", "#9b59b6", "#1abc9c", "#e91e63"];
 const MAX_MISSED = 3;
 
@@ -45,9 +53,27 @@ export class FirefighterGame {
   private buildingWidth = 0;
   private floors: number[] = [];
 
+  public pendingEvents: PendingEvents = {
+    personCatch: [],
+    personMiss: [],
+    personJump: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      personCatch: [],
+      personMiss: [],
+      personJump: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(cb: StateCallback) {
@@ -98,6 +124,7 @@ export class FirefighterGame {
     this.spawnInterval = 120;
     this.netX = this.canvas.width / 2 - this.netWidth / 2;
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.gameLoop();
   }
@@ -135,6 +162,7 @@ export class FirefighterGame {
       floor,
       color: PERSON_COLORS[Math.floor(Math.random() * PERSON_COLORS.length)],
     });
+    this.pendingEvents.personJump.push({ x, y: this.floors[floor], floor });
   }
 
   private gameLoop() {
@@ -187,7 +215,9 @@ export class FirefighterGame {
       ) {
         // Caught!
         this.saved++;
-        this.score += 100 + (5 - person.floor) * 20;
+        const points = 100 + (5 - person.floor) * 20;
+        this.score += points;
+        this.pendingEvents.personCatch.push({ x: person.x, y: person.y, points, floor: person.floor });
         this.people.splice(i, 1);
         this.emitState();
         continue;
@@ -196,11 +226,13 @@ export class FirefighterGame {
       // Check if hit ground
       if (person.y >= groundY) {
         this.missed++;
+        this.pendingEvents.personMiss.push({ x: person.x, y: person.y });
         this.people.splice(i, 1);
         this.emitState();
 
         if (this.missed >= MAX_MISSED) {
           this.status = "over";
+          this.pendingEvents.gameOver.push({ score: this.score, saved: this.saved, missed: this.missed });
           this.emitState();
         }
       }

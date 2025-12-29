@@ -112,6 +112,7 @@ export class MechanismGame {
   animating: boolean = false;
 
   onStateChange: ((state: any) => void) | null = null;
+  canvasRect: DOMRect | null = null;
 
   // Colors
   colors = {
@@ -505,6 +506,12 @@ export class MechanismGame {
     this.animating = true;
     m.active = true;
 
+    // Update canvas rect for accurate positions
+    this.canvasRect = this.canvas.getBoundingClientRect();
+
+    // Emit activation event based on mechanism type
+    this.emitMechanismEvent(m);
+
     // Trigger connected mechanisms with delay
     m.connectedTo.forEach(targetId => {
       const target = this.mechanisms.find(t => t.id === targetId);
@@ -519,6 +526,37 @@ export class MechanismGame {
     setTimeout(() => {
       this.animating = false;
     }, 1500);
+  }
+
+  private emitMechanismEvent(m: Mechanism) {
+    if (!this.onStateChange || !this.canvasRect) return;
+
+    const x = this.canvasRect.left + m.x + m.width / 2;
+    const y = this.canvasRect.top + m.y + m.height / 2;
+
+    const eventMap: Record<MechanismType, string> = {
+      lever: 'leverPull',
+      button: 'buttonPress',
+      gear: 'gearActivate',
+      pulley: 'pulleyActivate',
+      weight: 'weightDrop',
+      platform: 'platformMove',
+      spring: 'springActivate',
+      rope: 'ropeActivate',
+      door: 'doorOpen',
+    };
+
+    const event = eventMap[m.type];
+    if (event) {
+      this.onStateChange({
+        status: this.status,
+        level: this.currentLevel + 1,
+        moves: this.moves,
+        event,
+        x,
+        y,
+      });
+    }
   }
 
   public nextLevel() {

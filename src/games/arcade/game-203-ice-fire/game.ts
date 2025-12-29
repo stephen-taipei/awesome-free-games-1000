@@ -51,6 +51,17 @@ interface GameState {
   gems: number;
 }
 
+export interface PendingEvents {
+  iceJump: { x: number; y: number }[];
+  fireJump: { x: number; y: number }[];
+  gemCollect: { x: number; y: number; type: string }[];
+  goalReach: { type: string }[];
+  hazardHit: { type: string; hazard: string }[];
+  start: boolean;
+  won: { level: number; gems: number }[];
+  lost: { level: number; gems: number; cause: string }[];
+}
+
 const LEVELS: Level[] = [
   // Level 1 - Introduction
   {
@@ -204,6 +215,17 @@ export class IceFireGame {
   private readonly MOVE_SPEED = 4;
   private readonly CHAR_SIZE = 24;
 
+  public pendingEvents: PendingEvents = {
+    iceJump: [],
+    fireJump: [],
+    gemCollect: [],
+    goalReach: [],
+    hazardHit: [],
+    start: false,
+    won: [],
+    lost: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -214,6 +236,19 @@ export class IceFireGame {
     this.setupInput();
     this.loadLevel(0);
     this.draw();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      iceJump: [],
+      fireJump: [],
+      gemCollect: [],
+      goalReach: [],
+      hazardHit: [],
+      start: false,
+      won: [],
+      lost: [],
+    };
   }
 
   private createCharacter(
@@ -288,6 +323,7 @@ export class IceFireGame {
   start() {
     this.status = "playing";
     this.loadLevel(this.currentLevel);
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -343,6 +379,7 @@ export class IceFireGame {
       if (this.keys.has("w") && this.ice.onGround) {
         this.ice.vy = this.JUMP_FORCE;
         this.ice.onGround = false;
+        this.pendingEvents.iceJump.push({ x: this.ice.x, y: this.ice.y });
       }
     }
 
@@ -359,6 +396,7 @@ export class IceFireGame {
       if (this.keys.has("arrowup") && this.fire.onGround) {
         this.fire.vy = this.JUMP_FORCE;
         this.fire.onGround = false;
+        this.pendingEvents.fireJump.push({ x: this.fire.x, y: this.fire.y });
       }
     }
 
@@ -381,6 +419,10 @@ export class IceFireGame {
     // Check win condition
     if (this.ice.reachedGoal && this.fire.reachedGoal) {
       this.status = "won";
+      this.pendingEvents.won.push({
+        level: this.currentLevel + 1,
+        gems: this.totalGems,
+      });
       this.onStateChange?.({ status: "won", gems: this.totalGems });
     }
   }
@@ -462,6 +504,7 @@ export class IceFireGame {
       if (dist < 20) {
         gem.collected = true;
         this.totalGems++;
+        this.pendingEvents.gemCollect.push({ x: gem.x, y: gem.y, type: gem.type });
         this.onStateChange?.({ status: "playing", gems: this.totalGems });
       }
     }
@@ -475,6 +518,9 @@ export class IceFireGame {
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist < 25) {
+        if (!char.reachedGoal) {
+          this.pendingEvents.goalReach.push({ type: goal.type });
+        }
         char.reachedGoal = true;
       }
     }
@@ -484,10 +530,22 @@ export class IceFireGame {
     for (const platform of this.platforms) {
       // Ice dies in lava
       if (platform.type === "lava" && this.checkCollision(this.ice, platform)) {
+        this.pendingEvents.hazardHit.push({ type: "ice", hazard: "lava" });
+        this.pendingEvents.lost.push({
+          level: this.currentLevel + 1,
+          gems: this.totalGems,
+          cause: "ice in lava",
+        });
         return true;
       }
       // Fire dies in water
       if (platform.type === "water" && this.checkCollision(this.fire, platform)) {
+        this.pendingEvents.hazardHit.push({ type: "fire", hazard: "water" });
+        this.pendingEvents.lost.push({
+          level: this.currentLevel + 1,
+          gems: this.totalGems,
+          cause: "fire in water",
+        });
         return true;
       }
     }

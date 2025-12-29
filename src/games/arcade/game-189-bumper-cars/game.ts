@@ -26,6 +26,13 @@ interface GameState {
 
 type StateCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  bump: { x: number; y: number; points: number }[];
+  wallHit: { x: number; y: number }[];
+  start: boolean;
+  gameOver: { score: number; hits: number }[];
+}
+
 const CAR_COLORS = ["#3498db", "#2ecc71", "#9b59b6", "#1abc9c", "#e91e63"];
 
 export class BumperCarsGame {
@@ -42,9 +49,25 @@ export class BumperCarsGame {
   private timerInterval: number | null = null;
   private keys: Set<string> = new Set();
 
+  public pendingEvents: PendingEvents = {
+    bump: [],
+    wallHit: [],
+    start: false,
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      bump: [],
+      wallHit: [],
+      start: false,
+      gameOver: [],
+    };
   }
 
   setOnStateChange(cb: StateCallback) {
@@ -110,6 +133,7 @@ export class BumperCarsGame {
     }
 
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.emitState();
     this.startTimer();
     this.gameLoop();
@@ -124,6 +148,7 @@ export class BumperCarsGame {
 
       if (this.time <= 0) {
         this.status = "over";
+        this.pendingEvents.gameOver.push({ score: this.score, hits: this.hits });
         this.emitState();
         this.stopTimer();
       }
@@ -308,6 +333,7 @@ export class BumperCarsGame {
             this.score += 50;
             car1.hitCooldown = 30;
             car2.hitCooldown = 30;
+            this.pendingEvents.bump.push({ x: (car1.x + car2.x) / 2, y: (car1.y + car2.y) / 2, points: 50 });
             this.emitState();
           }
         }

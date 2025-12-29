@@ -1,6 +1,7 @@
 /**
  * Screw Puzzle Game Engine
  * Game #085
+ * Workshop / Industrial / Metallic Theme
  *
  * Unscrew screws in the correct order - some screws block others!
  */
@@ -11,6 +12,7 @@ interface Screw {
   y: number;
   angle: number;
   color: string;
+  colorIndex: number;
   removed: boolean;
   blockedBy: number[]; // IDs of screws that block this one
   rotateProgress: number; // 0-1 for removal animation
@@ -26,16 +28,23 @@ interface Plank {
 }
 
 interface Level {
-  screws: Omit<Screw, "removed" | "rotateProgress">[];
+  screws: Omit<Screw, "removed" | "rotateProgress" | "colorIndex">[];
   planks: Omit<Plank, "screwIds">[];
 }
 
-interface GameState {
+type GameEvent = "click" | "rotateStart" | "rotating" | "remove" | "blocked" | "victory" | "levelStart" | "reset";
+
+export interface GameState {
   level: number;
   maxLevel: number;
   screwsRemoved: number;
   totalScrews: number;
   status: "idle" | "playing" | "won";
+  event?: GameEvent;
+  eventX?: number;
+  eventY?: number;
+  eventColorIndex?: number;
+  eventProgress?: number;
 }
 
 type StateCallback = (state: GameState) => void;
@@ -129,6 +138,8 @@ export class ScrewPuzzleGame {
   private animationId: number | null = null;
   private blockedScrew: Screw | null = null;
   private blockedTimer = 0;
+  private rotatingScrew: Screw | null = null;
+  private lastRotateEmit = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -139,7 +150,7 @@ export class ScrewPuzzleGame {
     this.onStateChange = cb;
   }
 
-  private emitState() {
+  private emitState(event?: GameEvent, screw?: Screw, progress?: number) {
     if (this.onStateChange) {
       const removed = this.screws.filter((s) => s.removed).length;
       this.onStateChange({
@@ -148,6 +159,11 @@ export class ScrewPuzzleGame {
         screwsRemoved: removed,
         totalScrews: this.screws.length,
         status: this.status,
+        event,
+        eventX: screw?.x,
+        eventY: screw?.y,
+        eventColorIndex: screw?.colorIndex,
+        eventProgress: progress,
       });
     }
   }
@@ -163,14 +179,14 @@ export class ScrewPuzzleGame {
     this.level = 1;
     this.loadLevel();
     this.status = "playing";
-    this.emitState();
+    this.emitState("levelStart");
     this.gameLoop();
   }
 
   reset() {
     this.loadLevel();
     this.status = "playing";
-    this.emitState();
+    this.emitState("reset");
   }
 
   nextLevel() {
@@ -178,7 +194,7 @@ export class ScrewPuzzleGame {
       this.level++;
       this.loadLevel();
       this.status = "playing";
-      this.emitState();
+      this.emitState("levelStart");
     }
   }
 
@@ -189,10 +205,11 @@ export class ScrewPuzzleGame {
     const scaleX = this.canvas.width / 550;
     const scaleY = this.canvas.height / 400;
 
-    this.screws = levelData.screws.map((s) => ({
+    this.screws = levelData.screws.map((s, index) => ({
       ...s,
       x: s.x * scaleX,
       y: s.y * scaleY,
+      colorIndex: SCREW_COLORS.indexOf(s.color),
       removed: false,
       rotateProgress: 0,
     }));
@@ -208,6 +225,7 @@ export class ScrewPuzzleGame {
 
     this.blockedScrew = null;
     this.blockedTimer = 0;
+    this.rotatingScrew = null;
   }
 
   handleClick(x: number, y: number) {
@@ -222,6 +240,8 @@ export class ScrewPuzzleGame {
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist < 25) {
+        // Emit click event
+        this.emitState("click", screw);
         this.tryRemoveScrew(screw);
         return;
       }
@@ -239,11 +259,14 @@ export class ScrewPuzzleGame {
       // Show blocked feedback
       this.blockedScrew = screw;
       this.blockedTimer = 30;
+      this.emitState("blocked", screw);
       return;
     }
 
     // Start removal animation
     screw.rotateProgress = 0.01;
+    this.rotatingScrew = screw;
+    this.emitState("rotateStart", screw);
   }
 
   private gameLoop() {
@@ -272,9 +295,17 @@ export class ScrewPuzzleGame {
         screw.rotateProgress += 0.05;
         screw.angle += 15;
 
+        // Emit rotating event periodically
+        const now = performance.now();
+        if (now - this.lastRotateEmit > 100) {
+          this.emitState("rotating", screw, screw.rotateProgress);
+          this.lastRotateEmit = now;
+        }
+
         if (screw.rotateProgress >= 1) {
           screw.removed = true;
-          this.emitState();
+          this.rotatingScrew = null;
+          this.emitState("remove", screw);
         }
       }
 
@@ -286,7 +317,7 @@ export class ScrewPuzzleGame {
     // Check win
     if (allRemoved && this.screws.length > 0) {
       this.status = "won";
-      this.emitState();
+      this.emitState("victory");
     }
   }
 
@@ -295,15 +326,8 @@ export class ScrewPuzzleGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Clear
-    ctx.fillStyle = "#b2bec3";
-    ctx.fillRect(0, 0, w, h);
-
-    // Draw metal background texture
-    ctx.fillStyle = "#a4b0be";
-    for (let i = 0; i < w; i += 20) {
-      ctx.fillRect(i, 0, 1, h);
-    }
+    // Clear with transparent for WebGPU background
+    ctx.clearRect(0, 0, w, h);
 
     // Draw planks
     for (const plank of this.planks) {

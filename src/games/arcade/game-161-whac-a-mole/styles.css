@@ -1,25 +1,126 @@
-.game-container {
-  max-width: 550px;
+/**
+ * Whac-A-Mole Styles
+ * Carnival / Fair / Grass Green and Brown Theme
+ * Game #161
+ */
+
+:root {
+  --grass-green: #7ec850;
+  --grass-dark: #5a9c32;
+  --dirt-brown: #8B4513;
+  --dirt-dark: #2d1810;
+  --mole-face: #deb887;
+  --golden-yellow: #ffd700;
+  --bomb-red: #e74c3c;
+  --carnival-red: #e63939;
+  --carnival-blue: #3399e6;
+  --carnival-pink: #ff80b3;
+  --carnival-purple: #9966cc;
+  --bg-dark: #1a3d1a;
+  --bg-darker: #0d1f0d;
 }
 
-.game-area {
-  position: relative;
-  width: 100%;
-  height: 450px;
-  background: #7ec850;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 1rem;
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+body {
+  font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
+  background: linear-gradient(180deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+  min-height: 100vh;
   display: flex;
   justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
   overflow: hidden;
-  cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="%238B4513" stroke="%23333" stroke-width="2"/><rect x="14" y="2" width="4" height="14" fill="%238B4513"/></svg>') 16 16, pointer;
 }
 
-canvas {
+/* Carnival lights overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(230, 57, 57, 0.1) 0%, transparent 30%),
+    radial-gradient(circle at 90% 10%, rgba(51, 153, 230, 0.1) 0%, transparent 30%),
+    radial-gradient(circle at 10% 90%, rgba(255, 128, 179, 0.1) 0%, transparent 30%),
+    radial-gradient(circle at 90% 90%, rgba(255, 215, 0, 0.1) 0%, transparent 30%);
+  pointer-events: none;
+  z-index: 0;
+  animation: carnivalPulse 3s ease-in-out infinite;
+}
+
+@keyframes carnivalPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Grass texture */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 20px,
+    rgba(100, 200, 80, 0.03) 20px,
+    rgba(100, 200, 80, 0.03) 40px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.game-container {
+  max-width: 550px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(90deg, rgba(139, 69, 19, 0.2) 0%, rgba(126, 200, 80, 0.2) 100%);
+  border-radius: 8px;
+  border: 3px solid var(--dirt-brown);
+  box-shadow: 0 0 15px rgba(139, 69, 19, 0.3);
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  color: var(--dirt-brown);
+  text-shadow:
+    2px 2px 0 var(--mole-face),
+    0 0 10px rgba(139, 69, 19, 0.5);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 2px solid var(--grass-dark);
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--grass-green);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.header-controls select:hover {
+  box-shadow: 0 0 10px var(--grass-green);
 }
 
 .game-controls {
@@ -31,23 +132,191 @@ canvas {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+  background: linear-gradient(135deg, rgba(139, 69, 19, 0.9) 0%, rgba(45, 24, 16, 0.95) 100%);
+  border: 2px solid var(--mole-face);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 8px rgba(222, 184, 135, 0.3),
+    inset 0 0 10px rgba(222, 184, 135, 0.05);
   display: flex;
   gap: 0.5rem;
-  transition: background 0.3s ease;
 }
 
 .stats-card span:first-child {
   opacity: 0.8;
+  color: var(--mole-face);
 }
 
 .stats-card.lives-card {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: linear-gradient(135deg, rgba(230, 57, 57, 0.9) 0%, rgba(192, 57, 43, 0.95) 100%);
+  border-color: #ff8080;
+}
+
+.stats-card.lives-card span:first-child {
+  color: #ff8080;
+}
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 450px;
+  background: var(--grass-green);
+  border-radius: 8px;
+  box-shadow:
+    0 0 20px rgba(126, 200, 80, 0.3),
+    0 0 40px rgba(139, 69, 19, 0.2),
+    inset 0 0 30px rgba(0, 0, 0, 0.2);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border: 4px solid var(--dirt-brown);
+  cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="%238B4513" stroke="%23333" stroke-width="2"/><rect x="14" y="2" width="4" height="14" fill="%238B4513"/></svg>') 16 16, pointer;
+}
+
+/* Fair booth frame effect */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(139, 69, 19, 0.15) 100%);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 4px;
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 4px;
+}
+
+#game-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: 4px;
+}
+
+.overlay-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.overlay-title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--dirt-brown);
+  text-shadow:
+    0 0 10px var(--mole-face),
+    3px 3px 0 var(--grass-dark);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  animation: titleBounce 1s ease-in-out infinite;
+}
+
+@keyframes titleBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.overlay-msg {
+  margin-bottom: 1.5rem;
+  color: var(--grass-green);
+  text-shadow: 0 0 5px var(--grass-green);
+  font-size: 1.1rem;
+}
+
+.controls-hint {
+  margin-top: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: 3px solid var(--grass-dark);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: transparent;
+  color: var(--grass-green);
+}
+
+.btn:hover {
+  box-shadow:
+    0 0 15px var(--grass-green),
+    0 0 30px rgba(126, 200, 80, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn.primary {
+  background: var(--grass-green);
+  border-color: var(--grass-dark);
+  color: white;
+  text-shadow: 1px 1px 0 var(--grass-dark);
+}
+
+.btn.primary:hover {
+  background: var(--golden-yellow);
+  border-color: var(--dirt-brown);
+  color: var(--dirt-brown);
+  box-shadow:
+    0 0 20px var(--golden-yellow),
+    0 0 40px rgba(255, 215, 0, 0.5);
+}
+
+.btn.warning {
+  border-color: var(--bomb-red);
+  color: var(--bomb-red);
+  text-shadow: 0 0 5px var(--bomb-red);
+}
+
+.btn.warning:hover {
+  box-shadow:
+    0 0 15px var(--bomb-red),
+    0 0 30px rgba(231, 76, 60, 0.3);
 }
 
 .footer-controls {
@@ -56,16 +325,23 @@ canvas {
   gap: 1rem;
 }
 
-.controls-hint {
-  margin-top: 1rem;
-  color: rgba(255, 255, 255, 0.7);
-}
+@media (max-width: 500px) {
+  .game-header h1 {
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+  }
 
-.overlay {
-  background: rgba(0, 0, 0, 0.85);
-}
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
 
-.overlay-title {
-  color: #8B4513;
-  text-shadow: 0 0 10px #deb887;
+  .game-controls {
+    gap: 0.5rem;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+  }
 }

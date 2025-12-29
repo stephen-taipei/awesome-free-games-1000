@@ -140,20 +140,37 @@ export class CastleMechanismGame {
     this.activationOrder.push(mech.id);
     this.moves++;
 
+    // Emit mechanism activate event
+    if (this.onStateChange) {
+      this.onStateChange({
+        moves: this.moves,
+        mechanismActivate: {
+          x: mech.x,
+          y: mech.y,
+          mechType: mech.type,
+        },
+      });
+    }
+
     // Activate linked mechanisms
     mech.linkedTo.forEach((linkedId) => {
       const linked = this.mechanisms.find((m) => m.id === linkedId);
       if (linked && !linked.activated) {
         setTimeout(() => {
           linked.activated = true;
+          // Emit chain reaction event
+          if (this.onStateChange) {
+            this.onStateChange({
+              chainReaction: {
+                x: linked.x,
+                y: linked.y,
+              },
+            });
+          }
           this.draw();
         }, 300);
       }
     });
-
-    if (this.onStateChange) {
-      this.onStateChange({ moves: this.moves });
-    }
 
     // Animate and check progress
     setTimeout(() => {
@@ -184,6 +201,9 @@ export class CastleMechanismGame {
 
     if (!correctSoFar) {
       // Wrong order - reset
+      if (this.onStateChange) {
+        this.onStateChange({ wrongOrder: true });
+      }
       setTimeout(() => {
         this.mechanisms.forEach((m) => (m.activated = false));
         this.activationOrder = [];
@@ -197,7 +217,15 @@ export class CastleMechanismGame {
     const activatedRequired = this.gateOpenOrder.filter((id) =>
       this.activationOrder.includes(id)
     );
-    this.gateProgress = activatedRequired.length / this.gateOpenOrder.length;
+    const newProgress = activatedRequired.length / this.gateOpenOrder.length;
+
+    // Emit gate progress event if changed
+    if (newProgress > this.gateProgress) {
+      this.gateProgress = newProgress;
+      if (this.onStateChange) {
+        this.onStateChange({ gateProgress: this.gateProgress });
+      }
+    }
 
     if (this.gateProgress >= 1) {
       this.status = "won";

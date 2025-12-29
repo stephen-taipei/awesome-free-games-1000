@@ -1,25 +1,86 @@
+/**
+ * Hexagon Match Styles
+ * Crystalline Honeycomb Theme
+ * Game #029
+ */
+
+:root {
+  --honey-dark: #1a0f05;
+  --honey-deep: #2a1a0a;
+  --honey-surface: #3d2815;
+  --crystal-gold: #ffd700;
+  --crystal-amber: #ffbf00;
+  --crystal-honey: #f4a020;
+  --crystal-warm: #ff8c00;
+  --crystal-light: #fff8dc;
+  --honey-glow: #4a3010;
+}
+
 .game-container {
   max-width: 600px;
+  background: linear-gradient(180deg, var(--honey-dark) 0%, var(--honey-deep) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Honeycomb pattern background */
+.game-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath fill='%23ffd700' fill-opacity='0.03' d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' /%3E%3Cpath fill='none' stroke='%23ffd700' stroke-opacity='0.05' stroke-width='1' d='M28 0L28 66L0 50L0 16L28 0L56 16L56 50L28 66' /%3E%3C/svg%3E");
+  background-size: 56px 100px;
+  pointer-events: none;
+  z-index: 1;
+  animation: honeycombShimmer 8s ease-in-out infinite alternate;
+}
+
+@keyframes honeycombShimmer {
+  0% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  background: #2c3e50;
-  border-radius: 8px;
+  background: linear-gradient(180deg,
+    var(--honey-surface) 0%,
+    var(--honey-deep) 50%,
+    var(--honey-glow) 100%);
+  border-radius: 12px;
   padding: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 0 40px rgba(255, 215, 0, 0.15),
+    inset 0 0 60px rgba(0, 0, 0, 0.5);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  z-index: 2;
+}
+
+/* Crystal glow effect */
+.game-area::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60%;
+  height: 50%;
+  background: radial-gradient(ellipse, rgba(255, 215, 0, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .canvas-wrapper {
   width: 100%;
-  /* aspect ratio managed by canvas sizing logic */
   display: flex;
   justify-content: center;
+  position: relative;
+  z-index: 5;
 }
 
 canvas {
@@ -27,10 +88,21 @@ canvas {
   border-radius: 8px;
   cursor: grab;
   touch-action: none;
+  position: relative;
+  z-index: 5;
 }
 
 canvas:active {
   cursor: grabbing;
+}
+
+/* WebGPU overlay */
+.webgpu-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 12px;
 }
 
 .game-controls {
@@ -38,18 +110,240 @@ canvas:active {
   justify-content: flex-end;
   gap: 1rem;
   margin-bottom: 1rem;
+  position: relative;
+  z-index: 3;
 }
 
 .stats-card {
-  background: white;
-  padding: 0.5rem 1rem;
+  background: linear-gradient(145deg,
+    rgba(61, 40, 21, 0.95) 0%,
+    rgba(42, 26, 10, 0.98) 100%);
+  color: var(--crystal-gold);
+  padding: 0.6rem 1.2rem;
   border-radius: 8px;
+  font-family: 'Georgia', serif;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 0.95rem;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.4),
+    0 0 15px rgba(255, 215, 0, 0.1);
+  text-shadow: 0 0 10px var(--crystal-gold);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stats-card span:first-child {
+  color: var(--crystal-amber);
+  text-shadow: 0 0 8px var(--crystal-amber);
 }
 
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+  position: relative;
+  z-index: 3;
+}
+
+.footer-controls button {
+  background: linear-gradient(145deg,
+    rgba(100, 70, 30, 0.9) 0%,
+    rgba(61, 40, 21, 0.95) 100%);
+  color: var(--crystal-gold);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-family: 'Georgia', serif;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-shadow: 0 0 8px var(--crystal-gold);
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(255, 215, 0, 0.1);
+}
+
+.footer-controls button:hover {
+  background: linear-gradient(145deg,
+    rgba(120, 85, 35, 0.9) 0%,
+    rgba(80, 55, 25, 0.95) 100%);
+  border-color: var(--crystal-gold);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.4),
+    0 0 25px rgba(255, 215, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+.footer-controls button:active {
+  transform: translateY(0);
+}
+
+/* Game overlay */
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 15, 5, 0.95);
+  backdrop-filter: blur(15px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 12px;
+}
+
+.game-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 215, 0, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 30% 70%, rgba(255, 191, 0, 0.05) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+/* Hexagonal decoration */
+.game-overlay::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 100px;
+  background:
+    linear-gradient(120deg, transparent 30%, rgba(255, 215, 0, 0.1) 50%, transparent 70%);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  animation: hexRotate 10s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes hexRotate {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  100% { transform: translateX(-50%) rotate(360deg); }
+}
+
+.game-overlay h2 {
+  font-family: 'Georgia', serif;
+  font-size: 2.2rem;
+  color: var(--crystal-gold);
+  text-shadow:
+    0 0 10px var(--crystal-gold),
+    0 0 30px var(--crystal-amber),
+    0 0 50px var(--crystal-honey);
+  margin-bottom: 1rem;
+  letter-spacing: 3px;
+  animation: crystalGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes crystalGlow {
+  0% {
+    text-shadow:
+      0 0 10px var(--crystal-gold),
+      0 0 30px var(--crystal-amber);
+  }
+  100% {
+    text-shadow:
+      0 0 15px var(--crystal-gold),
+      0 0 40px var(--crystal-amber),
+      0 0 60px var(--crystal-honey);
+  }
+}
+
+.game-overlay p {
+  font-family: 'Georgia', serif;
+  color: var(--crystal-light);
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+}
+
+.game-overlay button {
+  background: linear-gradient(145deg,
+    rgba(255, 191, 0, 0.3) 0%,
+    rgba(255, 215, 0, 0.2) 100%);
+  color: var(--crystal-light);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  padding: 0.9rem 2.5rem;
+  border-radius: 8px;
+  font-family: 'Georgia', serif;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-shadow: 0 0 10px var(--crystal-gold);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(255, 215, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-overlay button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.game-overlay button:hover::before {
+  transform: translateX(100%);
+}
+
+.game-overlay button:hover {
+  background: linear-gradient(145deg,
+    rgba(255, 191, 0, 0.4) 0%,
+    rgba(255, 215, 0, 0.3) 100%);
+  border-color: var(--crystal-gold);
+  box-shadow:
+    0 6px 30px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(255, 215, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Language selector */
+select {
+  background: rgba(61, 40, 21, 0.9);
+  color: var(--crystal-gold);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+select:hover {
+  border-color: var(--crystal-gold);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+}
+
+select option {
+  background: var(--honey-deep);
+  color: var(--crystal-gold);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .game-area {
+    padding: 0.5rem;
+  }
+
+  .stats-card {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .game-overlay h2 {
+    font-size: 1.8rem;
+  }
 }

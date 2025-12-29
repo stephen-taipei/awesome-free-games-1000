@@ -1,6 +1,7 @@
 /**
  * Button Puzzle Game Engine
  * Game #088 - Press buttons in the correct sequence (Simon-like)
+ * WebGPU Enhanced with Event Emissions
  */
 
 export interface LevelConfig {
@@ -8,6 +9,17 @@ export interface LevelConfig {
   sequenceLength: number;
   showTime: number;
   pauseTime: number;
+}
+
+export interface GameState {
+  event?: "buttonFlash" | "sequenceShow" | "correct" | "wrong" | "victory" | "levelStart" | "reset";
+  x?: number;
+  y?: number;
+  buttonIndex?: number;
+  colorIndex?: number;
+  sequence?: string;
+  status?: "idle" | "showing" | "playing" | "won" | "wrong";
+  level?: number;
 }
 
 export class ButtonPuzzleGame {
@@ -20,7 +32,7 @@ export class ButtonPuzzleGame {
   private currentLevel = 0;
   private status: "idle" | "showing" | "playing" | "won" | "wrong" = "idle";
 
-  private onStateChange: ((state: any) => void) | null = null;
+  private onStateChange: ((state: GameState) => void) | null = null;
 
   private colors = ["red", "blue", "green", "yellow", "purple", "cyan", "orange", "pink", "white"];
 
@@ -37,6 +49,25 @@ export class ButtonPuzzleGame {
     this.gridContainer = gridContainer;
   }
 
+  private emitState(state: GameState): void {
+    if (this.onStateChange) {
+      this.onStateChange(state);
+    }
+  }
+
+  private getButtonCenter(buttonIndex: number): { x: number; y: number } {
+    const button = this.buttons[buttonIndex];
+    if (!button) {
+      return { x: 0, y: 0 };
+    }
+    const rect = button.getBoundingClientRect();
+    const containerRect = this.gridContainer.getBoundingClientRect();
+    return {
+      x: rect.left - containerRect.left + rect.width / 2,
+      y: rect.top - containerRect.top + rect.height / 2,
+    };
+  }
+
   public start(level?: number) {
     this.currentLevel = level ?? this.currentLevel;
     this.playerIndex = 0;
@@ -45,12 +76,19 @@ export class ButtonPuzzleGame {
     this.createGrid();
     this.generateSequence();
 
-    if (this.onStateChange) {
-      this.onStateChange({
-        sequence: `0/${this.sequence.length}`,
-        status: "showing",
-      });
-    }
+    this.emitState({
+      sequence: `0/${this.sequence.length}`,
+      status: "showing",
+    });
+
+    // Emit level start
+    const centerX = this.gridContainer.offsetWidth / 2;
+    const centerY = this.gridContainer.offsetHeight / 2;
+    this.emitState({
+      event: "levelStart",
+      x: centerX,
+      y: centerY,
+    });
 
     // Show sequence after a short delay
     setTimeout(() => {
@@ -96,7 +134,7 @@ export class ButtonPuzzleGame {
 
     for (let i = 0; i < this.sequence.length; i++) {
       const idx = this.sequence[i];
-      await this.flashButton(idx, config.showTime);
+      await this.flashButton(idx, config.showTime, true);
       await this.wait(config.pauseTime);
     }
 
@@ -104,15 +142,24 @@ export class ButtonPuzzleGame {
     this.status = "playing";
     this.buttons.forEach((btn) => btn.classList.remove("disabled"));
 
-    if (this.onStateChange) {
-      this.onStateChange({ status: "playing" });
-    }
+    this.emitState({ status: "playing" });
   }
 
-  private flashButton(index: number, duration: number): Promise<void> {
+  private flashButton(index: number, duration: number, isSequenceShow: boolean = false): Promise<void> {
     return new Promise((resolve) => {
       const btn = this.buttons[index];
       btn.classList.add("active");
+
+      const pos = this.getButtonCenter(index);
+
+      // Emit event for WebGPU/Audio
+      this.emitState({
+        event: isSequenceShow ? "sequenceShow" : "buttonFlash",
+        x: pos.x,
+        y: pos.y,
+        buttonIndex: index,
+        colorIndex: index % this.colors.length,
+      });
 
       setTimeout(() => {
         btn.classList.remove("active");
@@ -131,32 +178,54 @@ export class ButtonPuzzleGame {
     // Flash the clicked button
     this.flashButton(index, 200);
 
+    const pos = this.getButtonCenter(index);
+
     if (this.sequence[this.playerIndex] === index) {
       // Correct!
       this.playerIndex++;
 
-      if (this.onStateChange) {
-        this.onStateChange({
-          sequence: `${this.playerIndex}/${this.sequence.length}`,
-        });
-      }
+      this.emitState({
+        event: "correct",
+        x: pos.x,
+        y: pos.y,
+        buttonIndex: index,
+        colorIndex: index % this.colors.length,
+      });
+
+      this.emitState({
+        sequence: `${this.playerIndex}/${this.sequence.length}`,
+      });
 
       if (this.playerIndex >= this.sequence.length) {
         // Won!
         this.status = "won";
         this.buttons.forEach((btn) => btn.classList.add("disabled"));
 
-        if (this.onStateChange) {
-          this.onStateChange({
-            status: "won",
-            level: this.currentLevel,
-          });
-        }
+        const centerX = this.gridContainer.offsetWidth / 2;
+        const centerY = this.gridContainer.offsetHeight / 2;
+        this.emitState({
+          event: "victory",
+          x: centerX,
+          y: centerY,
+        });
+
+        this.emitState({
+          status: "won",
+          level: this.currentLevel,
+        });
       }
     } else {
       // Wrong!
       this.status = "wrong";
       this.buttons.forEach((btn) => btn.classList.add("disabled"));
+
+      const centerX = this.gridContainer.offsetWidth / 2;
+      const centerY = this.gridContainer.offsetHeight / 2;
+      this.emitState({
+        event: "wrong",
+        x: centerX,
+        y: centerY,
+      });
 
       // Flash all buttons red briefly
       this.buttons.forEach((btn) => {
@@ -168,20 +237,16 @@ export class ButtonPuzzleGame {
           btn.style.filter = "";
         });
 
-        if (this.onStateChange) {
-          this.onStateChange({ status: "wrong" });
-        }
+        this.emitState({ status: "wrong" });
 
         // Restart the level
         setTimeout(() => {
           this.playerIndex = 0;
           this.status = "showing";
-          if (this.onStateChange) {
-            this.onStateChange({
-              sequence: `0/${this.sequence.length}`,
-              status: "showing",
-            });
-          }
+          this.emitState({
+            sequence: `0/${this.sequence.length}`,
+            status: "showing",
+          });
           this.showSequence();
         }, 500);
       }, 500);
@@ -189,6 +254,9 @@ export class ButtonPuzzleGame {
   }
 
   public reset() {
+    this.emitState({
+      event: "reset",
+    });
     this.start(this.currentLevel);
   }
 
@@ -209,7 +277,7 @@ export class ButtonPuzzleGame {
     return this.sequence.length;
   }
 
-  public setOnStateChange(cb: (state: any) => void) {
+  public setOnStateChange(cb: (state: GameState) => void) {
     this.onStateChange = cb;
   }
 }

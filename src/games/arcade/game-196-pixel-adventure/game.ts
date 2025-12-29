@@ -11,6 +11,16 @@ export interface LevelConfig {
   playerStart: { x: number; y: number };
 }
 
+export interface PendingEvents {
+  jump: { x: number; y: number }[];
+  coinCollect: { x: number; y: number }[];
+  death: { x: number; y: number; cause: string }[];
+  levelComplete: { level: number; coins: number }[];
+  start: boolean;
+  won: { level: number; coins: number }[];
+  lost: { level: number; lives: number }[];
+}
+
 export class PixelAdventureGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -44,6 +54,16 @@ export class PixelAdventureGame {
   private onStateChange: ((state: any) => void) | null = null;
   private animationId: number | null = null;
   private frameCount = 0;
+
+  public pendingEvents: PendingEvents = {
+    jump: [],
+    coinCollect: [],
+    death: [],
+    levelComplete: [],
+    start: false,
+    won: [],
+    lost: [],
+  };
 
   private levels: LevelConfig[] = [
     // Level 1 - Simple intro
@@ -176,6 +196,18 @@ export class PixelAdventureGame {
     this.setupInput();
   }
 
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      jump: [],
+      coinCollect: [],
+      death: [],
+      levelComplete: [],
+      start: false,
+      won: [],
+      lost: [],
+    };
+  }
+
   private setupInput() {
     window.addEventListener("keydown", (e) => {
       this.keys[e.key.toLowerCase()] = true;
@@ -193,6 +225,7 @@ export class PixelAdventureGame {
     this.currentLevel = level ?? this.currentLevel;
     this.loadLevel(this.currentLevel);
     this.status = "playing";
+    this.pendingEvents.start = true;
     this.gameLoop();
   }
 
@@ -239,6 +272,7 @@ export class PixelAdventureGame {
     if ((this.keys[" "] || this.keys["arrowup"] || this.keys["w"]) && this.player.grounded) {
       this.player.vy = this.jumpForce;
       this.player.grounded = false;
+      this.pendingEvents.jump.push({ x: this.player.x, y: this.player.y });
     }
 
     // Apply gravity
@@ -283,6 +317,7 @@ export class PixelAdventureGame {
 
     // Fall death
     if (this.player.y > this.canvas.height) {
+      this.pendingEvents.death.push({ x: this.player.x, y: this.player.y, cause: "fall" });
       this.die();
       return;
     }
@@ -293,6 +328,7 @@ export class PixelAdventureGame {
         this.player.x, this.player.y, this.player.width, this.player.height,
         spike.x, spike.y, spike.w, 15
       )) {
+        this.pendingEvents.death.push({ x: this.player.x, y: this.player.y, cause: "spike" });
         this.die();
         return;
       }
@@ -306,6 +342,7 @@ export class PixelAdventureGame {
       )) {
         coin.collected = true;
         this.collectedCoins++;
+        this.pendingEvents.coinCollect.push({ x: coin.x, y: coin.y });
         this.updateState();
       }
     }
@@ -332,6 +369,7 @@ export class PixelAdventureGame {
 
     if (this.lives <= 0) {
       this.status = "lost";
+      this.pendingEvents.lost.push({ level: this.currentLevel + 1, lives: 0 });
       this.stopAnimation();
       if (this.onStateChange) {
         this.onStateChange({ status: "lost" });
@@ -348,6 +386,8 @@ export class PixelAdventureGame {
 
   private win() {
     this.status = "won";
+    this.pendingEvents.levelComplete.push({ level: this.currentLevel + 1, coins: this.collectedCoins });
+    this.pendingEvents.won.push({ level: this.currentLevel + 1, coins: this.collectedCoins });
     this.stopAnimation();
     if (this.onStateChange) {
       this.onStateChange({ status: "won" });

@@ -89,6 +89,16 @@ export interface GameConfig {
   enemySpawnInterval: number;
 }
 
+export interface PendingEvents {
+  start: boolean;
+  playerShoot: boolean;
+  enemyKilled: { type: string; points: number }[];
+  playerHit: { damage: number; healthRemaining: number }[];
+  fateSkillUsed: { skill: string }[];
+  waveComplete: { wave: number }[];
+  gameOver: { score: number; bestScore: number; wave: number; kills: number }[];
+}
+
 const ENEMY_CONFIGS = {
   [EnemyType.GRUNT]: {
     width: 30,
@@ -145,6 +155,28 @@ export class FateWarriorGame {
   private onStateChange?: (state: GameState) => void;
   private keys: Set<string> = new Set();
   private savedPlayerState: { health: number; x: number; y: number } | null = null;
+
+  public pendingEvents: PendingEvents = {
+    start: false,
+    playerShoot: false,
+    enemyKilled: [],
+    playerHit: [],
+    fateSkillUsed: [],
+    waveComplete: [],
+    gameOver: [],
+  };
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      start: false,
+      playerShoot: false,
+      enemyKilled: [],
+      playerHit: [],
+      fateSkillUsed: [],
+      waveComplete: [],
+      gameOver: [],
+    };
+  }
 
   constructor(config: Partial<GameConfig> = {}) {
     this.config = {
@@ -222,6 +254,7 @@ export class FateWarriorGame {
     this.nextProjectileId = 0;
     this.keys.clear();
     this.savedPlayerState = null;
+    this.pendingEvents.start = true;
     this.gameLoop();
     this.notifyStateChange();
   }
@@ -447,7 +480,9 @@ export class FateWarriorGame {
             if (enemy.health <= 0) {
               enemy.isDead = true;
               this.state.kills++;
-              this.state.score += ENEMY_CONFIGS[enemy.type].points;
+              const points = ENEMY_CONFIGS[enemy.type].points;
+              this.state.score += points;
+              this.pendingEvents.enemyKilled.push({ type: enemy.type, points });
               this.state.player.fateEnergy = Math.min(
                 this.state.player.maxFateEnergy,
                 this.state.player.fateEnergy + 10
@@ -474,6 +509,7 @@ export class FateWarriorGame {
               player.health -= projectile.damage;
               player.isInvulnerable = true;
               player.invulnerableTime = 0.5;
+              this.pendingEvents.playerHit.push({ damage: projectile.damage, healthRemaining: player.health });
               if (player.health <= 0) {
                 this.gameOver();
               }
@@ -542,6 +578,7 @@ export class FateWarriorGame {
     this.state.wave++;
     this.state.timeSinceWaveStart = 0;
     this.state.score += this.state.wave * 50;
+    this.pendingEvents.waveComplete.push({ wave: this.state.wave });
   }
 
   playerShoot(): void {
@@ -561,6 +598,7 @@ export class FateWarriorGame {
     };
 
     this.state.projectiles.push(projectile);
+    this.pendingEvents.playerShoot = true;
   }
 
   useFateSkill(skill: FateSkill): void {
@@ -571,6 +609,7 @@ export class FateWarriorGame {
 
     this.state.player.fateEnergy -= cost;
     this.state.activeFateSkill = skill;
+    this.pendingEvents.fateSkillUsed.push({ skill });
 
     switch (skill) {
       case FateSkill.TIME_REWIND:
@@ -640,6 +679,7 @@ export class FateWarriorGame {
       this.saveBestScore(this.state.bestScore);
     }
 
+    this.pendingEvents.gameOver.push({ score: this.state.score, bestScore: this.state.bestScore, wave: this.state.wave, kills: this.state.kills });
     this.notifyStateChange();
   }
 

@@ -35,6 +35,16 @@ interface CollectionZone {
 
 type StateChangeCallback = (state: GameState) => void;
 
+export interface PendingEvents {
+  magnetActivate: { x: number; y: number; mode: string }[];
+  ballCollect: { x: number; y: number }[];
+  dangerCollision: { x: number; y: number }[];
+  levelComplete: { level: number; collected: number }[];
+  start: boolean;
+  won: { level: number }[];
+  gameOver: { level: number }[];
+}
+
 export class MagnetBallGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -64,9 +74,31 @@ export class MagnetBallGame {
   private friction: number = 0.98;
   private maxLevels: number = 10;
 
+  public pendingEvents: PendingEvents = {
+    magnetActivate: [],
+    ballCollect: [],
+    dangerCollision: [],
+    levelComplete: [],
+    start: false,
+    won: [],
+    gameOver: [],
+  };
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      magnetActivate: [],
+      ballCollect: [],
+      dangerCollision: [],
+      levelComplete: [],
+      start: false,
+      won: [],
+      gameOver: [],
+    };
   }
 
   resize() {
@@ -102,6 +134,9 @@ export class MagnetBallGame {
       const scaleY = this.size / rect.height;
       this.magnetX = (x - rect.left) * scaleX;
       this.magnetY = (y - rect.top) * scaleY;
+      if (active) {
+        this.pendingEvents.magnetActivate.push({ x: this.magnetX, y: this.magnetY, mode: this.magnetMode });
+      }
     }
   }
 
@@ -123,6 +158,7 @@ export class MagnetBallGame {
     };
 
     this.setupLevel(1);
+    this.pendingEvents.start = true;
     this.notifyState();
     this.lastTime = performance.now();
     this.loop();
@@ -310,16 +346,21 @@ export class MagnetBallGame {
         if (ball.type === "metal") {
           ball.collected = true;
           this.state.collected++;
+          this.pendingEvents.ballCollect.push({ x: ball.x, y: ball.y });
           this.notifyState();
 
           // Check win
           if (this.state.collected >= this.state.total) {
             this.state.status = "won";
+            this.pendingEvents.levelComplete.push({ level: this.state.level, collected: this.state.collected });
+            this.pendingEvents.won.push({ level: this.state.level });
             this.notifyState();
           }
         } else if (ball.type === "danger") {
           // Game over
           this.state.status = "over";
+          this.pendingEvents.dangerCollision.push({ x: ball.x, y: ball.y });
+          this.pendingEvents.gameOver.push({ level: this.state.level });
           this.notifyState();
         }
       }

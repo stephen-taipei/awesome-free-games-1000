@@ -30,6 +30,13 @@ export interface GameState {
   totalTargets: number;
 }
 
+export interface PendingEvents {
+  rotate: { mirrorIndex: number; newAngle: number }[];
+  targetHit: { x: number; y: number }[];
+  levelComplete: { level: number; moves: number }[];
+  start: boolean;
+}
+
 export interface LaserLevel {
   mirrors: Mirror[];
   targets: Target[];
@@ -46,8 +53,24 @@ export class LaserMazeGame {
   onStateChange: ((state: GameState) => void) | null = null;
   private selectedMirror: number = -1;
 
+  public pendingEvents: PendingEvents = {
+    rotate: [],
+    targetHit: [],
+    levelComplete: [],
+    start: false,
+  };
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = {
+      rotate: [],
+      targetHit: [],
+      levelComplete: [],
+      start: false,
+    };
   }
 
   private createInitialState(): GameState {
@@ -66,6 +89,7 @@ export class LaserMazeGame {
       ...this.createInitialState(),
       phase: "playing",
     };
+    this.pendingEvents.start = true;
     this.generateLevel(1);
     this.calculateLaserPath();
     this.emitState();
@@ -199,6 +223,7 @@ export class LaserMazeGame {
         if (dist < 20 && !target.hit) {
           target.hit = true;
           this.state.targetsHit++;
+          this.pendingEvents.targetHit.push({ x: target.x, y: target.y });
         }
       }
     }
@@ -209,6 +234,7 @@ export class LaserMazeGame {
     // Check win condition
     if (this.state.targetsHit === this.state.totalTargets) {
       this.state.phase = "levelComplete";
+      this.pendingEvents.levelComplete.push({ level: this.state.level, moves: this.state.moves });
     }
   }
 
@@ -221,6 +247,7 @@ export class LaserMazeGame {
     // Toggle between 45 and 135 degrees
     mirror.angle = mirror.angle === 45 ? 135 : 45;
     this.state.moves++;
+    this.pendingEvents.rotate.push({ mirrorIndex: index, newAngle: mirror.angle });
 
     // Reset targets
     for (const target of this.currentLevel.targets) {

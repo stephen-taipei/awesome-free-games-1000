@@ -1,3 +1,23 @@
+/**
+ * Skeleton Puzzle Styles
+ * Game #117 - Archaeology / Museum Theme
+ * WebGPU Enhanced
+ */
+
+:root {
+  --bone-ivory: #f5f5dc;
+  --bone-aged: #d4c4a8;
+  --museum-dark: #1a1a2e;
+  --museum-wall: #252540;
+  --display-case: #16162a;
+  --amber-glow: #c9a44a;
+  --dust-tan: #a89070;
+  --velvet-bg: #2a1f1a;
+  --text-primary: #f5f5dc;
+  --text-secondary: rgba(245, 245, 220, 0.7);
+  --spotlight: rgba(255, 240, 200, 0.15);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,18 +25,60 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  background: linear-gradient(135deg, var(--museum-dark) 0%, #0f0f20 50%, var(--museum-dark) 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Museum spotlight ambiance */
+body::before {
+  content: "";
+  position: fixed;
+  top: -30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 400px;
+  background: radial-gradient(ellipse, var(--spotlight) 0%, transparent 70%);
+  pointer-events: none;
+  animation: spotlightPulse 6s ease-in-out infinite;
+}
+
+@keyframes spotlightPulse {
+  0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.9; transform: translateX(-50%) scale(1.05); }
+}
+
+/* Floating dust particles */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='30' r='1' fill='%23f5f5dc' opacity='0.3'/%3E%3Ccircle cx='80' cy='60' r='0.5' fill='%23f5f5dc' opacity='0.2'/%3E%3Ccircle cx='150' cy='40' r='1' fill='%23f5f5dc' opacity='0.25'/%3E%3Ccircle cx='40' cy='120' r='0.7' fill='%23f5f5dc' opacity='0.2'/%3E%3Ccircle cx='120' cy='150' r='0.8' fill='%23f5f5dc' opacity='0.3'/%3E%3Ccircle cx='180' cy='100' r='0.5' fill='%23f5f5dc' opacity='0.15'/%3E%3C/svg%3E");
+  pointer-events: none;
+  animation: dustFloat 30s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes dustFloat {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-100px); }
 }
 
 .game-container {
   max-width: 650px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .game-header {
@@ -24,21 +86,34 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  color: #f5f5dc;
+  color: var(--amber-glow);
 }
 
 .game-header h1 {
   font-size: 1.5rem;
-  text-shadow: 0 0 10px rgba(245, 245, 220, 0.3);
+  font-weight: 400;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 15px rgba(201, 164, 74, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .header-controls select {
-  padding: 0.5rem;
-  border-radius: 8px;
-  border: none;
-  background: #252540;
-  color: #f5f5dc;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: 1px solid var(--bone-aged);
+  background: linear-gradient(180deg, var(--museum-wall) 0%, var(--museum-dark) 100%);
+  color: var(--bone-ivory);
   cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.header-controls select:hover {
+  border-color: var(--amber-glow);
+  box-shadow: 0 0 10px rgba(201, 164, 74, 0.3);
 }
 
 .game-controls {
@@ -49,35 +124,80 @@ body {
 }
 
 .stats-card {
-  background: rgba(245, 245, 220, 0.1);
-  color: #f5f5dc;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-weight: bold;
+  background: rgba(245, 245, 220, 0.08);
+  color: var(--bone-ivory);
+  padding: 0.5rem 1.2rem;
+  border-radius: 4px;
+  font-weight: 400;
   display: flex;
   gap: 0.5rem;
-  border: 1px solid rgba(245, 245, 220, 0.2);
+  border: 1px solid rgba(245, 245, 220, 0.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 4px 8px rgba(0, 0, 0, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+
+.stats-card span:last-child {
+  color: var(--amber-glow);
+  font-weight: bold;
+  min-width: 40px;
+  text-align: center;
 }
 
 .game-area {
   position: relative;
   width: 100%;
-  background: #1a1a2e;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, var(--museum-wall) 0%, var(--display-case) 100%);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 40px rgba(201, 164, 74, 0.1);
   overflow: hidden;
+  border: 2px solid rgba(245, 245, 220, 0.1);
+}
+
+/* Display case frame effect */
+.game-area::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  border: 1px solid rgba(201, 164, 74, 0.2);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .canvas-container {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
 }
 
-canvas {
+#webgpu-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#game-canvas {
   max-width: 100%;
-  border-radius: 8px;
+  border-radius: 4px;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .overlay {
@@ -87,6 +207,7 @@ canvas {
   width: 100%;
   height: 100%;
   background: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -95,50 +216,78 @@ canvas {
 
 .overlay-content {
   text-align: center;
-  color: white;
+  color: var(--text-primary);
   padding: 2rem;
 }
 
 .overlay-title {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #f5f5dc;
-  text-shadow: 0 0 20px rgba(245, 245, 220, 0.3);
+  color: var(--amber-glow);
+  text-shadow:
+    0 0 20px rgba(201, 164, 74, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  font-weight: 400;
 }
 
 .overlay-msg {
   margin-bottom: 1.5rem;
-  opacity: 0.9;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  font-style: italic;
 }
 
 .controls-hint {
   margin-top: 1rem;
-  opacity: 0.7;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 1rem;
-  font-weight: bold;
+  font-weight: 500;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: inherit;
+  margin: 0 0.25rem;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #f5f5dc, #d4d4aa);
-  color: #1a1a2e;
+  background: linear-gradient(180deg, var(--bone-ivory) 0%, var(--bone-aged) 100%);
+  color: var(--museum-dark);
+  border: 2px solid var(--bone-ivory);
+  box-shadow:
+    0 4px 12px rgba(245, 245, 220, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 6px 20px rgba(245, 245, 220, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  border-color: var(--amber-glow);
 }
 
 .btn.warning {
-  background: #e74c3c;
-  color: white;
+  background: linear-gradient(180deg, #8b4513 0%, #654321 100%);
+  color: var(--bone-ivory);
+  border: 2px solid #8b4513;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+}
+
+.btn.warning:hover {
+  box-shadow: 0 6px 20px rgba(139, 69, 19, 0.5);
 }
 
 .footer-controls {
@@ -148,13 +297,81 @@ canvas {
   margin-top: 1rem;
 }
 
+/* Bone decorative elements */
+.game-area::after {
+  content: "";
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 30px;
+  height: 8px;
+  background: linear-gradient(90deg, var(--bone-aged), var(--bone-ivory), var(--bone-aged));
+  border-radius: 4px;
+  opacity: 0.3;
+  z-index: 0;
+}
+
+/* Aged paper texture */
+.canvas-container::before {
+  content: "";
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 3;
+  border-radius: 4px;
+}
+
+/* Responsive */
 @media (max-width: 500px) {
   .game-header h1 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
   }
 
   .stats-card {
     padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1rem;
     font-size: 0.9rem;
   }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* Discovery animation */
+@keyframes boneShimmer {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+  100% { filter: brightness(1); }
+}
+
+.game-area.discovered {
+  animation: boneShimmer 0.5s ease-out;
+}
+
+/* Excavation loading animation */
+@keyframes excavate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.game-area.loading {
+  background: linear-gradient(
+    90deg,
+    var(--display-case) 0%,
+    var(--museum-wall) 50%,
+    var(--display-case) 100%
+  );
+  background-size: 200% 100%;
+  animation: excavate 2s ease infinite;
 }

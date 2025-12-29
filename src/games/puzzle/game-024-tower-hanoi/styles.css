@@ -1,22 +1,98 @@
-.game-container {
-  max-width: 700px;
+/**
+ * Tower of Hanoi Styles
+ * Arcane Dimensional Theme
+ * Game #024
+ */
+
+/* Theme Variables */
+:root {
+  --arcane-dark: #0a0612;
+  --arcane-deep: #12081a;
+  --arcane-medium: #1a0c24;
+  --neon-purple: #9b59b6;
+  --neon-magenta: #e056fd;
+  --neon-gold: #f1c40f;
+  --neon-blue: #3498db;
+  --glass-bg: rgba(155, 89, 182, 0.05);
+  --glass-border: rgba(155, 89, 182, 0.2);
+  --glass-glow: 0 0 20px rgba(155, 89, 182, 0.3);
+  --text-primary: #e8d0ff;
+  --text-secondary: rgba(155, 89, 182, 0.7);
 }
 
+/* Container */
+.game-container {
+  max-width: 700px;
+  background: linear-gradient(180deg, var(--arcane-dark) 0%, var(--arcane-deep) 100%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-glow), inset 0 0 60px rgba(155, 89, 182, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(155, 89, 182, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(241, 196, 15, 0.03) 0%, transparent 40%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Game Area */
 .game-area {
   position: relative;
   width: 100%;
-  /* aspect-ratio: 16/9; */
   height: 300px;
-  background: #ecf0f1;
-  border-radius: 8px;
+  background: var(--arcane-medium);
+  border-radius: 12px;
   padding: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 0 30px rgba(155, 89, 182, 0.4),
+    inset 0 0 40px rgba(155, 89, 182, 0.1);
   margin-bottom: 1rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
+  border: 2px solid var(--neon-purple);
+  z-index: 1;
 }
 
+.game-area::before {
+  content: 'ARCANE TOWER';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--arcane-dark);
+  color: var(--neon-purple);
+  font-size: 0.7rem;
+  font-family: 'Courier New', monospace;
+  padding: 2px 12px;
+  border: 1px solid var(--neon-purple);
+  border-radius: 4px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px var(--neon-purple);
+  z-index: 30;
+}
+
+/* WebGPU Overlay */
+.webgpu-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Towers Container */
 #towers-container {
   display: flex;
   justify-content: space-around;
@@ -24,9 +100,10 @@
   width: 100%;
   height: 100%;
   position: relative;
-  /* padding-bottom: 20px; */
+  z-index: 10;
 }
 
+/* Tower */
 .tower {
   position: relative;
   width: 30%;
@@ -35,103 +112,337 @@
   flex-direction: column-reverse;
   align-items: center;
   cursor: pointer;
-  transition: background-color 0.2s;
-  border-radius: 4px;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  padding-bottom: 20px;
 }
 
 .tower:hover {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: rgba(155, 89, 182, 0.1);
 }
 
 .tower.selected-tower {
-  background-color: rgba(52, 152, 219, 0.1);
+  background-color: rgba(241, 196, 15, 0.15);
+  box-shadow: 0 0 20px rgba(241, 196, 15, 0.3);
 }
 
+/* Pole */
 .pole {
   position: absolute;
   bottom: 20px;
-  width: 10px;
+  width: 12px;
   height: 80%;
-  background: #7f8c8d;
-  border-radius: 5px 5px 0 0;
+  background: linear-gradient(90deg,
+    rgba(100, 60, 140, 0.9) 0%,
+    rgba(155, 89, 182, 0.9) 50%,
+    rgba(100, 60, 140, 0.9) 100%
+  );
+  border-radius: 6px 6px 0 0;
   z-index: 1;
+  box-shadow:
+    0 0 10px rgba(155, 89, 182, 0.5),
+    inset 0 0 5px rgba(255, 255, 255, 0.2);
 }
 
+/* Base */
 .base {
   position: absolute;
   bottom: 0;
   width: 100%;
   height: 20px;
-  background: #95a5a6;
+  background: linear-gradient(180deg,
+    rgba(80, 50, 100, 0.9) 0%,
+    rgba(60, 40, 80, 0.9) 100%
+  );
   border-radius: 4px;
   z-index: 1;
+  box-shadow:
+    0 0 15px rgba(155, 89, 182, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1);
 }
 
+/* Disk */
 .disk {
-  height: 25px;
-  border-radius: 12px;
-  background: #3498db;
-  border: 2px solid white;
+  height: 28px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   z-index: 10;
-  margin-bottom: 0; /* Stack on top of each other */
-  transition: transform 0.3s ease, bottom 0.3s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  /* For flex column-reverse stacking */
+  margin-bottom: 0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   flex-shrink: 0;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(155, 89, 182, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
 }
 
 /* Selected Disk Animation */
 .disk.selected {
-  transform: translateY(-20px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  transform: translateY(-25px);
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(241, 196, 15, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4);
+  animation: diskFloat 1s ease-in-out infinite;
 }
 
-/* Cannot Select visual cue? */
-
-/* Tower Base Logic:
-   Actually, flex-direction column-reverse on .tower puts items at bottom.
-   But pole is absolute. Disks are static flex items.
-   We need pole to be BEHIND disks.
-   z-index pole: 1. Disks: 10.
-
-   However, flex items will sit inside .tower.
-   We need a container for disks to sit above the base?
-   No, just margin-bottom on the lowest disk or padding-bottom on tower.
-*/
-
-.tower {
-  padding-bottom: 20px; /* Space for Base */
+@keyframes diskFloat {
+  0%, 100% { transform: translateY(-25px); }
+  50% { transform: translateY(-30px); }
 }
 
+/* Game Controls */
 .game-controls {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
+  z-index: 1;
+  position: relative;
 }
 
+/* Stats Card */
 .stats-card {
-  background: white;
-  padding: 0.5rem 1rem;
+  background: var(--glass-bg);
+  padding: 0.6rem 1.2rem;
   border-radius: 8px;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 10px var(--neon-purple);
+  box-shadow: var(--glass-glow);
 }
 
+.stats-card span {
+  color: var(--neon-gold);
+}
+
+/* Level Select */
 .level-select {
   margin: 1rem 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  z-index: 1;
+  position: relative;
 }
 
 .level-select select {
-  padding: 0.5rem;
-  border-radius: 4px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
 }
 
+.level-select select:focus {
+  outline: none;
+  border-color: var(--neon-purple);
+  box-shadow: 0 0 10px rgba(155, 89, 182, 0.3);
+}
+
+/* Footer Controls */
 .footer-controls {
   display: flex;
   justify-content: center;
   gap: 1rem;
+  z-index: 1;
+  position: relative;
+}
+
+/* Buttons */
+button, .btn {
+  background: linear-gradient(180deg,
+    rgba(155, 89, 182, 0.2) 0%,
+    rgba(155, 89, 182, 0.1) 100%
+  );
+  border: 1px solid var(--neon-purple);
+  color: var(--neon-purple);
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-shadow: 0 0 10px var(--neon-purple);
+  box-shadow: 0 0 15px rgba(155, 89, 182, 0.2);
+}
+
+button:hover, .btn:hover {
+  background: linear-gradient(180deg,
+    rgba(155, 89, 182, 0.4) 0%,
+    rgba(155, 89, 182, 0.2) 100%
+  );
+  box-shadow: 0 0 25px rgba(155, 89, 182, 0.5);
+  transform: translateY(-2px);
+}
+
+button:active, .btn:active {
+  transform: translateY(0);
+  box-shadow: 0 0 10px rgba(155, 89, 182, 0.3);
+}
+
+/* Reset Button - Gold accent */
+#reset-btn {
+  border-color: var(--neon-gold);
+  color: var(--neon-gold);
+  background: linear-gradient(180deg,
+    rgba(241, 196, 15, 0.2) 0%,
+    rgba(241, 196, 15, 0.1) 100%
+  );
+  text-shadow: 0 0 10px var(--neon-gold);
+  box-shadow: 0 0 15px rgba(241, 196, 15, 0.2);
+}
+
+#reset-btn:hover {
+  background: linear-gradient(180deg,
+    rgba(241, 196, 15, 0.4) 0%,
+    rgba(241, 196, 15, 0.2) 100%
+  );
+  box-shadow: 0 0 25px rgba(241, 196, 15, 0.5);
+}
+
+/* Header */
+.game-header {
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header h1 {
+  color: var(--neon-purple);
+  text-shadow: 0 0 20px var(--neon-purple), 0 0 40px rgba(155, 89, 182, 0.5);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 3px;
+}
+
+/* Language Select */
+select {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--neon-purple);
+  box-shadow: 0 0 10px rgba(155, 89, 182, 0.3);
+}
+
+/* Overlay */
+.game-overlay {
+  background: rgba(10, 6, 18, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  z-index: 100;
+}
+
+.overlay-content {
+  background: var(--glass-bg);
+  border: 1px solid var(--neon-purple);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(155, 89, 182, 0.3);
+}
+
+.overlay-content h2 {
+  color: var(--neon-purple);
+  text-shadow: 0 0 20px var(--neon-purple);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  margin-bottom: 1rem;
+}
+
+.overlay-content p {
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+/* Mystical Animation */
+@keyframes arcanePulse {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(155, 89, 182, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(155, 89, 182, 0.6), 0 0 80px rgba(241, 196, 15, 0.2);
+  }
+}
+
+.game-area::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 50% 100%,
+      rgba(155, 89, 182, 0.1) 0%,
+      transparent 50%
+    );
+  pointer-events: none;
+  z-index: 0;
+  animation: arcanePulse 4s ease-in-out infinite;
+}
+
+/* Floating Runes Effect */
+@keyframes runeFloat {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 0.6; transform: translateY(-5px); }
+}
+
+.tower::after {
+  content: '';
+  position: absolute;
+  bottom: 25px;
+  width: 60%;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(155, 89, 182, 0.5),
+    transparent
+  );
+  animation: runeFloat 3s ease-in-out infinite;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .game-container {
+    padding: 1rem;
+  }
+
+  .game-area {
+    height: 250px;
+  }
+
+  .disk {
+    height: 24px;
+    border-radius: 12px;
+  }
+
+  .stats-card {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .tower:hover .pole {
+    box-shadow:
+      0 0 20px rgba(155, 89, 182, 0.7),
+      inset 0 0 5px rgba(255, 255, 255, 0.3);
+  }
 }
