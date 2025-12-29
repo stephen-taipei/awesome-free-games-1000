@@ -3,6 +3,16 @@
  * Game #390 - Color Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  colorChange: { color: string }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; colors: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -73,6 +83,24 @@ export class RainbowRunGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      colorChange: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -113,6 +141,7 @@ export class RainbowRunGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -258,6 +287,7 @@ export class RainbowRunGame {
 
       if (playerBox.right > obsBox.left && playerBox.left < obsBox.right &&
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -291,14 +321,17 @@ export class RainbowRunGame {
       case 'colorOrb':
         this.state.colors++;
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: 50 });
         break;
       case 'sparkle':
         this.state.score += 75;
         this.state.speed = Math.min(14, this.state.speed + 0.5);
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: 75 });
         break;
       case 'rainbow':
         this.state.colors += 3;
         this.state.score += 150;
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: 150 });
         break;
     }
   }
@@ -317,11 +350,17 @@ export class RainbowRunGame {
     if (this.state.colorTime >= 1000) {
       this.state.colorTime = 0;
       this.state.currentColor = (this.state.currentColor + 1) % RAINBOW_COLORS.length;
+      this.pendingEvents.colorChange.push({ color: RAINBOW_COLORS[this.state.currentColor] });
     }
   }
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      colors: this.state.colors,
+    });
     this.stopGameLoop();
   }
 
@@ -329,6 +368,7 @@ export class RainbowRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -336,6 +376,7 @@ export class RainbowRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -344,6 +385,7 @@ export class RainbowRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -15;
+      this.pendingEvents.jump = true;
     }
   }
 

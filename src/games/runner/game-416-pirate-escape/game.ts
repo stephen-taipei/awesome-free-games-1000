@@ -1,3 +1,14 @@
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -70,6 +81,25 @@ export class PirateEscapeGame {
   private readonly MAX_SPEED = 12;
   private readonly SPEED_INCREMENT = 0.002;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.state = this.createInitialState();
@@ -105,6 +135,7 @@ export class PirateEscapeGame {
 
   start(): void {
     this.state = this.createInitialState();
+    this.pendingEvents.start = true;
   }
 
   update(): void {
@@ -298,6 +329,12 @@ export class PirateEscapeGame {
           player.y < obstacle.y + obstacle.height - 10 &&
           player.y + player.height > obstacle.y + 10
         ) {
+          this.pendingEvents.collision = true;
+          this.pendingEvents.gameOver.push({
+            score: this.state.score,
+            distance: Math.floor(this.state.distance),
+            coins: this.state.coins,
+          });
           this.state.gameOver = true;
           this.createExplosionParticles(player.x + player.width / 2, player.y + player.height / 2);
           return;
@@ -322,14 +359,17 @@ export class PirateEscapeGame {
             case 'coin':
               this.state.coins += 1;
               this.state.score += 10;
+              this.pendingEvents.collectibleCollected.push({ type: "coin", score: 10 });
               break;
             case 'map':
               this.state.coins += 5;
               this.state.score += 50;
+              this.pendingEvents.collectibleCollected.push({ type: "map", score: 50 });
               break;
             case 'rum':
               this.state.coins += 3;
               this.state.score += 30;
+              this.pendingEvents.collectibleCollected.push({ type: "rum", score: 30 });
               break;
           }
 
@@ -391,6 +431,7 @@ export class PirateEscapeGame {
     if (this.state.gameOver) return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: "left" });
     }
   }
 
@@ -398,6 +439,7 @@ export class PirateEscapeGame {
     if (this.state.gameOver) return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: "right" });
     }
   }
 
@@ -406,6 +448,7 @@ export class PirateEscapeGame {
     if (!this.state.player.isJumping && this.state.player.y >= this.GROUND_Y - this.state.player.height) {
       this.state.player.velocityY = this.JUMP_FORCE;
       this.state.player.isJumping = true;
+      this.pendingEvents.jump = true;
     }
   }
 

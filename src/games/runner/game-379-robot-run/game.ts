@@ -3,6 +3,17 @@
  * Game #379 - Mecha Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  boostStart: boolean;
+  boostStop: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; energy: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -71,6 +82,25 @@ export class RobotRunGame {
   private collectibleTimer: number = 0;
   private boostCooldown: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      boostStart: false,
+      boostStop: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -111,6 +141,7 @@ export class RobotRunGame {
     this.collectibleTimer = 0;
     this.boostCooldown = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -296,6 +327,7 @@ export class RobotRunGame {
 
       if (playerBox.right > obsBox.left && playerBox.left < obsBox.right &&
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -318,14 +350,17 @@ export class RobotRunGame {
       case 'battery':
         this.state.energy = Math.min(this.state.maxEnergy, this.state.energy + 20);
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type, score: 50 });
         break;
       case 'oil':
         this.state.score += 100;
         this.state.speed = Math.min(12, this.state.speed + 0.3);
+        this.pendingEvents.collectibleCollected.push({ type, score: 100 });
         break;
       case 'chip':
         this.state.score += 150;
         this.state.energy = Math.min(this.state.maxEnergy, this.state.energy + 30);
+        this.pendingEvents.collectibleCollected.push({ type, score: 150 });
         break;
     }
   }
@@ -387,6 +422,11 @@ export class RobotRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      energy: Math.floor(this.state.energy),
+    });
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
   }
@@ -395,6 +435,7 @@ export class RobotRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -402,6 +443,7 @@ export class RobotRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -410,6 +452,7 @@ export class RobotRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -16;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -418,10 +461,14 @@ export class RobotRunGame {
     if (this.state.energy >= 10 && this.boostCooldown <= 0) {
       this.state.player.isBoosting = true;
       this.boostCooldown = 300;
+      this.pendingEvents.boostStart = true;
     }
   }
 
   public stopBoost(): void {
+    if (this.state.player.isBoosting) {
+      this.pendingEvents.boostStop = true;
+    }
     this.state.player.isBoosting = false;
   }
 

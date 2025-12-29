@@ -3,6 +3,17 @@
  * Game #392 - Toy Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  magnetActivated: boolean;
+  magnetEnded: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -61,6 +72,25 @@ export class ToyRunGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      magnetActivated: false,
+      magnetEnded: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -103,6 +133,7 @@ export class ToyRunGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -246,6 +277,7 @@ export class ToyRunGame {
 
       if (playerBox.right > obsBox.left && playerBox.left < obsBox.right &&
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -266,14 +298,18 @@ export class ToyRunGame {
       case 'coin':
         this.state.coins++;
         this.state.score += 35;
+        this.pendingEvents.collectibleCollected.push({ type, score: 35 });
         break;
       case 'star':
         this.state.score += 100;
         this.state.speed = Math.min(14, this.state.speed + 0.5);
+        this.pendingEvents.collectibleCollected.push({ type, score: 100 });
         break;
       case 'magnet':
         this.state.hasMagnet = true;
         this.state.magnetTime = 5000;
+        this.pendingEvents.magnetActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 0 });
         break;
     }
   }
@@ -292,12 +328,18 @@ export class ToyRunGame {
       this.state.magnetTime -= dt;
       if (this.state.magnetTime <= 0) {
         this.state.hasMagnet = false;
+        this.pendingEvents.magnetEnded = true;
       }
     }
   }
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      coins: this.state.coins,
+    });
     this.stopGameLoop();
   }
 
@@ -305,6 +347,7 @@ export class ToyRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -312,6 +355,7 @@ export class ToyRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -320,6 +364,7 @@ export class ToyRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -15;
+      this.pendingEvents.jump = true;
     }
   }
 

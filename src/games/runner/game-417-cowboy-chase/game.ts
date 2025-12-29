@@ -1,3 +1,14 @@
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -70,6 +81,25 @@ export class CowboyChaseGame {
   private readonly OBSTACLE_SPAWN_INTERVAL = 120;
   private readonly COLLECTIBLE_SPAWN_INTERVAL = 200;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
@@ -107,6 +137,7 @@ export class CowboyChaseGame {
   public start(): void {
     this.state = this.createInitialState();
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop(this.lastTime);
   }
 
@@ -179,6 +210,11 @@ export class CowboyChaseGame {
 
       // Check collision
       if (this.checkCollision(player, obstacle)) {
+        this.pendingEvents.collision = true;
+        this.pendingEvents.gameOver.push({
+          score: this.state.score,
+          distance: Math.floor(this.state.distance),
+        });
         this.state.isGameOver = true;
       }
 
@@ -290,6 +326,7 @@ export class CowboyChaseGame {
     }
 
     this.state.score += points;
+    this.pendingEvents.collectibleCollected.push({ type: collectible.type, score: points });
 
     // Create collection particles
     for (let i = 0; i < 8; i++) {
@@ -338,12 +375,14 @@ export class CowboyChaseGame {
   public moveLeft(): void {
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: "left" });
     }
   }
 
   public moveRight(): void {
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: "right" });
     }
   }
 
@@ -351,6 +390,7 @@ export class CowboyChaseGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.velocityY = this.JUMP_FORCE;
+      this.pendingEvents.jump = true;
     }
   }
 

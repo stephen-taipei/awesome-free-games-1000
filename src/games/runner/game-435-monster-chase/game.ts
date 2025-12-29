@@ -1,6 +1,18 @@
 // Monster Chase - Monster Runner Game
 // Theme: Being chased by a giant monster through a city
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  doubleJump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  adrenalineActivated: boolean;
+  adrenalineExpired: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -70,6 +82,26 @@ export interface GameState {
 }
 
 export type GamePhase = GameState['phase'];
+
+export let pendingEvents: PendingEvents = createPendingEvents();
+
+export function createPendingEvents(): PendingEvents {
+  return {
+    start: false,
+    jump: false,
+    doubleJump: false,
+    laneChange: [],
+    collectibleCollected: [],
+    adrenalineActivated: false,
+    adrenalineExpired: false,
+    collision: false,
+    gameOver: [],
+  };
+}
+
+export function clearPendingEvents(): void {
+  pendingEvents = createPendingEvents();
+}
 
 const LANE_COUNT = 3;
 const LANE_WIDTH = 80;
@@ -275,6 +307,7 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
     createAdrenalineParticle(state);
     if (state.player.adrenalineTimer <= 0) {
       state.player.adrenalineMode = false;
+      pendingEvents.adrenalineExpired = true;
     }
   }
 
@@ -357,7 +390,9 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
         state.monsterDistance -= 30;
         obstacle.x = -200; // Remove obstacle
 
+        pendingEvents.collision = true;
         if (state.monsterDistance <= state.minMonsterDistance) {
+          pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), coins: state.coins });
           state.phase = 'gameover';
           return;
         }
@@ -381,15 +416,19 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
             state.player.adrenalineMode = true;
             state.player.adrenalineTimer = ADRENALINE_DURATION;
             createCollectParticle(state, powerup.x, powerup.y, '#ff6600');
+            pendingEvents.adrenalineActivated = true;
+            pendingEvents.collectibleCollected.push({ type: 'adrenaline', score: 0 });
             break;
           case 'slowdown':
             state.monsterDistance = Math.min(state.maxMonsterDistance, state.monsterDistance + 40);
             createCollectParticle(state, powerup.x, powerup.y, '#3498db');
+            pendingEvents.collectibleCollected.push({ type: 'slowdown', score: 0 });
             break;
           case 'coin':
             state.coins++;
             state.score += 25;
             createCollectParticle(state, powerup.x, powerup.y, '#ffd93d');
+            pendingEvents.collectibleCollected.push({ type: 'coin', score: 25 });
             break;
         }
       }
@@ -398,6 +437,7 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
 
   // Check if monster caught player
   if (state.monsterDistance <= 0) {
+    pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), coins: state.coins });
     state.phase = 'gameover';
     return;
   }
@@ -420,6 +460,7 @@ export function moveLeft(state: GameState): void {
   if (state.phase !== 'playing') return;
   if (state.player.targetLane > 0) {
     state.player.targetLane--;
+    pendingEvents.laneChange.push({ direction: 'left' });
   }
 }
 
@@ -427,6 +468,7 @@ export function moveRight(state: GameState): void {
   if (state.phase !== 'playing') return;
   if (state.player.targetLane < LANE_COUNT - 1) {
     state.player.targetLane++;
+    pendingEvents.laneChange.push({ direction: 'right' });
   }
 }
 
@@ -436,15 +478,18 @@ export function jump(state: GameState): void {
   if (!state.player.jumping) {
     state.player.jumping = true;
     state.player.jumpVelocity = JUMP_FORCE;
+    pendingEvents.jump = true;
   } else if (state.player.doubleJumpAvailable) {
     state.player.jumpVelocity = JUMP_FORCE * 0.85;
     state.player.doubleJumpAvailable = false;
+    pendingEvents.doubleJump = true;
   }
 }
 
 export function startGame(state: GameState): void {
   Object.assign(state, createInitialState());
   state.phase = 'playing';
+  pendingEvents.start = true;
 }
 
 export function getStats(state: GameState) {

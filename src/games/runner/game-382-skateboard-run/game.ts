@@ -3,6 +3,16 @@
  * Game #382 - Urban Skateboard Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  trick: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; tricks: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -71,6 +81,24 @@ export class SkateboardRunGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      trick: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -111,6 +139,7 @@ export class SkateboardRunGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -266,6 +295,7 @@ export class SkateboardRunGame {
 
       if (playerBox.right > obsBox.left && playerBox.left < obsBox.right &&
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -287,15 +317,18 @@ export class SkateboardRunGame {
       case 'coin':
         this.state.coins++;
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type, score: 50 });
         this.spawnSparkles(this.state.player.x, this.state.player.y, '#ffd700');
         break;
       case 'gear':
         this.state.score += 100;
         this.state.speed = Math.min(12, this.state.speed + 0.3);
+        this.pendingEvents.collectibleCollected.push({ type, score: 100 });
         this.spawnSparkles(this.state.player.x, this.state.player.y, '#00d4ff');
         break;
       case 'spray':
         this.state.score += 75;
+        this.pendingEvents.collectibleCollected.push({ type, score: 75 });
         this.spawnSparkles(this.state.player.x, this.state.player.y, '#e74c3c');
         break;
     }
@@ -343,6 +376,12 @@ export class SkateboardRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      tricks: this.state.tricks,
+      coins: this.state.coins,
+    });
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
   }
@@ -351,6 +390,7 @@ export class SkateboardRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -358,6 +398,7 @@ export class SkateboardRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -366,6 +407,7 @@ export class SkateboardRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -15;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -375,6 +417,7 @@ export class SkateboardRunGame {
       this.state.player.isTricking = true;
       this.state.tricks++;
       this.state.score += 150;
+      this.pendingEvents.trick = true;
       this.spawnSparkles(this.state.player.x, this.state.player.y, '#9b59b6');
     }
   }

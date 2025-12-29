@@ -3,6 +3,18 @@
  * Game #372 - 3D Lane Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  roll: boolean;
+  laneChange: { direction: string }[];
+  coinCollected: boolean;
+  powerupCollected: { type: string }[];
+  trainPassed: boolean;
+  collision: boolean;
+  gameOver: { score: number; coins: number }[];
+}
+
 interface Surfer {
   lane: number;
   y: number; vy: number;
@@ -58,6 +70,26 @@ export class SubwaySurfersGame {
   private lanes = [0, 0, 0];
   private activePowerup: string | null = null;
   private powerupTimer = 0;
+
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      roll: false,
+      laneChange: [],
+      coinCollected: false,
+      powerupCollected: [],
+      trainPassed: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -120,12 +152,18 @@ export class SubwaySurfersGame {
 
   private moveLeft() {
     if (this.status !== 'playing' || this.surfer.state === 'hit') return;
-    if (this.surfer.targetLane > 0) this.surfer.targetLane--;
+    if (this.surfer.targetLane > 0) {
+      this.surfer.targetLane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
+    }
   }
 
   private moveRight() {
     if (this.status !== 'playing' || this.surfer.state === 'hit') return;
-    if (this.surfer.targetLane < 2) this.surfer.targetLane++;
+    if (this.surfer.targetLane < 2) {
+      this.surfer.targetLane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
+    }
   }
 
   private jump() {
@@ -134,6 +172,7 @@ export class SubwaySurfersGame {
       this.surfer.vy = -20;
       this.surfer.state = 'jump';
       this.surfer.stateTime = 0;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -142,6 +181,7 @@ export class SubwaySurfersGame {
     if (this.surfer.y === 0 && this.surfer.state !== 'roll') {
       this.surfer.state = 'roll';
       this.surfer.stateTime = 0;
+      this.pendingEvents.roll = true;
     }
   }
 
@@ -164,6 +204,7 @@ export class SubwaySurfersGame {
     this.activePowerup = null;
     this.powerupTimer = 0;
     this.status = 'playing';
+    this.pendingEvents.start = true;
     this.emitState();
     this.lastTime = performance.now();
     this.gameLoop();
@@ -265,10 +306,16 @@ export class SubwaySurfersGame {
         if (s.y > -60 && s.state !== 'roll') {
           s.state = 'hit';
           this.status = 'over';
+          this.pendingEvents.collision = true;
+          this.pendingEvents.gameOver.push({
+            score: this.score,
+            coins: this.coinCount,
+          });
           this.emitState();
           return;
         }
         t.passed = true;
+        this.pendingEvents.trainPassed = true;
       }
     }
 
@@ -293,6 +340,7 @@ export class SubwaySurfersGame {
             if (Math.abs(c.y - (-s.y)) < collectRange) {
               c.collected = true;
               this.coinCount++;
+              this.pendingEvents.coinCollected = true;
             }
           }
         }
@@ -313,6 +361,7 @@ export class SubwaySurfersGame {
         p.collected = true;
         this.activePowerup = p.type;
         this.powerupTimer = 300;
+        this.pendingEvents.powerupCollected.push({ type: p.type });
       }
     }
 

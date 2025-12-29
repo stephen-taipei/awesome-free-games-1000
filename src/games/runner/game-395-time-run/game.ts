@@ -3,6 +3,19 @@
  * Game #395 - Time Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  slowMotionActivated: boolean;
+  slowMotionEnded: boolean;
+  eraChange: { era: string }[];
+  timeUp: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; clocksCollected: number; era: string }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -83,6 +96,27 @@ export class TimeRunGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      slowMotionActivated: false,
+      slowMotionEnded: false,
+      eraChange: [],
+      timeUp: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -125,6 +159,7 @@ export class TimeRunGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -162,6 +197,7 @@ export class TimeRunGame {
     this.state.timeRemaining -= dt;
     if (this.state.timeRemaining <= 0) {
       this.state.timeRemaining = 0;
+      this.pendingEvents.timeUp = true;
       this.gameOver();
     }
   }
@@ -172,6 +208,7 @@ export class TimeRunGame {
       this.state.eraTimer = 0;
       const currentIndex = ERAS.indexOf(this.state.era);
       this.state.era = ERAS[(currentIndex + 1) % ERAS.length];
+      this.pendingEvents.eraChange.push({ era: this.state.era });
       // Era change particles
       for (let i = 0; i < 20; i++) {
         this.state.particles.push({
@@ -315,6 +352,7 @@ export class TimeRunGame {
 
       if (playerBox.right > obsBox.left && playerBox.left < obsBox.right &&
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -336,15 +374,19 @@ export class TimeRunGame {
         this.state.timeRemaining += 5000;
         this.state.clocksCollected++;
         this.state.score += 30;
+        this.pendingEvents.collectibleCollected.push({ type, score: 30 });
         break;
       case 'hourglass':
         this.state.timeRemaining += 10000;
         this.state.score += 75;
+        this.pendingEvents.collectibleCollected.push({ type, score: 75 });
         break;
       case 'slowmo':
         this.state.slowMotion = true;
         this.state.slowMotionTime = 5000;
         this.state.score += 50;
+        this.pendingEvents.slowMotionActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 50 });
         break;
     }
   }
@@ -354,6 +396,7 @@ export class TimeRunGame {
       this.state.slowMotionTime -= dt;
       if (this.state.slowMotionTime <= 0) {
         this.state.slowMotion = false;
+        this.pendingEvents.slowMotionEnded = true;
       }
     }
   }
@@ -369,6 +412,12 @@ export class TimeRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      clocksCollected: this.state.clocksCollected,
+      era: this.state.era,
+    });
     this.stopGameLoop();
   }
 
@@ -376,6 +425,7 @@ export class TimeRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -383,6 +433,7 @@ export class TimeRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -391,6 +442,7 @@ export class TimeRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -15;
+      this.pendingEvents.jump = true;
     }
   }
 

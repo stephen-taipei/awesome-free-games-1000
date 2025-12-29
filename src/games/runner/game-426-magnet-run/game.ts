@@ -6,6 +6,17 @@
  * to attract to ceiling or floor while dodging obstacles.
  */
 
+export interface PendingEvents {
+  start: boolean;
+  polaritySwitch: boolean;
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  magnetBoostActivated: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -84,6 +95,25 @@ export class MagnetRunGame {
   private collectibleTimer: number = 0;
   private fieldTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      polaritySwitch: false,
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      magnetBoostActivated: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -122,6 +152,7 @@ export class MagnetRunGame {
   public start(): void {
     this.state = this.createInitialState();
     this.state.phase = 'playing';
+    this.pendingEvents.start = true;
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.fieldTimer = 0;
@@ -356,9 +387,11 @@ export class MagnetRunGame {
 
         if (this.state.hasShield) {
           this.state.hasShield = false;
+          this.pendingEvents.shieldBroken = true;
           this.spawnExplosion(obs.x, obs.y);
           obs.x = -100;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -399,15 +432,20 @@ export class MagnetRunGame {
       case 'coin':
         this.state.coins++;
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type: 'coin', score: 50 });
         break;
       case 'magnet_boost':
         this.state.magnetBoost = true;
         this.state.magnetBoostTime = 5000;
         this.state.score += 100;
+        this.pendingEvents.collectibleCollected.push({ type: 'magnet_boost', score: 100 });
+        this.pendingEvents.magnetBoostActivated = true;
         break;
       case 'shield':
         this.state.hasShield = true;
         this.state.shieldTime = 8000;
+        this.pendingEvents.collectibleCollected.push({ type: 'shield', score: 0 });
+        this.pendingEvents.shieldActivated = true;
         break;
     }
   }
@@ -453,6 +491,11 @@ export class MagnetRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: this.state.distance,
+      coins: this.state.coins,
+    });
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
   }
@@ -461,6 +504,7 @@ export class MagnetRunGame {
     if (this.state.phase !== 'playing') return;
     this.state.player.polarity =
       this.state.player.polarity === 'positive' ? 'negative' : 'positive';
+    this.pendingEvents.polaritySwitch = true;
 
     // Visual feedback particles
     for (let i = 0; i < 8; i++) {

@@ -3,6 +3,16 @@
  * Game #424 - Spring Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  springCollected: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -65,6 +75,24 @@ export class SpringJumpRunGame {
   private lastTime: number = 0;
   private spawnTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      springCollected: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -87,6 +115,7 @@ export class SpringJumpRunGame {
   public start(): void {
     this.state = this.createInitialState();
     this.state.phase = 'playing';
+    this.pendingEvents.start = true;
     this.lastTime = performance.now();
     this.startGameLoop();
     this.emitState();
@@ -205,6 +234,7 @@ export class SpringJumpRunGame {
         { x: player.x, y: player.y, width: player.width - 10, height: player.height - 10 },
         obs
       )) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -215,9 +245,19 @@ export class SpringJumpRunGame {
       const dist = Math.hypot(col.x - player.x, col.y - player.y);
       if (dist < 40) {
         col.collected = true;
-        if (col.type === 'coin') { this.state.coins++; this.state.score += 50; }
-        else if (col.type === 'spring') { this.state.springs++; this.state.score += 100; }
-        else { this.state.score += 200; }
+        if (col.type === 'coin') {
+          this.state.coins++;
+          this.state.score += 50;
+          this.pendingEvents.collectibleCollected.push({ type: 'coin', score: 50 });
+        } else if (col.type === 'spring') {
+          this.state.springs++;
+          this.state.score += 100;
+          this.pendingEvents.collectibleCollected.push({ type: 'spring', score: 100 });
+          this.pendingEvents.springCollected = true;
+        } else {
+          this.state.score += 200;
+          this.pendingEvents.collectibleCollected.push({ type: 'star', score: 200 });
+        }
         this.spawnSparkles(col.x, col.y);
       }
     }
@@ -243,10 +283,28 @@ export class SpringJumpRunGame {
     if (this.state.distance % 500 < this.state.speed) this.state.speed = Math.min(12, this.state.speed + 0.1);
   }
 
-  private gameOver(): void { this.state.phase = 'gameover'; this.stopGameLoop(); }
+  private gameOver(): void {
+    this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: this.state.distance,
+      coins: this.state.coins,
+    });
+    this.stopGameLoop();
+  }
 
-  public moveLeft(): void { if (this.state.player.lane > 0) this.state.player.lane--; }
-  public moveRight(): void { if (this.state.player.lane < 2) this.state.player.lane++; }
+  public moveLeft(): void {
+    if (this.state.player.lane > 0) {
+      this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
+    }
+  }
+  public moveRight(): void {
+    if (this.state.player.lane < 2) {
+      this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
+    }
+  }
 
   public chargeStart(): void {
     const { player } = this.state;
@@ -263,6 +321,7 @@ export class SpringJumpRunGame {
       player.vy = -jumpPower;
       player.isCharging = false;
       player.chargeTime = 0;
+      this.pendingEvents.jump = true;
 
       // Jump particles
       for (let i = 0; i < 8; i++) {

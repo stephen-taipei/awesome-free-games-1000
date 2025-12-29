@@ -3,6 +3,15 @@
  * Game #423 - Rocket Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  boost: boolean;
+  collectibleCollected: { type: string; score: number }[];
+  fuelCollected: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -64,6 +73,23 @@ export class RocketBootRunGame {
   private spawnTimer: number = 0;
   private isBoosting: boolean = false;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      boost: false,
+      collectibleCollected: [],
+      fuelCollected: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -85,6 +111,7 @@ export class RocketBootRunGame {
   public start(): void {
     this.state = this.createInitialState();
     this.state.phase = 'playing';
+    this.pendingEvents.start = true;
     this.lastTime = performance.now();
     this.startGameLoop();
     this.emitState();
@@ -201,7 +228,11 @@ export class RocketBootRunGame {
 
     for (const obs of obstacles) {
       if (obs.type === 'platform') continue;
-      if (this.rectCollision(player, obs)) { this.gameOver(); return; }
+      if (this.rectCollision(player, obs)) {
+        this.pendingEvents.collision = true;
+        this.gameOver();
+        return;
+      }
     }
 
     for (const col of collectibles) {
@@ -209,9 +240,19 @@ export class RocketBootRunGame {
       const dist = Math.hypot(col.x - player.x, col.y - player.y);
       if (dist < 35) {
         col.collected = true;
-        if (col.type === 'fuel') { player.fuel = Math.min(player.maxFuel, player.fuel + 30); this.state.score += 25; }
-        else if (col.type === 'coin') { this.state.coins++; this.state.score += 50; }
-        else { this.state.score += 150; }
+        if (col.type === 'fuel') {
+          player.fuel = Math.min(player.maxFuel, player.fuel + 30);
+          this.state.score += 25;
+          this.pendingEvents.collectibleCollected.push({ type: 'fuel', score: 25 });
+          this.pendingEvents.fuelCollected = true;
+        } else if (col.type === 'coin') {
+          this.state.coins++;
+          this.state.score += 50;
+          this.pendingEvents.collectibleCollected.push({ type: 'coin', score: 50 });
+        } else {
+          this.state.score += 150;
+          this.pendingEvents.collectibleCollected.push({ type: 'star', score: 150 });
+        }
       }
     }
   }
@@ -227,9 +268,20 @@ export class RocketBootRunGame {
     if (this.state.distance % 500 < this.state.speed) this.state.speed = Math.min(12, this.state.speed + 0.1);
   }
 
-  private gameOver(): void { this.state.phase = 'gameover'; this.stopGameLoop(); }
+  private gameOver(): void {
+    this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: this.state.distance,
+      coins: this.state.coins,
+    });
+    this.stopGameLoop();
+  }
 
-  public boostStart(): void { this.isBoosting = true; }
+  public boostStart(): void {
+    this.isBoosting = true;
+    this.pendingEvents.boost = true;
+  }
   public boostEnd(): void { this.isBoosting = false; }
 
   public handleKeyDown(code: string): void {

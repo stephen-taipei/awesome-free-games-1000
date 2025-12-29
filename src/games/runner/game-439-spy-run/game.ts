@@ -3,6 +3,16 @@
  * Game #439 - Secret Agent running through enemy base
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; intel: number; gadgets: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -70,6 +80,23 @@ export class SpyRunGame {
   private lastTime: number = 0;
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slide: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -112,6 +139,7 @@ export class SpyRunGame {
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
     this.startGameLoop();
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -316,6 +344,7 @@ export class SpyRunGame {
         this.state.detected += 35;
         this.spawnHitParticles(player.x, player.y);
         obs.x = -200;
+        this.pendingEvents.collision = true;
 
         if (this.state.detected >= 100) {
           this.gameOver();
@@ -341,17 +370,20 @@ export class SpyRunGame {
         this.state.score += 75;
         this.state.detected = Math.max(0, this.state.detected - 8);
         this.spawnCollectParticles(x, y, '#3498db');
+        this.pendingEvents.collectibleCollected.push({ type: 'intel', score: 75 });
         break;
       case 'gadget':
         this.state.gadgets++;
         this.state.score += 150;
         this.state.detected = Math.max(0, this.state.detected - 20);
         this.spawnCollectParticles(x, y, '#9b59b6');
+        this.pendingEvents.collectibleCollected.push({ type: 'gadget', score: 150 });
         break;
       case 'key':
         this.state.score += 100;
         this.state.speed = Math.min(13, this.state.speed + 0.4);
         this.spawnCollectParticles(x, y, '#f1c40f');
+        this.pendingEvents.collectibleCollected.push({ type: 'key', score: 100 });
         break;
     }
   }
@@ -412,6 +444,12 @@ export class SpyRunGame {
     this.state.phase = 'gameover';
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
+    this.pendingEvents.gameOver.push({
+      score: Math.floor(this.state.score),
+      distance: Math.floor(this.state.distance),
+      intel: this.state.intel,
+      gadgets: this.state.gadgets,
+    });
   }
 
   private spawnExplosion(x: number, y: number): void {
@@ -433,6 +471,7 @@ export class SpyRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -440,6 +479,7 @@ export class SpyRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -448,6 +488,7 @@ export class SpyRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -14;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -455,6 +496,7 @@ export class SpyRunGame {
     if (this.state.phase !== 'playing') return;
     if (!this.state.player.isSliding) {
       this.state.player.isSliding = true;
+      this.pendingEvents.slide = true;
       setTimeout(() => {
         this.state.player.isSliding = false;
       }, 500);

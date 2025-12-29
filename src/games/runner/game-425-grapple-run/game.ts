@@ -3,6 +3,15 @@
  * Game #425 - Grapple Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  grapple: boolean;
+  grappleRelease: boolean;
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -73,6 +82,23 @@ export class GrappleRunGame {
   private lastTime: number = 0;
   private spawnTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      grapple: false,
+      grappleRelease: false,
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -99,6 +125,7 @@ export class GrappleRunGame {
   public start(): void {
     this.state = this.createInitialState();
     this.state.phase = 'playing';
+    this.pendingEvents.start = true;
     // Initial grapple points
     for (let i = 0; i < 5; i++) {
       this.state.grapplePoints.push({ x: 200 + i * 150, y: 60 + Math.random() * 60, active: true });
@@ -243,6 +270,7 @@ export class GrappleRunGame {
 
     for (const obs of obstacles) {
       if (obs.type === 'pit' && player.y > GROUND_Y - 30 && player.x > obs.x - 30 && player.x < obs.x + obs.width + 30) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -253,9 +281,17 @@ export class GrappleRunGame {
       const dist = Math.hypot(col.x - player.x, col.y - player.y);
       if (dist < 35) {
         col.collected = true;
-        if (col.type === 'coin') { this.state.coins++; this.state.score += 50; }
-        else if (col.type === 'gem') { this.state.score += 150; }
-        else { this.state.score += 250; }
+        if (col.type === 'coin') {
+          this.state.coins++;
+          this.state.score += 50;
+          this.pendingEvents.collectibleCollected.push({ type: 'coin', score: 50 });
+        } else if (col.type === 'gem') {
+          this.state.score += 150;
+          this.pendingEvents.collectibleCollected.push({ type: 'gem', score: 150 });
+        } else {
+          this.state.score += 250;
+          this.pendingEvents.collectibleCollected.push({ type: 'star', score: 250 });
+        }
       }
     }
   }
@@ -266,7 +302,15 @@ export class GrappleRunGame {
     if (this.state.distance % 500 < this.state.speed) this.state.speed = Math.min(10, this.state.speed + 0.1);
   }
 
-  private gameOver(): void { this.state.phase = 'gameover'; this.stopGameLoop(); }
+  private gameOver(): void {
+    this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: this.state.distance,
+      coins: this.state.coins,
+    });
+    this.stopGameLoop();
+  }
 
   public grapple(): void {
     const { player, grapplePoints } = this.state;
@@ -276,6 +320,7 @@ export class GrappleRunGame {
       player.vx = Math.cos(player.angle - Math.PI/2) * player.angularVel * player.ropeLength * 0.3;
       player.vy = Math.sin(player.angle - Math.PI/2) * player.angularVel * player.ropeLength * 0.3 - 5;
       player.grapplePoint = null;
+      this.pendingEvents.grappleRelease = true;
 
       // Release particles
       for (let i = 0; i < 5; i++) {
@@ -297,6 +342,7 @@ export class GrappleRunGame {
         player.ropeLength = Math.hypot(nearestPoint.x - player.x, nearestPoint.y - player.y);
         player.angle = Math.atan2(player.x - nearestPoint.x, player.y - nearestPoint.y);
         player.angularVel = 0.05;
+        this.pendingEvents.grapple = true;
       }
     }
   }

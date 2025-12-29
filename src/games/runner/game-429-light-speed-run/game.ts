@@ -6,6 +6,16 @@
  * warping through space at incredible speeds.
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  warp: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; crystals: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -85,6 +95,24 @@ export class LightSpeedRunGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      warp: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -139,6 +167,7 @@ export class LightSpeedRunGame {
   public start(): void {
     this.state = this.createInitialState();
     this.state.phase = 'playing';
+    this.pendingEvents.start = true;
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
@@ -344,6 +373,7 @@ export class LightSpeedRunGame {
 
         if (playerBox.right > obsBox.left && playerBox.left < obsBox.right &&
             playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -370,10 +400,12 @@ export class LightSpeedRunGame {
           this.state.player.maxWarpCharge,
           this.state.player.warpCharge + 5
         );
+        this.pendingEvents.collectibleCollected.push({ type: 'light_crystal', score: 50 });
         break;
       case 'photon_boost':
         this.state.speed = Math.min(20, this.state.speed + 1.5);
         this.state.score += 150;
+        this.pendingEvents.collectibleCollected.push({ type: 'photon_boost', score: 150 });
         break;
       case 'warp_fuel':
         this.state.player.warpCharge = Math.min(
@@ -381,6 +413,7 @@ export class LightSpeedRunGame {
           this.state.player.warpCharge + 30
         );
         this.state.score += 100;
+        this.pendingEvents.collectibleCollected.push({ type: 'warp_fuel', score: 100 });
         break;
     }
   }
@@ -431,6 +464,11 @@ export class LightSpeedRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: this.state.distance,
+      crystals: this.state.crystals,
+    });
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
   }
@@ -439,6 +477,7 @@ export class LightSpeedRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -446,6 +485,7 @@ export class LightSpeedRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -454,6 +494,7 @@ export class LightSpeedRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -16;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -462,6 +503,7 @@ export class LightSpeedRunGame {
     if (this.state.player.warpCharge >= 20 && !this.state.player.isWarping) {
       this.state.player.isWarping = true;
       this.state.player.warpTime = 3000;
+      this.pendingEvents.warp = true;
 
       // Warp activation particles
       for (let i = 0; i < 15; i++) {

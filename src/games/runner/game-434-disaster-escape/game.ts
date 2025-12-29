@@ -1,6 +1,18 @@
 // Disaster Escape - Disaster Runner Game
 // Theme: Escape from natural disasters - earthquake, volcano, tsunami
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldExpired: boolean;
+  survivorRescued: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; survivors: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -72,6 +84,26 @@ export interface GameState {
 }
 
 export type GamePhase = GameState['phase'];
+
+export let pendingEvents: PendingEvents = createPendingEvents();
+
+export function createPendingEvents(): PendingEvents {
+  return {
+    start: false,
+    jump: false,
+    laneChange: [],
+    collectibleCollected: [],
+    shieldActivated: false,
+    shieldExpired: false,
+    survivorRescued: false,
+    collision: false,
+    gameOver: [],
+  };
+}
+
+export function clearPendingEvents(): void {
+  pendingEvents = createPendingEvents();
+}
 
 const LANE_COUNT = 3;
 const LANE_WIDTH = 80;
@@ -317,6 +349,7 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
     createShieldParticle(state);
     if (state.player.shieldTimer <= 0) {
       state.player.shieldActive = false;
+      pendingEvents.shieldExpired = true;
     }
   }
 
@@ -369,6 +402,8 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
         playerLeft, playerTop, PLAYER_WIDTH, PLAYER_HEIGHT,
         obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height, obstacle.width, obstacle.height
       )) {
+        pendingEvents.collision = true;
+        pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), survivors: state.survivors });
         state.phase = 'gameover';
         return;
       }
@@ -391,14 +426,19 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
             state.survivors++;
             state.score += 100;
             createRescueParticle(state, collectible.x, collectible.y);
+            pendingEvents.survivorRescued = true;
+            pendingEvents.collectibleCollected.push({ type: 'survivor', score: 100 });
             break;
           case 'supply':
             state.supplies++;
             state.score += 50;
+            pendingEvents.collectibleCollected.push({ type: 'supply', score: 50 });
             break;
           case 'shield':
             state.player.shieldActive = true;
             state.player.shieldTimer = SHIELD_DURATION;
+            pendingEvents.shieldActivated = true;
+            pendingEvents.collectibleCollected.push({ type: 'shield', score: 0 });
             break;
         }
       }
@@ -416,6 +456,8 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
         playerLeft, playerTop, PLAYER_WIDTH, PLAYER_HEIGHT,
         obj.x - obj.size / 2, obj.y - obj.size / 2, obj.size, obj.size
       )) {
+        pendingEvents.collision = true;
+        pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), survivors: state.survivors });
         state.phase = 'gameover';
         return;
       }
@@ -424,6 +466,8 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
 
   // Check if caught by tsunami wave
   if (state.disasterType === 'tsunami' && state.waveDistance > state.player.x) {
+    pendingEvents.collision = true;
+    pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), survivors: state.survivors });
     state.phase = 'gameover';
     return;
   }
@@ -446,6 +490,7 @@ export function moveLeft(state: GameState): void {
   if (state.phase !== 'playing') return;
   if (state.player.targetLane > 0) {
     state.player.targetLane--;
+    pendingEvents.laneChange.push({ direction: 'left' });
   }
 }
 
@@ -453,6 +498,7 @@ export function moveRight(state: GameState): void {
   if (state.phase !== 'playing') return;
   if (state.player.targetLane < LANE_COUNT - 1) {
     state.player.targetLane++;
+    pendingEvents.laneChange.push({ direction: 'right' });
   }
 }
 
@@ -461,6 +507,7 @@ export function jump(state: GameState): void {
   if (!state.player.jumping) {
     state.player.jumping = true;
     state.player.jumpVelocity = JUMP_FORCE;
+    pendingEvents.jump = true;
   }
 }
 
@@ -468,6 +515,7 @@ export function startGame(state: GameState): void {
   const newState = createInitialState();
   Object.assign(state, newState);
   state.phase = 'playing';
+  pendingEvents.start = true;
 }
 
 export function getStats(state: GameState) {

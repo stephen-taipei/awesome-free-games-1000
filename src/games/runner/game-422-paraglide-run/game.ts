@@ -3,6 +3,16 @@
  * Game #422 - Paraglide Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  ascend: boolean;
+  descend: boolean;
+  collectibleCollected: { type: string; score: number }[];
+  thermalUsed: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -61,6 +71,24 @@ export class ParaglideRunGame {
   private spawnTimer: number = 0;
   private keys: Set<string> = new Set();
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      ascend: false,
+      descend: false,
+      collectibleCollected: [],
+      thermalUsed: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -82,6 +110,7 @@ export class ParaglideRunGame {
   public start(): void {
     this.state = this.createInitialState();
     this.state.phase = 'playing';
+    this.pendingEvents.start = true;
     this.lastTime = performance.now();
     this.startGameLoop();
     this.emitState();
@@ -188,7 +217,11 @@ export class ParaglideRunGame {
     const { player, obstacles, collectibles } = this.state;
 
     for (const obs of obstacles) {
-      if (this.rectCollision(player, obs)) { this.gameOver(); return; }
+      if (this.rectCollision(player, obs)) {
+        this.pendingEvents.collision = true;
+        this.gameOver();
+        return;
+      }
     }
 
     for (const col of collectibles) {
@@ -196,9 +229,19 @@ export class ParaglideRunGame {
       const dist = Math.hypot(col.x - player.x, col.y - player.y);
       if (dist < 40) {
         col.collected = true;
-        if (col.type === 'coin') { this.state.coins++; this.state.score += 50; }
-        else if (col.type === 'thermal') { this.state.player.vy = -3; this.state.score += 75; }
-        else { this.state.score += 150; }
+        if (col.type === 'coin') {
+          this.state.coins++;
+          this.state.score += 50;
+          this.pendingEvents.collectibleCollected.push({ type: 'coin', score: 50 });
+        } else if (col.type === 'thermal') {
+          this.state.player.vy = -3;
+          this.state.score += 75;
+          this.pendingEvents.collectibleCollected.push({ type: 'thermal', score: 75 });
+          this.pendingEvents.thermalUsed = true;
+        } else {
+          this.state.score += 150;
+          this.pendingEvents.collectibleCollected.push({ type: 'star', score: 150 });
+        }
       }
     }
   }
@@ -214,9 +257,25 @@ export class ParaglideRunGame {
     if (this.state.distance % 500 < this.state.speed) this.state.speed = Math.min(10, this.state.speed + 0.1);
   }
 
-  private gameOver(): void { this.state.phase = 'gameover'; this.stopGameLoop(); }
+  private gameOver(): void {
+    this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: this.state.distance,
+      coins: this.state.coins,
+    });
+    this.stopGameLoop();
+  }
 
-  public handleKeyDown(code: string): void { this.keys.add(code); }
+  public handleKeyDown(code: string): void {
+    this.keys.add(code);
+    if (code === 'ArrowUp' || code === 'KeyW') {
+      this.pendingEvents.ascend = true;
+    }
+    if (code === 'ArrowDown' || code === 'KeyS') {
+      this.pendingEvents.descend = true;
+    }
+  }
   public handleKeyUp(code: string): void { this.keys.delete(code); }
 
   private stopGameLoop(): void { if (this.gameLoop) { cancelAnimationFrame(this.gameLoop); this.gameLoop = null; } }

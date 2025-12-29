@@ -6,6 +6,17 @@
  * to boost speed and must avoid obstacles.
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  overchargeActivated: boolean;
+  overchargeDestroy: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; boltsCollected: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -88,6 +99,25 @@ export class ElectricRunGame {
   private collectibleTimer: number = 0;
   private fenceToggleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      overchargeActivated: false,
+      overchargeDestroy: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -128,6 +158,7 @@ export class ElectricRunGame {
   public start(): void {
     this.state = this.createInitialState();
     this.state.phase = 'playing';
+    this.pendingEvents.start = true;
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.fenceToggleTimer = 0;
@@ -355,7 +386,9 @@ export class ElectricRunGame {
           this.createLightningBolt(player.x, player.y, obs.x, obs.y);
           obs.x = -100;
           this.state.score += 200;
+          this.pendingEvents.overchargeDestroy = true;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -379,16 +412,20 @@ export class ElectricRunGame {
         this.state.boltsCollected++;
         this.state.score += 30;
         this.state.player.charge = Math.min(this.state.player.maxCharge, this.state.player.charge + 10);
+        this.pendingEvents.collectibleCollected.push({ type: 'bolt', score: 30 });
         break;
       case 'battery':
         this.state.player.charge = Math.min(this.state.player.maxCharge, this.state.player.charge + 30);
         this.state.score += 100;
+        this.pendingEvents.collectibleCollected.push({ type: 'battery', score: 100 });
         break;
       case 'surge':
         this.state.isOvercharged = true;
         this.state.overchargeTime = 5000;
         this.state.player.charge = this.state.player.maxCharge;
         this.state.score += 150;
+        this.pendingEvents.collectibleCollected.push({ type: 'surge', score: 150 });
+        this.pendingEvents.overchargeActivated = true;
         break;
     }
   }
@@ -454,6 +491,11 @@ export class ElectricRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: this.state.distance,
+      boltsCollected: this.state.boltsCollected,
+    });
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y, '#00ffff');
   }
@@ -462,6 +504,7 @@ export class ElectricRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -469,6 +512,7 @@ export class ElectricRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -477,6 +521,7 @@ export class ElectricRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -15;
+      this.pendingEvents.jump = true;
     }
   }
 

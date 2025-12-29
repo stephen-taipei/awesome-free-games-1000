@@ -3,6 +3,18 @@
  * Game #412 - Pixel Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  dash: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -72,6 +84,26 @@ export class PixelAdventureRunGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      dash: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -113,6 +145,7 @@ export class PixelAdventureRunGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -257,9 +290,11 @@ export class PixelAdventureRunGame {
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
         if (this.state.hasShield) {
           this.state.hasShield = false;
+          this.pendingEvents.shieldBroken = true;
           this.spawnPixelBurst(obs.x, obs.y);
           obs.x = -100;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -281,14 +316,18 @@ export class PixelAdventureRunGame {
       case "coin":
         this.state.coins++;
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type: "coin", score: 50 });
         break;
       case "heart":
         this.state.score += 100;
         this.state.speed = Math.min(12, this.state.speed + 0.5);
+        this.pendingEvents.collectibleCollected.push({ type: "heart", score: 100 });
         break;
       case "star":
         this.state.hasShield = true;
         this.state.shieldTime = 5000;
+        this.pendingEvents.collectibleCollected.push({ type: "star", score: 0 });
+        this.pendingEvents.shieldActivated = true;
         break;
     }
   }
@@ -325,18 +364,29 @@ export class PixelAdventureRunGame {
 
   private gameOver(): void {
     this.state.phase = "gameover";
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      coins: this.state.coins,
+    });
     this.stopGameLoop();
     this.spawnPixelBurst(this.state.player.x, this.state.player.y);
   }
 
   public moveLeft(): void {
     if (this.state.phase !== "playing") return;
-    if (this.state.player.lane > 0) this.state.player.lane--;
+    if (this.state.player.lane > 0) {
+      this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: "left" });
+    }
   }
 
   public moveRight(): void {
     if (this.state.phase !== "playing") return;
-    if (this.state.player.lane < 2) this.state.player.lane++;
+    if (this.state.player.lane < 2) {
+      this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: "right" });
+    }
   }
 
   public jump(): void {
@@ -344,12 +394,14 @@ export class PixelAdventureRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -14;
+      this.pendingEvents.jump = true;
     }
   }
 
   public dash(): void {
     if (this.state.phase !== "playing") return;
     this.state.player.isDashing = true;
+    this.pendingEvents.dash = true;
     setTimeout(() => { this.state.player.isDashing = false; }, 300);
   }
 

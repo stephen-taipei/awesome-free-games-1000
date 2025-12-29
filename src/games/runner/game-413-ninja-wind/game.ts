@@ -3,6 +3,18 @@
  * Game #413 - Ninja Speed Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  smokeBomb: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; scrolls: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -72,6 +84,26 @@ export class NinjaWindGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      smokeBomb: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -113,6 +145,7 @@ export class NinjaWindGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -258,9 +291,11 @@ export class NinjaWindGame {
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
         if (this.state.hasSmoke) {
           this.state.hasSmoke = false;
+          this.pendingEvents.shieldBroken = true;
           this.spawnSmokeBurst(obs.x, obs.y);
           obs.x = -100;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -282,14 +317,18 @@ export class NinjaWindGame {
       case "scroll":
         this.state.scrolls++;
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type: "scroll", score: 50 });
         break;
       case "kunai":
         this.state.score += 100;
         this.state.speed = Math.min(12, this.state.speed + 0.5);
+        this.pendingEvents.collectibleCollected.push({ type: "kunai", score: 100 });
         break;
       case "smoke":
         this.state.hasSmoke = true;
         this.state.smokeTime = 5000;
+        this.pendingEvents.collectibleCollected.push({ type: "smoke", score: 0 });
+        this.pendingEvents.shieldActivated = true;
         break;
     }
   }
@@ -325,18 +364,29 @@ export class NinjaWindGame {
 
   private gameOver(): void {
     this.state.phase = "gameover";
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      scrolls: this.state.scrolls,
+    });
     this.stopGameLoop();
     this.spawnSmokeBurst(this.state.player.x, this.state.player.y);
   }
 
   public moveLeft(): void {
     if (this.state.phase !== "playing") return;
-    if (this.state.player.lane > 0) this.state.player.lane--;
+    if (this.state.player.lane > 0) {
+      this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: "left" });
+    }
   }
 
   public moveRight(): void {
     if (this.state.phase !== "playing") return;
-    if (this.state.player.lane < 2) this.state.player.lane++;
+    if (this.state.player.lane < 2) {
+      this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: "right" });
+    }
   }
 
   public jump(): void {
@@ -344,12 +394,14 @@ export class NinjaWindGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -14;
+      this.pendingEvents.jump = true;
     }
   }
 
   public smokeBomb(): void {
     if (this.state.phase !== "playing") return;
     this.state.player.isSmoke = true;
+    this.pendingEvents.smokeBomb = true;
     setTimeout(() => { this.state.player.isSmoke = false; }, 300);
   }
 
