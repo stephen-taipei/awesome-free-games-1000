@@ -3,6 +3,19 @@
  * Game #391 - Candy Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  sugarRushActivated: boolean;
+  sugarRushEnded: boolean;
+  doublePointsActivated: boolean;
+  doublePointsEnded: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; candy: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -73,6 +86,27 @@ export class CandyRunGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      sugarRushActivated: false,
+      sugarRushEnded: false,
+      doublePointsActivated: false,
+      doublePointsEnded: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -118,6 +152,7 @@ export class CandyRunGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -259,6 +294,7 @@ export class CandyRunGame {
           obs.x = -100;
           this.state.score += 25;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -293,16 +329,21 @@ export class CandyRunGame {
       case 'candy':
         this.state.candy++;
         this.state.score += 40 * pointMult;
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: 40 * pointMult });
         break;
       case 'sugarRush':
         this.state.sugarRush = true;
         this.state.sugarTime = 4000;
         this.state.score += 60 * pointMult;
+        this.pendingEvents.sugarRushActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: 60 * pointMult });
         break;
       case 'doublePts':
         this.state.doublePoints = true;
         this.state.doubleTime = 5000;
         this.state.score += 50;
+        this.pendingEvents.doublePointsActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: 50 });
         break;
     }
   }
@@ -322,18 +363,25 @@ export class CandyRunGame {
       this.state.sugarTime -= dt;
       if (this.state.sugarTime <= 0) {
         this.state.sugarRush = false;
+        this.pendingEvents.sugarRushEnded = true;
       }
     }
     if (this.state.doublePoints) {
       this.state.doubleTime -= dt;
       if (this.state.doubleTime <= 0) {
         this.state.doublePoints = false;
+        this.pendingEvents.doublePointsEnded = true;
       }
     }
   }
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      candy: this.state.candy,
+    });
     this.stopGameLoop();
   }
 
@@ -341,6 +389,7 @@ export class CandyRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -348,6 +397,7 @@ export class CandyRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -356,6 +406,7 @@ export class CandyRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -15;
+      this.pendingEvents.jump = true;
     }
   }
 

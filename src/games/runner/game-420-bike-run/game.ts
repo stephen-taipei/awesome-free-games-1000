@@ -1,3 +1,14 @@
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; waterBottles: number }[];
+}
+
 export interface Player {
   lane: number; // 0, 1, or 2
   y: number;
@@ -66,6 +77,25 @@ export class BikeRunGame {
   private readonly MAX_SPEED = 12;
   private readonly SPEED_INCREMENT = 0.002;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -100,6 +130,7 @@ export class BikeRunGame {
   start(): void {
     this.state = this.createInitialState();
     this.state.isRunning = true;
+    this.pendingEvents.start = true;
     this.generateInitialObstacles();
     this.generateInitialCollectibles();
     this.spawnAmbientParticles();
@@ -397,14 +428,17 @@ export class BikeRunGame {
             case 'water':
               this.state.waterBottles++;
               this.state.score += 10;
+              this.pendingEvents.collectibleCollected.push({ type: "water", score: 10 });
               break;
             case 'energy':
               this.state.energyBars++;
               this.state.score += 25;
+              this.pendingEvents.collectibleCollected.push({ type: "energy", score: 25 });
               break;
             case 'medal':
               this.state.medals++;
               this.state.score += 100;
+              this.pendingEvents.collectibleCollected.push({ type: "medal", score: 100 });
               break;
           }
         }
@@ -427,6 +461,7 @@ export class BikeRunGame {
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
       this.state.player.leanAngle = -15;
+      this.pendingEvents.laneChange.push({ direction: "left" });
       this.spawnDustParticles();
     }
   }
@@ -437,6 +472,7 @@ export class BikeRunGame {
     if (this.state.player.lane < this.LANES - 1) {
       this.state.player.lane++;
       this.state.player.leanAngle = 15;
+      this.pendingEvents.laneChange.push({ direction: "right" });
       this.spawnDustParticles();
     }
   }
@@ -447,11 +483,18 @@ export class BikeRunGame {
     if (!this.state.player.isJumping && this.state.player.y === this.GROUND_Y) {
       this.state.player.velocityY = this.JUMP_FORCE;
       this.state.player.isJumping = true;
+      this.pendingEvents.jump = true;
       this.spawnDustParticles();
     }
   }
 
   private gameOver(): void {
+    this.pendingEvents.collision = true;
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      waterBottles: this.state.waterBottles,
+    });
     this.state.gameOver = true;
     this.state.isRunning = false;
   }

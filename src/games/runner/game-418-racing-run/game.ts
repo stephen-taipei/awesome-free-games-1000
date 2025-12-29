@@ -1,3 +1,14 @@
+export interface PendingEvents {
+  start: boolean;
+  boost: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -80,6 +91,25 @@ export class RacingRunGame {
   private readonly LANE_POSITIONS: number[] = [0, 1, 2];
   private readonly CAR_COLORS: string[] = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      boost: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.state = this.createInitialState();
@@ -123,6 +153,7 @@ export class RacingRunGame {
   public start(): void {
     this.state = this.createInitialState();
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
   }
 
   public update(currentTime: number): void {
@@ -210,6 +241,12 @@ export class RacingRunGame {
 
     // Check game over
     if (this.state.player.health <= 0) {
+      this.pendingEvents.collision = true;
+      this.pendingEvents.gameOver.push({
+        score: this.state.score,
+        distance: Math.floor(this.state.distance),
+        coins: this.state.coins,
+      });
       this.state.gameOver = true;
     }
   }
@@ -405,13 +442,16 @@ export class RacingRunGame {
     switch (collectible.type) {
       case 'nitro':
         this.state.nitroAmount = Math.min(this.state.maxNitro, this.state.nitroAmount + 30);
+        this.pendingEvents.collectibleCollected.push({ type: "nitro", score: 0 });
         break;
       case 'coin':
         this.state.coins += 1;
         this.state.score += 10;
+        this.pendingEvents.collectibleCollected.push({ type: "coin", score: 10 });
         break;
       case 'repair':
         this.state.player.health = Math.min(this.state.player.maxHealth, this.state.player.health + 20);
+        this.pendingEvents.collectibleCollected.push({ type: "repair", score: 0 });
         break;
     }
 
@@ -473,6 +513,7 @@ export class RacingRunGame {
     if (this.state.gameOver || this.state.gamePaused) return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: "left" });
     }
   }
 
@@ -480,6 +521,7 @@ export class RacingRunGame {
     if (this.state.gameOver || this.state.gamePaused) return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: "right" });
     }
   }
 
@@ -487,6 +529,7 @@ export class RacingRunGame {
     if (this.state.gameOver || this.state.gamePaused) return;
     if (this.state.nitroAmount >= 20 && !this.state.nitroActive) {
       this.state.nitroActive = true;
+      this.pendingEvents.boost = true;
     }
   }
 

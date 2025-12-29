@@ -3,6 +3,15 @@
  * Game #421 - Wingsuit Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  glide: boolean;
+  dive: boolean;
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; rings: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -63,6 +72,23 @@ export class WingsuitRunGame {
   private spawnTimer: number = 0;
   private isGliding: boolean = false;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      glide: false,
+      dive: false,
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -85,6 +111,7 @@ export class WingsuitRunGame {
   public start(): void {
     this.state = this.createInitialState();
     this.state.phase = 'playing';
+    this.pendingEvents.start = true;
     this.lastTime = performance.now();
     this.startGameLoop();
     this.emitState();
@@ -202,6 +229,7 @@ export class WingsuitRunGame {
 
     for (const obs of obstacles) {
       if (this.rectCollision(player, obs)) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -212,9 +240,18 @@ export class WingsuitRunGame {
       const dist = Math.hypot(col.x - player.x, col.y - player.y);
       if (dist < 35) {
         col.collected = true;
-        if (col.type === 'ring') { this.state.rings++; this.state.score += 50; }
-        else if (col.type === 'star') { this.state.score += 100; }
-        else { this.state.speed = Math.min(12, this.state.speed + 0.5); this.state.score += 75; }
+        if (col.type === 'ring') {
+          this.state.rings++;
+          this.state.score += 50;
+          this.pendingEvents.collectibleCollected.push({ type: 'ring', score: 50 });
+        } else if (col.type === 'star') {
+          this.state.score += 100;
+          this.pendingEvents.collectibleCollected.push({ type: 'star', score: 100 });
+        } else {
+          this.state.speed = Math.min(12, this.state.speed + 0.5);
+          this.state.score += 75;
+          this.pendingEvents.collectibleCollected.push({ type: 'boost', score: 75 });
+        }
         this.spawnSparkles(col.x, col.y);
       }
     }
@@ -246,12 +283,25 @@ export class WingsuitRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: this.state.distance,
+      rings: this.state.rings,
+    });
     this.stopGameLoop();
   }
 
-  public glideStart(): void { this.isGliding = true; }
+  public glideStart(): void {
+    this.isGliding = true;
+    this.pendingEvents.glide = true;
+  }
   public glideEnd(): void { this.isGliding = false; }
-  public dive(): void { if (this.state.phase === 'playing') this.state.player.vy = 5; }
+  public dive(): void {
+    if (this.state.phase === 'playing') {
+      this.state.player.vy = 5;
+      this.pendingEvents.dive = true;
+    }
+  }
 
   public handleKeyDown(code: string): void {
     if (code === 'Space' || code === 'ArrowUp' || code === 'KeyW') this.glideStart();

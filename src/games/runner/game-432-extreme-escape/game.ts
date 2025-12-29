@@ -1,6 +1,18 @@
 // Extreme Escape - Extreme Runner Game
 // Theme: Escape from a collapsing facility with traps and hazards
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldExpired: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; keysCollected: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -75,6 +87,26 @@ export interface GameState {
 }
 
 export type GamePhase = GameState['phase'];
+
+export let pendingEvents: PendingEvents = createPendingEvents();
+
+export function createPendingEvents(): PendingEvents {
+  return {
+    start: false,
+    jump: false,
+    slide: false,
+    laneChange: [],
+    collectibleCollected: [],
+    shieldActivated: false,
+    shieldExpired: false,
+    collision: false,
+    gameOver: [],
+  };
+}
+
+export function clearPendingEvents(): void {
+  pendingEvents = createPendingEvents();
+}
 
 const LANE_COUNT = 3;
 const LANE_WIDTH = 80;
@@ -337,6 +369,7 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
     state.player.invincibleTimer -= deltaTime;
     if (state.player.invincibleTimer <= 0) {
       state.player.invincible = false;
+      pendingEvents.shieldExpired = true;
     }
   }
 
@@ -388,6 +421,7 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
         state.player.invincible = true;
         state.player.invincibleTimer = INVINCIBLE_DURATION;
         createDamageParticle(state, state.player.x + PLAYER_WIDTH / 2, state.player.y - playerHeight / 2);
+        pendingEvents.collision = true;
 
         if (obstacle.type === 'falling') {
           createExplosionParticle(state, obstacle.x, obstacle.y);
@@ -395,6 +429,7 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
         }
 
         if (state.player.health <= 0) {
+          pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), keysCollected: state.keysCollected });
           state.phase = 'gameover';
           return;
         }
@@ -417,20 +452,25 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
           case 'health':
             state.player.health = Math.min(state.player.maxHealth, state.player.health + 1);
             createCollectParticle(state, collectible.x, collectible.y, '#2ecc71');
+            pendingEvents.collectibleCollected.push({ type: 'health', score: 0 });
             break;
           case 'shield':
             state.player.invincible = true;
             state.player.invincibleTimer = 3000;
             createCollectParticle(state, collectible.x, collectible.y, '#3498db');
+            pendingEvents.shieldActivated = true;
+            pendingEvents.collectibleCollected.push({ type: 'shield', score: 0 });
             break;
           case 'boost':
             state.score += 200;
             createCollectParticle(state, collectible.x, collectible.y, '#f39c12');
+            pendingEvents.collectibleCollected.push({ type: 'boost', score: 200 });
             break;
           case 'key':
             state.keysCollected++;
             state.score += 500;
             createCollectParticle(state, collectible.x, collectible.y, '#ffd93d');
+            pendingEvents.collectibleCollected.push({ type: 'key', score: 500 });
             break;
         }
       }
@@ -456,8 +496,10 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
     state.player.invincible = true;
     state.player.invincibleTimer = INVINCIBLE_DURATION;
     createDamageParticle(state, state.player.x + PLAYER_WIDTH / 2, state.player.y - playerHeight / 2);
+    pendingEvents.collision = true;
 
     if (state.player.health <= 0) {
+      pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), keysCollected: state.keysCollected });
       state.phase = 'gameover';
       return;
     }
@@ -474,6 +516,7 @@ export function moveLeft(state: GameState): void {
   if (state.phase !== 'playing') return;
   if (state.player.targetLane > 0) {
     state.player.targetLane--;
+    pendingEvents.laneChange.push({ direction: 'left' });
   }
 }
 
@@ -481,6 +524,7 @@ export function moveRight(state: GameState): void {
   if (state.phase !== 'playing') return;
   if (state.player.targetLane < LANE_COUNT - 1) {
     state.player.targetLane++;
+    pendingEvents.laneChange.push({ direction: 'right' });
   }
 }
 
@@ -489,6 +533,7 @@ export function jump(state: GameState): void {
   if (!state.player.jumping && !state.player.sliding) {
     state.player.jumping = true;
     state.player.jumpVelocity = JUMP_FORCE;
+    pendingEvents.jump = true;
   }
 }
 
@@ -497,12 +542,14 @@ export function slide(state: GameState): void {
   if (!state.player.jumping && !state.player.sliding) {
     state.player.sliding = true;
     state.player.slideTimer = SLIDE_DURATION;
+    pendingEvents.slide = true;
   }
 }
 
 export function startGame(state: GameState): void {
   Object.assign(state, createInitialState());
   state.phase = 'playing';
+  pendingEvents.start = true;
 }
 
 export function getStats(state: GameState) {

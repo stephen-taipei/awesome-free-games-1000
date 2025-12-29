@@ -3,6 +3,16 @@
  * Game #437 - Street Runner escaping from Police
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number; donuts: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -75,6 +85,23 @@ export class PoliceChaseGame {
   private lastTime: number = 0;
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slide: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -117,6 +144,7 @@ export class PoliceChaseGame {
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
     this.startGameLoop();
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -319,6 +347,7 @@ export class PoliceChaseGame {
         this.state.police.distance -= 25;
         this.spawnHitParticles(player.x, player.y);
         obs.x = -200;
+        this.pendingEvents.collision = true;
 
         if (this.state.police.distance <= 30) {
           this.gameOver();
@@ -344,18 +373,21 @@ export class PoliceChaseGame {
         this.state.score += 25;
         this.state.police.distance += 3;
         this.spawnCollectParticles(x, y, '#f1c40f');
+        this.pendingEvents.collectibleCollected.push({ type: 'coin', score: 25 });
         break;
       case 'donut':
         this.state.donuts++;
         this.state.score += 75;
         this.state.police.distance += 10;
         this.spawnCollectParticles(x, y, '#e91e63');
+        this.pendingEvents.collectibleCollected.push({ type: 'donut', score: 75 });
         break;
       case 'coffee':
         this.state.score += 50;
         this.state.speed = Math.min(13, this.state.speed + 0.5);
         this.state.police.distance += 8;
         this.spawnCollectParticles(x, y, '#795548');
+        this.pendingEvents.collectibleCollected.push({ type: 'coffee', score: 50 });
         break;
     }
   }
@@ -416,6 +448,12 @@ export class PoliceChaseGame {
     this.state.phase = 'gameover';
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
+    this.pendingEvents.gameOver.push({
+      score: Math.floor(this.state.score),
+      distance: Math.floor(this.state.distance),
+      coins: this.state.coins,
+      donuts: this.state.donuts,
+    });
   }
 
   private spawnExplosion(x: number, y: number): void {
@@ -437,6 +475,7 @@ export class PoliceChaseGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -444,6 +483,7 @@ export class PoliceChaseGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -452,6 +492,7 @@ export class PoliceChaseGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -14;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -459,6 +500,7 @@ export class PoliceChaseGame {
     if (this.state.phase !== 'playing') return;
     if (!this.state.player.isSliding) {
       this.state.player.isSliding = true;
+      this.pendingEvents.slide = true;
       setTimeout(() => {
         this.state.player.isSliding = false;
       }, 500);

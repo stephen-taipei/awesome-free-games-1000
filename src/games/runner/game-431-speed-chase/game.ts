@@ -1,6 +1,17 @@
 // Speed Chase - Chase Runner Game
 // Theme: Police chase - catch criminals while avoiding traffic
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  boost: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  criminalCaptured: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; captures: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -77,6 +88,25 @@ export interface GameState {
 }
 
 export type GamePhase = GameState['phase'];
+
+export let pendingEvents: PendingEvents = createPendingEvents();
+
+export function createPendingEvents(): PendingEvents {
+  return {
+    start: false,
+    jump: false,
+    boost: false,
+    laneChange: [],
+    collectibleCollected: [],
+    criminalCaptured: [],
+    collision: false,
+    gameOver: [],
+  };
+}
+
+export function clearPendingEvents(): void {
+  pendingEvents = createPendingEvents();
+}
 
 const LANE_COUNT = 3;
 const LANE_WIDTH = 80;
@@ -277,6 +307,7 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
   // Update pursuit meter (decreases over time, increase by catching criminals)
   state.pursuitMeter -= 0.02 * dt;
   if (state.pursuitMeter <= 0) {
+    pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), captures: state.captures });
     state.phase = 'gameover';
     return;
   }
@@ -345,12 +376,14 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
 
         // Score bonus based on type
         const bonusByType = { car: 100, bike: 50, truck: 200 };
-        state.score += bonusByType[criminal.type] * (1 + state.streak * 0.1);
+        const captureScore = bonusByType[criminal.type] * (1 + state.streak * 0.1);
+        state.score += captureScore;
 
         // Restore pursuit meter
         state.pursuitMeter = Math.min(state.maxPursuitMeter, state.pursuitMeter + 15);
 
         createCaptureParticle(state, criminal.x, criminal.y - criminalHeight / 2);
+        pendingEvents.criminalCaptured.push({ type: criminal.type, score: captureScore });
       }
     }
   }
@@ -372,11 +405,13 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
       // Crash! End pursuit streak
       state.streak = 0;
       state.pursuitMeter -= 20;
+      pendingEvents.collision = true;
 
       // Remove traffic
       traffic.x = -200;
 
       if (state.pursuitMeter <= 0) {
+        pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), captures: state.captures });
         state.phase = 'gameover';
         return;
       }
@@ -400,12 +435,15 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
         switch (powerup.type) {
           case 'nitro':
             state.nitroCount++;
+            pendingEvents.collectibleCollected.push({ type: 'nitro', score: 25 });
             break;
           case 'spike':
             state.spikeCount++;
+            pendingEvents.collectibleCollected.push({ type: 'spike', score: 25 });
             break;
           case 'emp':
             state.empCount++;
+            pendingEvents.collectibleCollected.push({ type: 'emp', score: 25 });
             break;
         }
 
@@ -432,6 +470,7 @@ export function moveLeft(state: GameState): void {
   if (state.phase !== 'playing') return;
   if (state.player.targetLane > 0) {
     state.player.targetLane--;
+    pendingEvents.laneChange.push({ direction: 'left' });
   }
 }
 
@@ -439,6 +478,7 @@ export function moveRight(state: GameState): void {
   if (state.phase !== 'playing') return;
   if (state.player.targetLane < LANE_COUNT - 1) {
     state.player.targetLane++;
+    pendingEvents.laneChange.push({ direction: 'right' });
   }
 }
 
@@ -447,6 +487,7 @@ export function jump(state: GameState): void {
   if (!state.player.jumping) {
     state.player.jumping = true;
     state.player.jumpVelocity = JUMP_FORCE;
+    pendingEvents.jump = true;
   }
 }
 
@@ -456,12 +497,14 @@ export function activateNitro(state: GameState): void {
     state.nitroCount--;
     state.player.boostActive = true;
     state.player.boostTimer = BOOST_DURATION;
+    pendingEvents.boost = true;
   }
 }
 
 export function startGame(state: GameState): void {
   Object.assign(state, createInitialState());
   state.phase = 'playing';
+  pendingEvents.start = true;
 }
 
 export function getStats(state: GameState) {

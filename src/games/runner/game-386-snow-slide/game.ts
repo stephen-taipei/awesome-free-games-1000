@@ -3,6 +3,17 @@
  * Game #386 - Snow Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  boostActivated: boolean;
+  boostEnded: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -67,6 +78,25 @@ export class SnowSlideGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      boostActivated: false,
+      boostEnded: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -120,6 +150,7 @@ export class SnowSlideGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -264,8 +295,10 @@ export class SnowSlideGame {
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
         if (this.state.hasBoost) {
           this.state.hasBoost = false;
+          this.pendingEvents.boostEnded = true;
           obs.x = -100;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -287,14 +320,18 @@ export class SnowSlideGame {
       case 'coin':
         this.state.coins++;
         this.state.score += 30;
+        this.pendingEvents.collectibleCollected.push({ type, score: 30 });
         break;
       case 'gem':
         this.state.coins += 5;
         this.state.score += 100;
+        this.pendingEvents.collectibleCollected.push({ type, score: 100 });
         break;
       case 'boost':
         this.state.hasBoost = true;
         this.state.boostTime = 4000;
+        this.pendingEvents.boostActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 0 });
         break;
     }
   }
@@ -313,12 +350,18 @@ export class SnowSlideGame {
       this.state.boostTime -= dt;
       if (this.state.boostTime <= 0) {
         this.state.hasBoost = false;
+        this.pendingEvents.boostEnded = true;
       }
     }
   }
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      coins: this.state.coins,
+    });
     this.stopGameLoop();
   }
 
@@ -326,6 +369,7 @@ export class SnowSlideGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -333,6 +377,7 @@ export class SnowSlideGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -341,6 +386,7 @@ export class SnowSlideGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -14;
+      this.pendingEvents.jump = true;
     }
   }
 

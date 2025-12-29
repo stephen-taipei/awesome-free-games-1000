@@ -3,6 +3,16 @@
  * Game #445 - Running through a theme park collecting tickets and prizes
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; tickets: number; treats: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -70,6 +80,23 @@ export class ThemeParkRunGame {
   private lastTime: number = 0;
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slide: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -112,6 +139,7 @@ export class ThemeParkRunGame {
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
     this.startGameLoop();
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -308,6 +336,7 @@ export class ThemeParkRunGame {
         this.state.fun -= 18;
         this.spawnHitParticles(player.x, player.y);
         obs.x = -200;
+        this.pendingEvents.collision = true;
 
         if (this.state.fun <= 0) {
           this.gameOver();
@@ -332,17 +361,20 @@ export class ThemeParkRunGame {
         this.state.tickets++;
         this.state.score += 70;
         this.spawnCollectParticles(x, y, '#ff9800');
+        this.pendingEvents.collectibleCollected.push({ type: 'ticket', score: 70 });
         break;
       case 'cotton-candy':
         this.state.treats++;
         this.state.score += 55;
         this.state.speed = Math.min(13.5, this.state.speed + 0.13);
         this.spawnCollectParticles(x, y, '#e91e63');
+        this.pendingEvents.collectibleCollected.push({ type: 'cotton-candy', score: 55 });
         break;
       case 'star':
         this.state.fun = Math.min(100, this.state.fun + 22);
         this.state.score += 85;
         this.spawnCollectParticles(x, y, '#ffc107');
+        this.pendingEvents.collectibleCollected.push({ type: 'star', score: 85 });
         break;
     }
   }
@@ -411,6 +443,12 @@ export class ThemeParkRunGame {
     this.state.fun = 0;
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
+    this.pendingEvents.gameOver.push({
+      score: Math.floor(this.state.score),
+      distance: Math.floor(this.state.distance),
+      tickets: this.state.tickets,
+      treats: this.state.treats,
+    });
   }
 
   private spawnExplosion(x: number, y: number): void {
@@ -433,6 +471,7 @@ export class ThemeParkRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -440,6 +479,7 @@ export class ThemeParkRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -448,6 +488,7 @@ export class ThemeParkRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -13;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -455,6 +496,7 @@ export class ThemeParkRunGame {
     if (this.state.phase !== 'playing') return;
     if (!this.state.player.isSliding) {
       this.state.player.isSliding = true;
+      this.pendingEvents.slide = true;
       setTimeout(() => {
         this.state.player.isSliding = false;
       }, 460);

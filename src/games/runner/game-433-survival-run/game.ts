@@ -1,6 +1,17 @@
 // Survival Run - Survival Runner Game
 // Theme: Post-apocalyptic survival - collect resources, avoid zombies and hazards
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  sprint: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  zombieKilled: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; survivalDays: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -76,6 +87,25 @@ export interface GameState {
 }
 
 export type GamePhase = GameState['phase'];
+
+export let pendingEvents: PendingEvents = createPendingEvents();
+
+export function createPendingEvents(): PendingEvents {
+  return {
+    start: false,
+    jump: false,
+    sprint: false,
+    laneChange: [],
+    collectibleCollected: [],
+    zombieKilled: [],
+    collision: false,
+    gameOver: [],
+  };
+}
+
+export function clearPendingEvents(): void {
+  pendingEvents = createPendingEvents();
+}
 
 const LANE_COUNT = 3;
 const LANE_WIDTH = 80;
@@ -294,6 +324,7 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
   state.thirst -= 0.02 * dt;
 
   if (state.hunger <= 0 || state.thirst <= 0) {
+    pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), survivalDays: state.survivalDays });
     state.phase = 'gameover';
     return;
   }
@@ -361,9 +392,12 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
             createZombieDeathParticle(state, zombie.x, zombie.y - zombieHeight / 2);
             zombie.x = -100;
             state.score += 50;
+            pendingEvents.zombieKilled.push({ type: zombie.type, score: 50 });
           }
         } else {
           // Game over if hit by zombie
+          pendingEvents.collision = true;
+          pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), survivalDays: state.survivalDays });
           state.phase = 'gameover';
           return;
         }
@@ -388,6 +422,8 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
         playerLeft, playerTop, PLAYER_WIDTH, PLAYER_HEIGHT,
         hazard.x - hazard.width / 2, hazard.y - hazard.height, hazard.width, hazard.height
       )) {
+        pendingEvents.collision = true;
+        pendingEvents.gameOver.push({ score: Math.floor(state.score), distance: Math.floor(state.distance), survivalDays: state.survivalDays });
         state.phase = 'gameover';
         return;
       }
@@ -411,22 +447,26 @@ export function update(state: GameState, deltaTime: number, canvasWidth: number,
             state.foodCount++;
             state.hunger = Math.min(state.maxHungerThirst, state.hunger + 20);
             color = '#f39c12';
+            pendingEvents.collectibleCollected.push({ type: 'food', score: 20 });
             break;
           case 'water':
             state.waterCount++;
             state.thirst = Math.min(state.maxHungerThirst, state.thirst + 25);
             color = '#3498db';
+            pendingEvents.collectibleCollected.push({ type: 'water', score: 20 });
             break;
           case 'medkit':
             state.medkitCount++;
             state.hunger = Math.min(state.maxHungerThirst, state.hunger + 10);
             state.thirst = Math.min(state.maxHungerThirst, state.thirst + 10);
             color = '#e74c3c';
+            pendingEvents.collectibleCollected.push({ type: 'medkit', score: 20 });
             break;
           case 'ammo':
             state.ammoCount++;
             state.score += 30;
             color = '#95a5a6';
+            pendingEvents.collectibleCollected.push({ type: 'ammo', score: 50 });
             break;
         }
 
@@ -454,6 +494,7 @@ export function moveLeft(state: GameState): void {
   if (state.phase !== 'playing') return;
   if (state.player.targetLane > 0) {
     state.player.targetLane--;
+    pendingEvents.laneChange.push({ direction: 'left' });
   }
 }
 
@@ -461,6 +502,7 @@ export function moveRight(state: GameState): void {
   if (state.phase !== 'playing') return;
   if (state.player.targetLane < LANE_COUNT - 1) {
     state.player.targetLane++;
+    pendingEvents.laneChange.push({ direction: 'right' });
   }
 }
 
@@ -469,6 +511,7 @@ export function jump(state: GameState): void {
   if (!state.player.jumping) {
     state.player.jumping = true;
     state.player.jumpVelocity = JUMP_FORCE;
+    pendingEvents.jump = true;
   }
 }
 
@@ -476,6 +519,7 @@ export function toggleSprint(state: GameState, sprinting: boolean): void {
   if (state.phase !== 'playing') return;
   if (sprinting && state.player.stamina > 0) {
     state.player.sprinting = true;
+    pendingEvents.sprint = true;
   } else {
     state.player.sprinting = false;
   }
@@ -484,6 +528,7 @@ export function toggleSprint(state: GameState, sprinting: boolean): void {
 export function startGame(state: GameState): void {
   Object.assign(state, createInitialState());
   state.phase = 'playing';
+  pendingEvents.start = true;
 }
 
 export function getStats(state: GameState) {

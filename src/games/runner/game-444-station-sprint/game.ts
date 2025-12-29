@@ -3,6 +3,16 @@
  * Game #444 - Running through train station to catch your train
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; tickets: number; coins: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -70,6 +80,23 @@ export class StationSprintGame {
   private lastTime: number = 0;
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slide: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -112,6 +139,7 @@ export class StationSprintGame {
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
     this.startGameLoop();
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -307,6 +335,7 @@ export class StationSprintGame {
         this.state.countdown -= 12;
         this.spawnHitParticles(player.x, player.y);
         obs.x = -200;
+        this.pendingEvents.collision = true;
 
         if (this.state.countdown <= 0) {
           this.gameOver();
@@ -331,17 +360,20 @@ export class StationSprintGame {
         this.state.tickets++;
         this.state.score += 90;
         this.spawnCollectParticles(x, y, '#ff5722');
+        this.pendingEvents.collectibleCollected.push({ type: 'ticket', score: 90 });
         break;
       case 'coin':
         this.state.coins++;
         this.state.score += 50;
         this.state.speed = Math.min(14, this.state.speed + 0.12);
         this.spawnCollectParticles(x, y, '#ffc107');
+        this.pendingEvents.collectibleCollected.push({ type: 'coin', score: 50 });
         break;
       case 'watch':
         this.state.countdown = Math.min(100, this.state.countdown + 18);
         this.state.score += 65;
         this.spawnCollectParticles(x, y, '#607d8b');
+        this.pendingEvents.collectibleCollected.push({ type: 'watch', score: 65 });
         break;
     }
   }
@@ -410,6 +442,12 @@ export class StationSprintGame {
     this.state.countdown = 0;
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
+    this.pendingEvents.gameOver.push({
+      score: Math.floor(this.state.score),
+      distance: Math.floor(this.state.distance),
+      tickets: this.state.tickets,
+      coins: this.state.coins,
+    });
   }
 
   private spawnExplosion(x: number, y: number): void {
@@ -431,6 +469,7 @@ export class StationSprintGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -438,6 +477,7 @@ export class StationSprintGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -446,6 +486,7 @@ export class StationSprintGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -13.5;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -453,6 +494,7 @@ export class StationSprintGame {
     if (this.state.phase !== 'playing') return;
     if (!this.state.player.isSliding) {
       this.state.player.isSliding = true;
+      this.pendingEvents.slide = true;
       setTimeout(() => {
         this.state.player.isSliding = false;
       }, 470);

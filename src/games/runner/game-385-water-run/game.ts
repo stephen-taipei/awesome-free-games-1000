@@ -3,6 +3,18 @@
  * Game #385 - Water Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  dive: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; shells: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -71,6 +83,26 @@ export class WaterRunGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      dive: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -111,6 +143,7 @@ export class WaterRunGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -263,9 +296,11 @@ export class WaterRunGame {
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
         if (this.state.hasShield) {
           this.state.hasShield = false;
+          this.pendingEvents.shieldBroken = true;
           this.spawnSplash(obs.x, obs.y);
           obs.x = -100;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -289,15 +324,19 @@ export class WaterRunGame {
       case 'shell':
         this.state.shells++;
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type, score: 50 });
         break;
       case 'pearl':
         this.state.score += 150;
         this.state.speed = Math.min(12, this.state.speed + 0.3);
+        this.pendingEvents.collectibleCollected.push({ type, score: 150 });
         break;
       case 'chest':
         this.state.score += 300;
         this.state.hasShield = true;
         this.state.shieldTime = 5000;
+        this.pendingEvents.shieldActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 300 });
         break;
     }
   }
@@ -354,6 +393,11 @@ export class WaterRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      shells: this.state.shells,
+    });
     this.stopGameLoop();
     this.spawnSplash(this.state.player.x, this.state.player.y);
   }
@@ -362,6 +406,7 @@ export class WaterRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -369,6 +414,7 @@ export class WaterRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -377,6 +423,7 @@ export class WaterRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -16;
+      this.pendingEvents.jump = true;
       // Jump splash
       this.spawnSplash(this.state.player.x, this.state.player.y + 20);
     }
@@ -386,6 +433,7 @@ export class WaterRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.isJumping) {
       this.state.player.jumpVelocity = 10; // Force downward
+      this.pendingEvents.dive = true;
     }
   }
 

@@ -3,6 +3,17 @@
  * Game #383 - Parkour Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  vault: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; skillPoints: number; medals: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -74,6 +85,25 @@ export class ParkourMasterGame {
   private comboMultiplier: number = 1;
   private lastMoveTime: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slide: false,
+      vault: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -117,6 +147,7 @@ export class ParkourMasterGame {
     this.comboMultiplier = 1;
     this.lastMoveTime = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -325,6 +356,7 @@ export class ParkourMasterGame {
         if ((obs.type === 'ac-unit' || obs.type === 'fence') && player.isVaulting) {
           this.comboMultiplier += 0.5;
           this.state.score += Math.floor(100 * this.comboMultiplier);
+          this.pendingEvents.vault = true;
           this.spawnStyleParticles(obs.x, obs.y, '#27ae60');
           obs.x = -200; // Remove obstacle
           continue;
@@ -341,6 +373,7 @@ export class ParkourMasterGame {
 
         // Regular collision
         if (!player.isSliding || obs.type !== 'billboard') {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -364,18 +397,24 @@ export class ParkourMasterGame {
 
     switch (type) {
       case 'energy-drink':
-        this.state.score += Math.floor(50 * this.comboMultiplier);
+        const energyScore = Math.floor(50 * this.comboMultiplier);
+        this.state.score += energyScore;
         this.state.speed = Math.min(14, this.state.speed + 0.3);
+        this.pendingEvents.collectibleCollected.push({ type, score: energyScore });
         this.spawnCollectParticles(x, y, '#3498db');
         break;
       case 'medal':
         this.state.medals++;
-        this.state.score += Math.floor(100 * this.comboMultiplier);
+        const medalScore = Math.floor(100 * this.comboMultiplier);
+        this.state.score += medalScore;
+        this.pendingEvents.collectibleCollected.push({ type, score: medalScore });
         this.spawnCollectParticles(x, y, '#f1c40f');
         break;
       case 'skill-point':
         this.state.skillPoints++;
-        this.state.score += Math.floor(200 * this.comboMultiplier);
+        const skillScore = Math.floor(200 * this.comboMultiplier);
+        this.state.score += skillScore;
+        this.pendingEvents.collectibleCollected.push({ type, score: skillScore });
         this.spawnCollectParticles(x, y, '#e74c3c');
         break;
     }
@@ -429,6 +468,12 @@ export class ParkourMasterGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      skillPoints: this.state.skillPoints,
+      medals: this.state.medals,
+    });
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
   }
@@ -454,6 +499,7 @@ export class ParkourMasterGame {
       this.state.player.lane--;
       this.lastMoveTime = performance.now();
       this.comboMultiplier = Math.min(3, this.comboMultiplier + 0.1);
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -463,6 +509,7 @@ export class ParkourMasterGame {
       this.state.player.lane++;
       this.lastMoveTime = performance.now();
       this.comboMultiplier = Math.min(3, this.comboMultiplier + 0.1);
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -474,6 +521,7 @@ export class ParkourMasterGame {
       this.state.player.isVaulting = true;
       this.lastMoveTime = performance.now();
       this.comboMultiplier = Math.min(3, this.comboMultiplier + 0.15);
+      this.pendingEvents.jump = true;
 
       // Jump dust particles
       for (let i = 0; i < 5; i++) {
@@ -497,6 +545,7 @@ export class ParkourMasterGame {
       this.state.player.isSliding = true;
       this.lastMoveTime = performance.now();
       this.comboMultiplier = Math.min(3, this.comboMultiplier + 0.15);
+      this.pendingEvents.slide = true;
 
       setTimeout(() => {
         this.state.player.isSliding = false;

@@ -3,6 +3,17 @@
  * Game #393 - Rhythm Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  comboUpdated: { combo: number }[];
+  beatPulse: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; notes: number; maxCombo: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -74,6 +85,25 @@ export class MusicRunGame {
   private collectibleTimer: number = 0;
   private beatTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      comboUpdated: [],
+      beatPulse: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -119,6 +149,7 @@ export class MusicRunGame {
     this.collectibleTimer = 0;
     this.beatTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -154,6 +185,7 @@ export class MusicRunGame {
     if (this.beatTimer >= beatInterval) {
       this.beatTimer = 0;
       this.state.beat = (this.state.beat + 1) % 4;
+      this.pendingEvents.beatPulse = true;
       // Create beat wave
       this.state.soundWaves.push({
         x: 50,
@@ -281,6 +313,7 @@ export class MusicRunGame {
 
       if (playerBox.right > obsBox.left && playerBox.left < obsBox.right &&
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -312,14 +345,19 @@ export class MusicRunGame {
         this.state.notes++;
         this.state.score += 25 * this.state.combo;
         this.state.combo = Math.min(8, this.state.combo + 1);
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: 25 * this.state.combo });
+        this.pendingEvents.comboUpdated.push({ combo: this.state.combo });
         break;
       case 'treble':
         this.state.score += 100 * this.state.combo;
         this.state.speed = Math.min(14, this.state.speed + 0.5);
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: 100 * this.state.combo });
         break;
       case 'bass':
         this.state.combo = Math.min(8, this.state.combo + 2);
         this.state.score += 75 * this.state.combo;
+        this.pendingEvents.collectibleCollected.push({ type: col.type, score: 75 * this.state.combo });
+        this.pendingEvents.comboUpdated.push({ combo: this.state.combo });
         break;
     }
     this.state.maxCombo = Math.max(this.state.maxCombo, this.state.combo);
@@ -336,6 +374,12 @@ export class MusicRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      notes: this.state.notes,
+      maxCombo: this.state.maxCombo,
+    });
     this.stopGameLoop();
   }
 
@@ -343,6 +387,7 @@ export class MusicRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -350,6 +395,7 @@ export class MusicRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -358,6 +404,7 @@ export class MusicRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -15;
+      this.pendingEvents.jump = true;
     }
   }
 

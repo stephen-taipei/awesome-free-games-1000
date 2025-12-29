@@ -3,6 +3,18 @@
  * Game #389 - Ice Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  warmthActivated: boolean;
+  warmthEnded: boolean;
+  coldDeath: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; fish: number; cold: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -69,6 +81,26 @@ export class IceFieldRunGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      warmthActivated: false,
+      warmthEnded: false,
+      coldDeath: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -124,6 +156,7 @@ export class IceFieldRunGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -271,6 +304,7 @@ export class IceFieldRunGame {
 
       if (playerBox.right > obsBox.left && playerBox.left < obsBox.right &&
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -291,15 +325,19 @@ export class IceFieldRunGame {
       case 'fish':
         this.state.fish++;
         this.state.score += 40;
+        this.pendingEvents.collectibleCollected.push({ type, score: 40 });
         break;
       case 'warmth':
         this.state.hasWarmth = true;
         this.state.warmthTime = 4000;
         this.state.cold = Math.max(0, this.state.cold - 25);
+        this.pendingEvents.warmthActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 0 });
         break;
       case 'slide':
         this.state.speed = Math.min(14, this.state.speed + 1);
         this.state.score += 60;
+        this.pendingEvents.collectibleCollected.push({ type, score: 60 });
         break;
     }
   }
@@ -318,10 +356,12 @@ export class IceFieldRunGame {
       this.state.warmthTime -= dt;
       if (this.state.warmthTime <= 0) {
         this.state.hasWarmth = false;
+        this.pendingEvents.warmthEnded = true;
       }
     } else {
       this.state.cold += dt * 0.004;
       if (this.state.cold >= 100) {
+        this.pendingEvents.coldDeath = true;
         this.gameOver();
       }
     }
@@ -329,6 +369,12 @@ export class IceFieldRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      fish: this.state.fish,
+      cold: Math.floor(this.state.cold),
+    });
     this.stopGameLoop();
   }
 
@@ -336,6 +382,7 @@ export class IceFieldRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -343,6 +390,7 @@ export class IceFieldRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -351,6 +399,7 @@ export class IceFieldRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -14;
+      this.pendingEvents.jump = true;
     }
   }
 
