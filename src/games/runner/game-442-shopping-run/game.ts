@@ -3,6 +3,16 @@
  * Game #442 - Running through a shopping mall collecting deals
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; coupons: number; gifts: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -70,6 +80,23 @@ export class ShoppingRunGame {
   private lastTime: number = 0;
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slide: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -112,6 +139,7 @@ export class ShoppingRunGame {
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
     this.startGameLoop();
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -306,6 +334,7 @@ export class ShoppingRunGame {
         this.state.budget -= 20;
         this.spawnHitParticles(player.x, player.y);
         obs.x = -200;
+        this.pendingEvents.collision = true;
 
         if (this.state.budget <= 0) {
           this.gameOver();
@@ -330,16 +359,19 @@ export class ShoppingRunGame {
         this.state.coupons++;
         this.state.score += 60;
         this.spawnCollectParticles(x, y, '#ff9800');
+        this.pendingEvents.collectibleCollected.push({ type: 'coupon', score: 60 });
         break;
       case 'gift-box':
         this.state.gifts++;
         this.state.score += 120;
         this.spawnCollectParticles(x, y, '#e91e63');
+        this.pendingEvents.collectibleCollected.push({ type: 'gift-box', score: 120 });
         break;
       case 'sale-tag':
         this.state.budget = Math.min(100, this.state.budget + 25);
         this.state.score += 80;
         this.spawnCollectParticles(x, y, '#4caf50');
+        this.pendingEvents.collectibleCollected.push({ type: 'sale-tag', score: 80 });
         break;
     }
   }
@@ -408,6 +440,12 @@ export class ShoppingRunGame {
     this.state.budget = 0;
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
+    this.pendingEvents.gameOver.push({
+      score: Math.floor(this.state.score),
+      distance: Math.floor(this.state.distance),
+      coupons: this.state.coupons,
+      gifts: this.state.gifts,
+    });
   }
 
   private spawnExplosion(x: number, y: number): void {
@@ -429,6 +467,7 @@ export class ShoppingRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -436,6 +475,7 @@ export class ShoppingRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -444,6 +484,7 @@ export class ShoppingRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -13.5;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -451,6 +492,7 @@ export class ShoppingRunGame {
     if (this.state.phase !== 'playing') return;
     if (!this.state.player.isSliding) {
       this.state.player.isSliding = true;
+      this.pendingEvents.slide = true;
       setTimeout(() => {
         this.state.player.isSliding = false;
       }, 480);

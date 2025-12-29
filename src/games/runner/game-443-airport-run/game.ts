@@ -3,6 +3,16 @@
  * Game #443 - Running through airport terminals to catch your flight
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; passports: number; tickets: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -70,6 +80,23 @@ export class AirportRunGame {
   private lastTime: number = 0;
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slide: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -112,6 +139,7 @@ export class AirportRunGame {
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
     this.startGameLoop();
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -307,6 +335,7 @@ export class AirportRunGame {
         this.state.timeLeft -= 15;
         this.spawnHitParticles(player.x, player.y);
         obs.x = -200;
+        this.pendingEvents.collision = true;
 
         if (this.state.timeLeft <= 0) {
           this.gameOver();
@@ -331,17 +360,20 @@ export class AirportRunGame {
         this.state.passports++;
         this.state.score += 100;
         this.spawnCollectParticles(x, y, '#1565c0');
+        this.pendingEvents.collectibleCollected.push({ type: 'passport', score: 100 });
         break;
       case 'ticket':
         this.state.tickets++;
         this.state.score += 70;
         this.state.speed = Math.min(14, this.state.speed + 0.15);
         this.spawnCollectParticles(x, y, '#ff9800');
+        this.pendingEvents.collectibleCollected.push({ type: 'ticket', score: 70 });
         break;
       case 'coffee':
         this.state.timeLeft = Math.min(100, this.state.timeLeft + 20);
         this.state.score += 55;
         this.spawnCollectParticles(x, y, '#795548');
+        this.pendingEvents.collectibleCollected.push({ type: 'coffee', score: 55 });
         break;
     }
   }
@@ -410,6 +442,12 @@ export class AirportRunGame {
     this.state.timeLeft = 0;
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
+    this.pendingEvents.gameOver.push({
+      score: Math.floor(this.state.score),
+      distance: Math.floor(this.state.distance),
+      passports: this.state.passports,
+      tickets: this.state.tickets,
+    });
   }
 
   private spawnExplosion(x: number, y: number): void {
@@ -431,6 +469,7 @@ export class AirportRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -438,6 +477,7 @@ export class AirportRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -446,6 +486,7 @@ export class AirportRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -13.5;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -453,6 +494,7 @@ export class AirportRunGame {
     if (this.state.phase !== 'playing') return;
     if (!this.state.player.isSliding) {
       this.state.player.isSliding = true;
+      this.pendingEvents.slide = true;
       setTimeout(() => {
         this.state.player.isSliding = false;
       }, 475);

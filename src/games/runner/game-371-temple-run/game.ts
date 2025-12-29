@@ -3,6 +3,17 @@
  * Game #371 - Endless runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  laneChange: { direction: string }[];
+  coinCollected: boolean;
+  obstaclePassed: boolean;
+  collision: boolean;
+  gameOver: { score: number; coins: number; distance: number }[];
+}
+
 interface Runner {
   lane: number; // 0, 1, 2 (left, center, right)
   y: number; vy: number;
@@ -50,6 +61,25 @@ export class TempleRunGame {
   private spawnTimer = 0;
   private laneWidth = 80;
   private lanes = [0, 0, 0];
+
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slide: false,
+      laneChange: [],
+      coinCollected: false,
+      obstaclePassed: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -113,12 +143,18 @@ export class TempleRunGame {
 
   private moveLeft() {
     if (this.status !== 'playing' || this.runner.state === 'hit') return;
-    if (this.runner.targetLane > 0) this.runner.targetLane--;
+    if (this.runner.targetLane > 0) {
+      this.runner.targetLane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
+    }
   }
 
   private moveRight() {
     if (this.status !== 'playing' || this.runner.state === 'hit') return;
-    if (this.runner.targetLane < 2) this.runner.targetLane++;
+    if (this.runner.targetLane < 2) {
+      this.runner.targetLane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
+    }
   }
 
   private jump() {
@@ -127,6 +163,7 @@ export class TempleRunGame {
       this.runner.vy = -18;
       this.runner.state = 'jump';
       this.runner.stateTime = 0;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -135,6 +172,7 @@ export class TempleRunGame {
     if (this.runner.y === 0 && this.runner.state !== 'slide') {
       this.runner.state = 'slide';
       this.runner.stateTime = 0;
+      this.pendingEvents.slide = true;
     }
   }
 
@@ -154,6 +192,7 @@ export class TempleRunGame {
     this.coins = [];
     this.spawnTimer = 0;
     this.status = 'playing';
+    this.pendingEvents.start = true;
     this.emitState();
     this.lastTime = performance.now();
     this.gameLoop();
@@ -250,10 +289,17 @@ export class TempleRunGame {
         if (hit) {
           r.state = 'hit';
           this.status = 'over';
+          this.pendingEvents.collision = true;
+          this.pendingEvents.gameOver.push({
+            score: this.score,
+            coins: this.coinCount,
+            distance: Math.floor(this.distance),
+          });
           this.emitState();
           return;
         }
         o.passed = true;
+        this.pendingEvents.obstaclePassed = true;
       }
     }
 
@@ -272,6 +318,7 @@ export class TempleRunGame {
         if (Math.abs(c.y - (-r.y)) < 40) {
           c.collected = true;
           this.coinCount++;
+          this.pendingEvents.coinCollected = true;
           this.emitState();
         }
       }

@@ -3,6 +3,17 @@
  * Game #377 - Horror Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  zombieHit: { damage: number }[];
+  collectibleCollected: { type: string; score: number }[];
+  speedBoostActivated: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; survivors: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -75,6 +86,25 @@ export class ZombieEscapeGame {
   private collectibleTimer: number = 0;
   private hordeTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      zombieHit: [],
+      collectibleCollected: [],
+      speedBoostActivated: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -117,6 +147,7 @@ export class ZombieEscapeGame {
     this.collectibleTimer = 0;
     this.hordeTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -307,10 +338,12 @@ export class ZombieEscapeGame {
           playerBox.bottom > zombieBox.top && playerBox.top < zombieBox.bottom) {
         // Take damage
         player.health -= 25;
+        this.pendingEvents.zombieHit.push({ damage: 25 });
         this.spawnBloodSplatter(player.x, player.y);
         zombie.x = -200; // Remove zombie
 
         if (player.health <= 0) {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -334,15 +367,19 @@ export class ZombieEscapeGame {
       case 'ammo':
         player.ammo += 5;
         this.state.score += 30;
+        this.pendingEvents.collectibleCollected.push({ type, score: 30 });
         break;
       case 'health':
         player.health = Math.min(player.maxHealth, player.health + 30);
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type, score: 50 });
         break;
       case 'speed':
         this.state.speedBoostTime = 3000;
         this.state.speed = Math.min(10, this.state.speed + 2);
         this.state.score += 100;
+        this.pendingEvents.speedBoostActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 100 });
         break;
     }
   }
@@ -388,6 +425,11 @@ export class ZombieEscapeGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      survivors: this.state.survivors,
+    });
     this.stopGameLoop();
     this.spawnBloodSplatter(this.state.player.x, this.state.player.y);
   }
@@ -396,6 +438,7 @@ export class ZombieEscapeGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -403,6 +446,7 @@ export class ZombieEscapeGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -411,6 +455,7 @@ export class ZombieEscapeGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -14;
+      this.pendingEvents.jump = true;
     }
   }
 

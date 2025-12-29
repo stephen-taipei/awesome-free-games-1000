@@ -3,6 +3,19 @@
  * Game #381 - Retro Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  powerUpActivated: boolean;
+  powerUpEnded: boolean;
+  lifeLost: boolean;
+  lifeGained: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; coins: number; lives: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -74,6 +87,27 @@ export class PixelRunGame {
   private collectibleTimer: number = 0;
   private animationTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      powerUpActivated: false,
+      powerUpEnded: false,
+      lifeLost: false,
+      lifeGained: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -116,6 +150,7 @@ export class PixelRunGame {
     this.collectibleTimer = 0;
     this.animationTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -318,17 +353,22 @@ export class PixelRunGame {
       case 'coin':
         this.state.coins++;
         this.state.score += 100;
+        this.pendingEvents.collectibleCollected.push({ type, score: 100 });
         this.spawnPixelExplosion(x, y, '#ffd700');
         break;
       case 'powerup':
         this.state.hasPowerUp = true;
         this.state.powerUpTime = 5000;
         this.state.score += 200;
+        this.pendingEvents.powerUpActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 200 });
         this.spawnPixelExplosion(x, y, '#00ff00');
         break;
       case 'oneup':
         this.state.lives = Math.min(9, this.state.lives + 1);
         this.state.score += 500;
+        this.pendingEvents.lifeGained = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 500 });
         this.spawnPixelExplosion(x, y, '#ff69b4');
         break;
     }
@@ -349,6 +389,7 @@ export class PixelRunGame {
       this.state.powerUpTime -= dt;
       if (this.state.powerUpTime <= 0) {
         this.state.hasPowerUp = false;
+        this.pendingEvents.powerUpEnded = true;
       }
     }
   }
@@ -370,6 +411,8 @@ export class PixelRunGame {
 
   private loseLife(): void {
     this.state.lives--;
+    this.pendingEvents.lifeLost = true;
+    this.pendingEvents.collision = true;
     if (this.state.lives <= 0) {
       this.gameOver();
     } else {
@@ -382,6 +425,12 @@ export class PixelRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      coins: this.state.coins,
+      lives: this.state.lives,
+    });
     this.stopGameLoop();
     this.spawnPixelExplosion(this.state.player.x, this.state.player.y, '#ff0000');
   }
@@ -390,6 +439,7 @@ export class PixelRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -397,6 +447,7 @@ export class PixelRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -405,6 +456,7 @@ export class PixelRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -16;
+      this.pendingEvents.jump = true;
     }
   }
 

@@ -3,6 +3,16 @@
  * Game #436 - Forest Runner escaping from Hunters
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  slide: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; berries: number; feathers: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -75,6 +85,23 @@ export class HunterPursuitGame {
   private lastTime: number = 0;
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      slide: false,
+      laneChange: [],
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
 
   constructor() {
     this.state = this.createInitialState();
@@ -117,6 +144,7 @@ export class HunterPursuitGame {
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
     this.startGameLoop();
+    this.pendingEvents.start = true;
     this.emitState();
   }
 
@@ -326,6 +354,7 @@ export class HunterPursuitGame {
         this.state.hunter.distanceFromPlayer -= 20;
         this.spawnHitParticles(player.x, player.y);
         obs.x = -200;
+        this.pendingEvents.collision = true;
 
         if (this.state.hunter.distanceFromPlayer <= 30) {
           this.gameOver();
@@ -352,17 +381,20 @@ export class HunterPursuitGame {
         this.state.score += 30;
         this.state.hunter.distanceFromPlayer += 5;
         this.spawnCollectParticles(x, y, '#e74c3c');
+        this.pendingEvents.collectibleCollected.push({ type: 'berry', score: 30 });
         break;
       case 'mushroom':
         this.state.score += 50;
         this.state.speed = Math.min(12, this.state.speed + 0.3);
         this.spawnCollectParticles(x, y, '#9b59b6');
+        this.pendingEvents.collectibleCollected.push({ type: 'mushroom', score: 50 });
         break;
       case 'feather':
         this.state.feathers++;
         this.state.score += 100;
         this.state.hunter.distanceFromPlayer += 15;
         this.spawnCollectParticles(x, y, '#f1c40f');
+        this.pendingEvents.collectibleCollected.push({ type: 'feather', score: 100 });
         break;
     }
   }
@@ -423,6 +455,12 @@ export class HunterPursuitGame {
     this.state.phase = 'gameover';
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
+    this.pendingEvents.gameOver.push({
+      score: Math.floor(this.state.score),
+      distance: Math.floor(this.state.distance),
+      berries: this.state.berries,
+      feathers: this.state.feathers,
+    });
   }
 
   private spawnExplosion(x: number, y: number): void {
@@ -444,6 +482,7 @@ export class HunterPursuitGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -451,6 +490,7 @@ export class HunterPursuitGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -459,6 +499,7 @@ export class HunterPursuitGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -14;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -466,6 +507,7 @@ export class HunterPursuitGame {
     if (this.state.phase !== 'playing') return;
     if (!this.state.player.isSliding) {
       this.state.player.isSliding = true;
+      this.pendingEvents.slide = true;
       setTimeout(() => {
         this.state.player.isSliding = false;
       }, 500);

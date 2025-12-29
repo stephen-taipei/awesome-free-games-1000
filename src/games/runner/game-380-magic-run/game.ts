@@ -3,6 +3,18 @@
  * Game #380 - Fantasy Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  castSpell: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; mana: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -73,6 +85,26 @@ export class MagicRunGame {
   private collectibleTimer: number = 0;
   private particleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      castSpell: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -114,6 +146,7 @@ export class MagicRunGame {
     this.collectibleTimer = 0;
     this.particleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -289,9 +322,11 @@ export class MagicRunGame {
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
         if (this.state.hasShield) {
           this.state.hasShield = false;
+          this.pendingEvents.shieldBroken = true;
           this.spawnExplosion(obs.x, obs.y, '#9b59b6');
           obs.x = -100;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -315,15 +350,19 @@ export class MagicRunGame {
       case 'mana':
         this.state.mana = Math.min(100, this.state.mana + 20);
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type, score: 50 });
         break;
       case 'spellbook':
         this.state.score += 100;
         this.state.speed = Math.min(12, this.state.speed + 0.5);
+        this.pendingEvents.collectibleCollected.push({ type, score: 100 });
         break;
       case 'potion':
         this.state.hasShield = true;
         this.state.shieldTime = 5000;
         this.state.mana = Math.min(100, this.state.mana + 10);
+        this.pendingEvents.shieldActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 0 });
         break;
     }
   }
@@ -388,6 +427,11 @@ export class MagicRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      mana: Math.floor(this.state.mana),
+    });
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y, '#e74c3c');
   }
@@ -396,6 +440,7 @@ export class MagicRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -403,6 +448,7 @@ export class MagicRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -411,6 +457,7 @@ export class MagicRunGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -15;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -420,6 +467,7 @@ export class MagicRunGame {
 
     this.state.player.isCasting = true;
     this.state.mana -= 30;
+    this.pendingEvents.castSpell = true;
 
     // Clear obstacles in front of player
     const { player } = this.state;

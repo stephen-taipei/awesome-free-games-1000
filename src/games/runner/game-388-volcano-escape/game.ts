@@ -3,6 +3,17 @@
  * Game #388 - Lava Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; crystals: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -70,6 +81,25 @@ export class VolcanoEscapeGame {
   private collectibleTimer: number = 0;
   private particleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -111,6 +141,7 @@ export class VolcanoEscapeGame {
     this.collectibleTimer = 0;
     this.particleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -286,8 +317,10 @@ export class VolcanoEscapeGame {
         if (dist < 35) {
           if (this.state.hasShield) {
             this.state.hasShield = false;
+            this.pendingEvents.shieldBroken = true;
             obs.y = ARENA_HEIGHT + 100;
           } else {
+            this.pendingEvents.collision = true;
             this.gameOver();
             return;
           }
@@ -299,8 +332,10 @@ export class VolcanoEscapeGame {
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
         if (this.state.hasShield) {
           this.state.hasShield = false;
+          this.pendingEvents.shieldBroken = true;
           obs.x = -100;
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -322,14 +357,18 @@ export class VolcanoEscapeGame {
       case 'crystal':
         this.state.crystals++;
         this.state.score += 60;
+        this.pendingEvents.collectibleCollected.push({ type, score: 60 });
         break;
       case 'shield':
         this.state.hasShield = true;
         this.state.shieldTime = 5000;
+        this.pendingEvents.shieldActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 0 });
         break;
       case 'speedBoost':
         this.state.speed = Math.min(16, this.state.speed + 1.5);
         this.state.score += 80;
+        this.pendingEvents.collectibleCollected.push({ type, score: 80 });
         break;
     }
   }
@@ -358,6 +397,11 @@ export class VolcanoEscapeGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      crystals: this.state.crystals,
+    });
     this.stopGameLoop();
   }
 
@@ -365,6 +409,7 @@ export class VolcanoEscapeGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -372,6 +417,7 @@ export class VolcanoEscapeGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -380,6 +426,7 @@ export class VolcanoEscapeGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -15;
+      this.pendingEvents.jump = true;
     }
   }
 

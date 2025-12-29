@@ -6,6 +6,17 @@
  * collecting musical notes and creating sonic booms.
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  boost: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  sonicBoom: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; notes: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -88,6 +99,25 @@ export class SonicSprintGame {
   private collectibleTimer: number = 0;
   private beatTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      boost: false,
+      laneChange: [],
+      collectibleCollected: [],
+      sonicBoom: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -129,6 +159,7 @@ export class SonicSprintGame {
   public start(): void {
     this.state = this.createInitialState();
     this.state.phase = 'playing';
+    this.pendingEvents.start = true;
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.beatTimer = 0;
@@ -343,9 +374,11 @@ export class SonicSprintGame {
           this.createSonicBoom(obs.x, obs.y);
           obs.x = -100;
           this.state.score += 200;
+          this.pendingEvents.sonicBoom = true;
         } else {
           // Reset combo on hit
           this.state.combo = 0;
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -380,6 +413,7 @@ export class SonicSprintGame {
           this.state.player.maxSonicEnergy,
           this.state.player.sonicEnergy + 5
         );
+        this.pendingEvents.collectibleCollected.push({ type: 'note', score: Math.floor(30 * comboMultiplier) });
         // Small sound wave
         this.state.soundWaves.push({
           x: this.state.player.x,
@@ -396,6 +430,7 @@ export class SonicSprintGame {
           this.state.player.maxSonicEnergy,
           this.state.player.sonicEnergy + 15
         );
+        this.pendingEvents.collectibleCollected.push({ type: 'chord', score: Math.floor(100 * comboMultiplier) });
         // Medium sound wave
         this.state.soundWaves.push({
           x: this.state.player.x,
@@ -409,6 +444,7 @@ export class SonicSprintGame {
         this.state.player.isBoosting = true;
         this.state.player.boostTime = 4000;
         this.state.score += Math.floor(150 * comboMultiplier);
+        this.pendingEvents.collectibleCollected.push({ type: 'beat_boost', score: Math.floor(150 * comboMultiplier) });
         // Large sound wave
         this.createSonicBoom(this.state.player.x, this.state.player.y);
         break;
@@ -482,6 +518,11 @@ export class SonicSprintGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: this.state.distance,
+      notes: this.state.notes,
+    });
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
   }
@@ -490,6 +531,7 @@ export class SonicSprintGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -497,6 +539,7 @@ export class SonicSprintGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -505,6 +548,7 @@ export class SonicSprintGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -15;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -513,6 +557,7 @@ export class SonicSprintGame {
     if (this.state.player.sonicEnergy >= 30 && !this.state.player.isBoosting) {
       this.state.player.isBoosting = true;
       this.state.player.boostTime = 3000;
+      this.pendingEvents.boost = true;
       this.createSonicBoom(this.state.player.x, this.state.player.y);
     }
   }

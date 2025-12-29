@@ -6,6 +6,18 @@
  * and the player must dash through at lightning speed.
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  dash: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  dashDestroy: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; orbs: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -88,6 +100,26 @@ export class LightningSprintGame {
   private collectibleTimer: number = 0;
   private lightningTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      dash: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      dashDestroy: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -128,6 +160,7 @@ export class LightningSprintGame {
   public start(): void {
     this.state = this.createInitialState();
     this.state.phase = 'playing';
+    this.pendingEvents.start = true;
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lightningTimer = 0;
@@ -404,7 +437,9 @@ export class LightningSprintGame {
             this.spawnExplosion(obs.x, obs.y);
             obs.x = -100;
             this.state.score += 150;
+            this.pendingEvents.dashDestroy = true;
           } else {
+            this.pendingEvents.collision = true;
             this.gameOver();
             return;
           }
@@ -414,6 +449,7 @@ export class LightningSprintGame {
       // Check lightning strike collisions
       for (const strike of lightningStrikes) {
         if (Math.abs(strike.x - player.x) < 30 && strike.life > 100) {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -436,15 +472,19 @@ export class LightningSprintGame {
       case 'lightning_orb':
         this.state.orbs++;
         this.state.score += 40;
+        this.pendingEvents.collectibleCollected.push({ type: 'lightning_orb', score: 40 });
         break;
       case 'speed_boost':
         this.state.speed = Math.min(18, this.state.speed + 1);
         this.state.score += 100;
+        this.pendingEvents.collectibleCollected.push({ type: 'speed_boost', score: 100 });
         break;
       case 'thunder_shield':
         this.state.player.invincible = true;
         this.state.player.invincibleTime = 5000;
         this.state.score += 150;
+        this.pendingEvents.collectibleCollected.push({ type: 'thunder_shield', score: 150 });
+        this.pendingEvents.shieldActivated = true;
         break;
     }
   }
@@ -479,6 +519,11 @@ export class LightningSprintGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: this.state.distance,
+      orbs: this.state.orbs,
+    });
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
   }
@@ -487,6 +532,7 @@ export class LightningSprintGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -494,6 +540,7 @@ export class LightningSprintGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -502,6 +549,7 @@ export class LightningSprintGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -16;
+      this.pendingEvents.jump = true;
     }
   }
 
@@ -510,6 +558,7 @@ export class LightningSprintGame {
     if (this.state.player.dashCooldown <= 0) {
       this.state.player.isDashing = true;
       this.state.player.dashCooldown = 2000;
+      this.pendingEvents.dash = true;
       setTimeout(() => {
         this.state.player.isDashing = false;
       }, 500);

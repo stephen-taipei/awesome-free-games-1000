@@ -3,6 +3,17 @@
  * Game #394 - Gravity Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  gravityFlip: { direction: number }[];
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; orbs: number; flips: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -78,6 +89,25 @@ export class GravityRunGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      gravityFlip: [],
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -120,6 +150,7 @@ export class GravityRunGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -300,6 +331,7 @@ export class GravityRunGame {
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
         if (this.state.hasShield) {
           this.state.hasShield = false;
+          this.pendingEvents.shieldBroken = true;
           // Create shield break particles
           for (let i = 0; i < 10; i++) {
             this.state.particles.push({
@@ -313,6 +345,7 @@ export class GravityRunGame {
             });
           }
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -334,16 +367,20 @@ export class GravityRunGame {
       case 'orb':
         this.state.orbs++;
         this.state.score += 30;
+        this.pendingEvents.collectibleCollected.push({ type, score: 30 });
         break;
       case 'antigrav':
         // Auto flip gravity
         this.flipGravity();
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type, score: 50 });
         break;
       case 'shield':
         this.state.hasShield = true;
         this.state.shieldTime = 8000;
         this.state.score += 75;
+        this.pendingEvents.shieldActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 75 });
         break;
     }
   }
@@ -368,6 +405,12 @@ export class GravityRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      orbs: this.state.orbs,
+      flips: this.state.flips,
+    });
     this.stopGameLoop();
   }
 
@@ -375,6 +418,7 @@ export class GravityRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -382,6 +426,7 @@ export class GravityRunGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -392,6 +437,7 @@ export class GravityRunGame {
     player.velocityY = player.gravityDirection * -8;
     player.isFlipping = true;
     this.state.flips++;
+    this.pendingEvents.gravityFlip.push({ direction: player.gravityDirection });
   }
 
   public handleKeyDown(code: string): void {

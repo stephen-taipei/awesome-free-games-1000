@@ -1,3 +1,14 @@
+export interface PendingEvents {
+  start: boolean;
+  wheelie: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  shieldActivated: boolean;
+  shieldBroken: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -77,6 +88,25 @@ export class MotoRunGame {
   private lastTime: number = 0;
   private keys: Set<string> = new Set();
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      wheelie: false,
+      laneChange: [],
+      collectibleCollected: [],
+      shieldActivated: false,
+      shieldBroken: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.state = this.createInitialState();
@@ -128,6 +158,7 @@ export class MotoRunGame {
   public start(): void {
     this.state = this.createInitialState();
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.gameLoop(this.lastTime);
   }
 
@@ -157,6 +188,10 @@ export class MotoRunGame {
     player.fuel -= 0.05 * deltaTime;
     if (player.fuel <= 0) {
       player.fuel = 0;
+      this.pendingEvents.gameOver.push({
+        score: this.state.score,
+        distance: Math.floor(this.state.distance),
+      });
       this.state.gameOver = true;
       return;
     }
@@ -258,6 +293,11 @@ export class MotoRunGame {
           this.createSparkParticles(obstacle.x, obstacle.y);
           continue;
         }
+        this.pendingEvents.collision = true;
+        this.pendingEvents.gameOver.push({
+          score: this.state.score,
+          distance: Math.floor(this.state.distance),
+        });
         this.state.gameOver = true;
         this.createCrashParticles(player.x, player.y);
         return;
@@ -359,6 +399,7 @@ export class MotoRunGame {
           this.state.player.fuel + 20
         );
         this.state.score += 30;
+        this.pendingEvents.collectibleCollected.push({ type: "fuel", score: 30 });
         break;
       case 'coin':
         this.state.score += 50;
@@ -367,6 +408,7 @@ export class MotoRunGame {
         if (this.state.combo > 1) {
           this.state.score += this.state.combo * 10;
         }
+        this.pendingEvents.collectibleCollected.push({ type: "coin", score: 50 });
         break;
       case 'helmet':
         this.state.score += 100;
@@ -374,6 +416,7 @@ export class MotoRunGame {
           this.state.player.maxFuel,
           this.state.player.fuel + 10
         );
+        this.pendingEvents.collectibleCollected.push({ type: "helmet", score: 100 });
         break;
     }
     this.createCollectParticles(collectible.x, collectible.y, collectible.type);
@@ -467,12 +510,14 @@ export class MotoRunGame {
   public moveLeft(): void {
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: "left" });
     }
   }
 
   public moveRight(): void {
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: "right" });
     }
   }
 
@@ -480,6 +525,7 @@ export class MotoRunGame {
     if (this.state.player.isWheeling === 0) {
       this.state.player.isWheeling = 1;
       this.state.player.wheelieTimer = 0;
+      this.pendingEvents.wheelie = true;
     }
   }
 

@@ -3,6 +3,18 @@
  * Game #387 - Desert Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  jump: boolean;
+  laneChange: { direction: string }[];
+  collectibleCollected: { type: string; score: number }[];
+  waterActivated: boolean;
+  waterEnded: boolean;
+  heatDeath: boolean;
+  collision: boolean;
+  gameOver: { score: number; distance: number; gems: number; heat: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -68,6 +80,26 @@ export class DesertDashGame {
   private spawnTimer: number = 0;
   private collectibleTimer: number = 0;
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      jump: false,
+      laneChange: [],
+      collectibleCollected: [],
+      waterActivated: false,
+      waterEnded: false,
+      heatDeath: false,
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -122,6 +154,7 @@ export class DesertDashGame {
     this.spawnTimer = 0;
     this.collectibleTimer = 0;
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -260,6 +293,7 @@ export class DesertDashGame {
 
       if (playerBox.right > obsBox.left && playerBox.left < obsBox.right &&
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
+        this.pendingEvents.collision = true;
         this.gameOver();
         return;
       }
@@ -280,15 +314,19 @@ export class DesertDashGame {
       case 'gem':
         this.state.gems++;
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type, score: 50 });
         break;
       case 'water':
         this.state.hasWater = true;
         this.state.waterTime = 5000;
         this.state.heat = Math.max(0, this.state.heat - 30);
+        this.pendingEvents.waterActivated = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 0 });
         break;
       case 'speed':
         this.state.speed = Math.min(15, this.state.speed + 1);
         this.state.score += 75;
+        this.pendingEvents.collectibleCollected.push({ type, score: 75 });
         break;
     }
   }
@@ -307,10 +345,12 @@ export class DesertDashGame {
       this.state.waterTime -= dt;
       if (this.state.waterTime <= 0) {
         this.state.hasWater = false;
+        this.pendingEvents.waterEnded = true;
       }
     } else {
       this.state.heat += dt * 0.005;
       if (this.state.heat >= 100) {
+        this.pendingEvents.heatDeath = true;
         this.gameOver();
       }
     }
@@ -318,6 +358,12 @@ export class DesertDashGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      gems: this.state.gems,
+      heat: Math.floor(this.state.heat),
+    });
     this.stopGameLoop();
   }
 
@@ -325,6 +371,7 @@ export class DesertDashGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane > 0) {
       this.state.player.lane--;
+      this.pendingEvents.laneChange.push({ direction: 'left' });
     }
   }
 
@@ -332,6 +379,7 @@ export class DesertDashGame {
     if (this.state.phase !== 'playing') return;
     if (this.state.player.lane < 2) {
       this.state.player.lane++;
+      this.pendingEvents.laneChange.push({ direction: 'right' });
     }
   }
 
@@ -340,6 +388,7 @@ export class DesertDashGame {
     if (!this.state.player.isJumping) {
       this.state.player.isJumping = true;
       this.state.player.jumpVelocity = -14;
+      this.pendingEvents.jump = true;
     }
   }
 

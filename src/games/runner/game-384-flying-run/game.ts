@@ -3,6 +3,17 @@
  * Game #384 - Flying Runner
  */
 
+export interface PendingEvents {
+  start: boolean;
+  flyStart: boolean;
+  flyStop: boolean;
+  boost: boolean;
+  boostEnded: boolean;
+  collectibleCollected: { type: string; score: number }[];
+  collision: boolean;
+  gameOver: { score: number; distance: number; altitude: number; feathers: number }[];
+}
+
 export interface Player {
   x: number;
   y: number;
@@ -73,6 +84,25 @@ export class FlyingRunGame {
   private collectibleTimer: number = 0;
   private keyPressed: Set<string> = new Set();
 
+  public pendingEvents: PendingEvents = this.createPendingEvents();
+
+  private createPendingEvents(): PendingEvents {
+    return {
+      start: false,
+      flyStart: false,
+      flyStop: false,
+      boost: false,
+      boostEnded: false,
+      collectibleCollected: [],
+      collision: false,
+      gameOver: [],
+    };
+  }
+
+  public clearPendingEvents(): void {
+    this.pendingEvents = this.createPendingEvents();
+  }
+
   constructor() {
     this.state = this.createInitialState();
   }
@@ -113,6 +143,7 @@ export class FlyingRunGame {
     this.collectibleTimer = 0;
     this.keyPressed.clear();
     this.lastTime = performance.now();
+    this.pendingEvents.start = true;
     this.startGameLoop();
     this.emitState();
   }
@@ -319,9 +350,11 @@ export class FlyingRunGame {
           playerBox.bottom > obsBox.top && playerBox.top < obsBox.bottom) {
         if (this.state.hasBoosted) {
           this.state.hasBoosted = false;
+          this.pendingEvents.boostEnded = true;
           this.spawnExplosion(obs.x, obs.y);
           obs.x = -200; // Remove obstacle
         } else {
+          this.pendingEvents.collision = true;
           this.gameOver();
           return;
         }
@@ -344,17 +377,21 @@ export class FlyingRunGame {
       case 'feather':
         this.state.feathers++;
         this.state.score += 50;
+        this.pendingEvents.collectibleCollected.push({ type, score: 50 });
         this.spawnCollectParticles(x, y, '#fff8dc');
         break;
       case 'wind':
         this.state.score += 100;
         this.state.speed = Math.min(10, this.state.speed + 0.3);
+        this.pendingEvents.collectibleCollected.push({ type, score: 100 });
         this.spawnCollectParticles(x, y, '#87ceeb');
         break;
       case 'ring':
         this.state.score += 200;
         this.state.hasBoosted = true;
         this.state.boostTime = 3000;
+        this.pendingEvents.boost = true;
+        this.pendingEvents.collectibleCollected.push({ type, score: 200 });
         this.spawnCollectParticles(x, y, '#ffd700');
         break;
     }
@@ -390,6 +427,7 @@ export class FlyingRunGame {
       this.state.boostTime -= dt;
       if (this.state.boostTime <= 0) {
         this.state.hasBoosted = false;
+        this.pendingEvents.boostEnded = true;
       }
     }
   }
@@ -411,6 +449,12 @@ export class FlyingRunGame {
 
   private gameOver(): void {
     this.state.phase = 'gameover';
+    this.pendingEvents.gameOver.push({
+      score: this.state.score,
+      distance: Math.floor(this.state.distance),
+      altitude: Math.floor(this.state.altitude),
+      feathers: this.state.feathers,
+    });
     this.stopGameLoop();
     this.spawnExplosion(this.state.player.x, this.state.player.y);
   }
@@ -418,12 +462,18 @@ export class FlyingRunGame {
   public flyUp(): void {
     if (this.state.phase !== 'playing') return;
     this.keyPressed.add('up');
+    if (!this.state.player.isFlying) {
+      this.pendingEvents.flyStart = true;
+    }
     this.state.player.isFlying = true;
   }
 
   public flyDown(): void {
     if (this.state.phase !== 'playing') return;
     this.keyPressed.delete('up');
+    if (this.state.player.isFlying) {
+      this.pendingEvents.flyStop = true;
+    }
     this.state.player.isFlying = false;
   }
 
@@ -433,6 +483,7 @@ export class FlyingRunGame {
       this.state.feathers -= 5;
       this.state.hasBoosted = true;
       this.state.boostTime = 3000;
+      this.pendingEvents.boost = true;
     }
   }
 
