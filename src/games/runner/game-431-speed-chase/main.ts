@@ -396,7 +396,8 @@ function gameLoop(timestamp: number): void {
     update(state, deltaTime, canvas.width, canvas.height);
     render();
 
-    if (state.phase === 'gameover') {
+    const phaseAfterUpdate: string = state.phase;
+    if (phaseAfterUpdate === 'gameover') {
       showGameOver();
     }
   }

@@ -211,9 +211,9 @@ function drawPillar(x: number, y: number, height: number): void {
 function drawCountdownMeter(countdown: number): void {
   const barWidth = 100;
   const barHeight = 12;
+  const width = canvas.width;
   const x = width - barWidth - 20;
   const y = 20;
-  const width = canvas.width;
 
   ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
   ctx.fillRect(x, y, barWidth, barHeight);

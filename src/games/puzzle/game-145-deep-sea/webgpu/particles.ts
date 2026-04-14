@@ -60,7 +60,7 @@ export class ParticleSystem {
         this.particles.shift();
       }
 
-      let color = options.color || this.getDefaultColor(type);
+      let color: [number, number, number, number] = [...(options.color ?? this.getDefaultColor(type))] as [number, number, number, number];
       let size = randomRange(
         options.sizeRange?.[0] ?? 0.5,
         options.sizeRange?.[1] ?? 1.2

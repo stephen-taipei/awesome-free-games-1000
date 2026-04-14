@@ -286,7 +286,7 @@ export class ChainFighterGame {
       // State timer
       if (e.stateTimer > 0) {
         e.stateTimer--;
-        if (e.stateTimer === 0 && e.state !== "dead") {
+        if (e.stateTimer === 0) {
           e.state = "idle";
         }
       }

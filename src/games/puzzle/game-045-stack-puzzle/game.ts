@@ -68,6 +68,10 @@ export class StackPuzzleGame {
     this.ctx = canvas.getContext('2d')!;
   }
 
+  public get canDrop(): boolean {
+    return this.status === 'playing' && this.currentBlock !== null && this.currentBlock.vy === 0;
+  }
+
   public start() {
     this.loadLevel(this.currentLevel);
     this.status = 'playing';

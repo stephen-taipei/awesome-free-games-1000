@@ -178,10 +178,11 @@ export class StreetFighterGame {
   private updateFighter(f: Fighter, isPlayer: boolean) {
     // State timer
     if (f.stateTimer > 0) {
+      const wasHit = f.state === "hit";
       f.stateTimer--;
       if (f.stateTimer === 0 && f.state !== "ko") {
         f.state = "idle";
-        if (f.state === "hit") f.combo = 0;
+        if (wasHit) f.combo = 0;
       }
     }
 

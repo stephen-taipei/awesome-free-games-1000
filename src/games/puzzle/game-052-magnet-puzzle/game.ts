@@ -139,6 +139,21 @@ export class MagnetPuzzleGame {
     return false;
   }
 
+  public getClickInfo(x: number, y: number): { type: 'magnet'; polarity: Polarity } | null {
+    const clicked = this.pieces.find((p) => {
+      if (!p.isFixed) return false;
+      const dist = Math.hypot(p.x - x, p.y - y);
+      return dist < p.radius + 10;
+    });
+
+    if (!clicked) return null;
+
+    return {
+      type: 'magnet',
+      polarity: clicked.polarity,
+    };
+  }
+
   private loop = () => {
     this.update();
     this.draw();

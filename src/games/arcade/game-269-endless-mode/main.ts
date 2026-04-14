@@ -119,17 +119,17 @@ function initGame() {
   });
 
   // Mobile controls
-  const setupMobileButton = (btn: HTMLElement, key: keyof Parameters<typeof game.setKey>[0] extends infer K ? K : never) => {
-    btn.addEventListener("mousedown", () => game.setKey(key as any, true));
-    btn.addEventListener("mouseup", () => game.setKey(key as any, false));
-    btn.addEventListener("mouseleave", () => game.setKey(key as any, false));
+  const setupMobileButton = (btn: HTMLElement, key: Parameters<EndlessGame["setKey"]>[0]) => {
+    btn.addEventListener("mousedown", () => game.setKey(key, true));
+    btn.addEventListener("mouseup", () => game.setKey(key, false));
+    btn.addEventListener("mouseleave", () => game.setKey(key, false));
     btn.addEventListener("touchstart", (e) => {
       e.preventDefault();
-      game.setKey(key as any, true);
+      game.setKey(key, true);
     });
     btn.addEventListener("touchend", (e) => {
       e.preventDefault();
-      game.setKey(key as any, false);
+      game.setKey(key, false);
     });
   };
 

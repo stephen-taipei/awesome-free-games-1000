@@ -300,7 +300,7 @@ function getCubieDataForRenderer(): CubieData[] {
 
     // Apply cubie's current transform (from DOMMatrix)
     // The game stores transforms as DOMMatrix on each .cubie element
-    const cubieEl = cubie.el;
+    const cubieEl = cubie.element;
     const style = cubieEl.style.transform;
 
     // Parse the transform matrix

@@ -376,7 +376,7 @@ export class SwordMagicGame {
       // State timer
       if (m.stateTimer > 0) {
         m.stateTimer--;
-        if (m.stateTimer === 0 && m.state !== "dead") {
+        if (m.stateTimer === 0) {
           m.state = "idle";
         }
       }

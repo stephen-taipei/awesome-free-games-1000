@@ -309,7 +309,7 @@ export class LightRefractionGame {
     const maxDist = 2000;
 
     let closestDist = maxDist;
-    let result = { x: x + dx * maxDist, y: y + dy * maxDist, type: "none" as string };
+    let result: { x: number; y: number; type: string; prismId?: number } = { x: x + dx * maxDist, y: y + dy * maxDist, type: "none" };
 
     // Check target
     const targetHit = this.rayCircleIntersect(

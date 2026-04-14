@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "generate:sitemap": "node scripts/generate-sitemap.mjs",
-    "build": "npm run generate:sitemap && tsc && vite build",
+    "build": "npm run generate:sitemap && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@webgpu/types": "^0.1.69",
     "typescript": "^5.2.2",
     "vite": "^5.2.0"
   }

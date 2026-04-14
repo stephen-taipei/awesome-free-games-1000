@@ -301,6 +301,8 @@ export class SnakeLadderArcadeGame {
 
   private drawBoard() {
     const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
 
     for (let i = 0; i < TOTAL_CELLS; i++) {
       const row = Math.floor(i / BOARD_SIZE);

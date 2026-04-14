@@ -1,4 +1,4 @@
-import { Game } from './game';
+import { Game, type OfferingType } from './game';
 import { translations } from './i18n';
 
 const game = new Game();
@@ -27,7 +27,7 @@ const candles = [
   document.getElementById('candle-5')!
 ];
 
-const offerings: Record<string, HTMLElement> = {
+const offerings: Record<OfferingType, HTMLElement> = {
   blood: offerBlood,
   bone: offerBone,
   soul: offerSoul

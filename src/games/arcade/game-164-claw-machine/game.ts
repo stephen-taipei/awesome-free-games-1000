@@ -172,6 +172,7 @@ export class ClawMachineGame {
 
   private updateClaw() {
     const c = this.claw;
+    const w = this.canvas.width;
     const h = this.canvas.height;
 
     switch (c.state) {

@@ -169,7 +169,7 @@ export class MirrorGame {
         // Actually relying on the loop break above is cleaner
         return false;
       });
-      if (!targetHit && this.status !== "won") {
+      if (!targetHit) {
         // Still playing
       }
     }

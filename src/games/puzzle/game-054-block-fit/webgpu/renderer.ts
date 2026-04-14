@@ -5,7 +5,7 @@
  */
 
 import { ParticleSystem, Particle } from './particles';
-import { BACKGROUND_SHADER, PARTICLE_SHADER } from './shaders';
+import { backgroundShader, particleShader } from './shaders';
 
 export class WebGPURenderer {
   private device!: GPUDevice;
@@ -65,7 +65,7 @@ export class WebGPURenderer {
   private async createPipelines(format: GPUTextureFormat): Promise<void> {
     // Background pipeline
     const bgShaderModule = this.device.createShaderModule({
-      code: BACKGROUND_SHADER,
+      code: backgroundShader,
     });
 
     this.bgPipeline = this.device.createRenderPipeline({
@@ -86,7 +86,7 @@ export class WebGPURenderer {
 
     // Particle pipeline
     const particleShaderModule = this.device.createShaderModule({
-      code: PARTICLE_SHADER,
+      code: particleShader,
     });
 
     this.particlePipeline = this.device.createRenderPipeline({

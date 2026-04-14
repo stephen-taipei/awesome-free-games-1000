@@ -300,6 +300,7 @@ export class UltimateHeroGame {
       // Attack
       b.attackTimer -= dt;
       if (b.attackTimer <= 0 && b.state !== 'hurt') {
+        const isEnraged = b.state === 'enraged';
         b.state = 'attack';
         const dir = dx > 0 ? 1 : -1;
         // Boss shoots based on phase
@@ -311,7 +312,7 @@ export class UltimateHeroGame {
             damage: 15, friendly: false, element: 'dark', life: 70
           });
         }
-        b.attackTimer = b.state === 'enraged' ? 30 : 50;
+        b.attackTimer = isEnraged ? 30 : 50;
       }
 
       // Enrage at low HP

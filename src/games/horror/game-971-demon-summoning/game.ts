@@ -1,6 +1,6 @@
 import { translations } from './i18n';
 
-type OfferingType = 'blood' | 'bone' | 'soul';
+export type OfferingType = 'blood' | 'bone' | 'soul';
 
 export class Game {
   private power: number = 0;

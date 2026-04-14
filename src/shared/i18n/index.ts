@@ -5,8 +5,10 @@
 
 export type Locale = 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'ko' | 'es' | 'fr' | 'de' | 'pt' | 'ru' | 'it' | 'th' | 'vi' | 'id' | 'ar' | 'hi';
 
+export type TranslationValue = string | readonly string[] | Translations;
+
 export interface Translations {
-  [key: string]: string | Translations;
+  [key: string]: TranslationValue;
 }
 
 class I18n {
@@ -76,21 +78,23 @@ class I18n {
     }
 
     // 優先嘗試直接匹配 (支援 flat keys)
-    let value: string | Translations | undefined = translations[key];
+    let value: TranslationValue | undefined = translations[key];
 
     // 如果直接匹配失敗，嘗試巢狀匹配 (支援 nested keys)
     if (typeof value !== 'string') {
       const keys = key.split('.');
-      value = translations;
+      let current: TranslationValue | undefined = translations;
 
       for (const k of keys) {
-        if (typeof value === 'object' && value !== null) {
-          value = value[k];
+        if (typeof current === 'object' && current !== null && !Array.isArray(current)) {
+          current = current[k];
         } else {
-          value = undefined;
+          current = undefined;
           break;
         }
       }
+
+      value = current;
     }
 
     if (typeof value !== 'string') {
