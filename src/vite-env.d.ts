@@ -11,6 +11,16 @@ declare global {
   interface AudioParam {
     exponentialDecayTo?(value: number, endTime: number): AudioParam;
   }
+
+  interface GPUQueue {
+    writeBuffer(
+      buffer: GPUBuffer,
+      bufferOffset: GPUSize64,
+      data: AllowSharedBufferSource,
+      dataOffset?: GPUSize64,
+      size?: GPUSize64,
+    ): undefined;
+  }
 }
 
 export {};

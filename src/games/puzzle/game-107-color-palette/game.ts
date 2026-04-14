@@ -86,6 +86,7 @@ export class ColorPaletteGame {
   clearButton: { x: number; y: number; width: number; height: number } | null = null;
 
   onStateChange: ((state: any) => void) | null = null;
+  onMix: ((x: number, y: number, hue1: number, hue2: number) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -196,9 +197,17 @@ export class ColorPaletteGame {
   }
 
   private addColor(color: RGB) {
+    const previousColor = { ...this.currentColor };
     this.mixedColors.push(color);
     this.currentColor = this.mixColors(this.mixedColors);
     this.moves++;
+
+    this.onMix?.(
+      this.canvas.width / 2 + 45,
+      95,
+      this.colorToHue(previousColor),
+      this.colorToHue(color)
+    );
 
     if (this.onStateChange) {
       this.onStateChange({ moves: this.moves });
@@ -272,6 +281,28 @@ export class ColorPaletteGame {
 
   private rgbToString(color: RGB): string {
     return `rgb(${color.r}, ${color.g}, ${color.b})`;
+  }
+
+  private colorToHue(color: RGB): number {
+    const r = color.r / 255;
+    const g = color.g / 255;
+    const b = color.b / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    if (delta === 0) return 0;
+
+    let hue = 0;
+    if (max === r) {
+      hue = ((g - b) / delta) % 6;
+    } else if (max === g) {
+      hue = (b - r) / delta + 2;
+    } else {
+      hue = (r - g) / delta + 4;
+    }
+
+    return (hue * 60 + 360) % 360;
   }
 
   private draw() {
@@ -478,6 +509,10 @@ export class ColorPaletteGame {
 
   public setOnStateChange(cb: (state: any) => void) {
     this.onStateChange = cb;
+  }
+
+  public setOnMix(cb: (x: number, y: number, hue1: number, hue2: number) => void) {
+    this.onMix = cb;
   }
 
   public getTotalLevels() {

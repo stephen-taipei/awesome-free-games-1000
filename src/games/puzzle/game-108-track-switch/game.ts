@@ -116,6 +116,7 @@ export class TrackSwitchGame {
   status: "playing" | "won" | "lost" = "playing";
 
   onStateChange: ((state: any) => void) | null = null;
+  onTrainMove: ((x: number, y: number) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -232,6 +233,8 @@ export class TrackSwitchGame {
           train.direction = this.getNewDirection(train.direction, track);
         }
       }
+
+      this.onTrainMove?.(train.x, train.y);
 
       // Check station arrival
       for (const station of this.stations) {
@@ -581,6 +584,10 @@ export class TrackSwitchGame {
 
   public setOnStateChange(cb: (state: any) => void) {
     this.onStateChange = cb;
+  }
+
+  public setOnTrainMove(cb: (x: number, y: number) => void) {
+    this.onTrainMove = cb;
   }
 
   public getTotalLevels() {

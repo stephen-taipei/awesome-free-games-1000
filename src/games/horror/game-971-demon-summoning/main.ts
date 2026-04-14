@@ -65,10 +65,11 @@ function render() {
 
   // Offerings
   Object.entries(offerings).forEach(([type, el]) => {
+    const offeringType = type as OfferingType;
     el.classList.remove('selected', 'used');
-    if (stats.usedOfferings.includes(type)) {
+    if (stats.usedOfferings.includes(offeringType)) {
       el.classList.add('used');
-    } else if (stats.selectedOffering === type) {
+    } else if (stats.selectedOffering === offeringType) {
       el.classList.add('selected');
     }
   });

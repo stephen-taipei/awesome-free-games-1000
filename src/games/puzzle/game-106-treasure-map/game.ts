@@ -73,6 +73,7 @@ export class TreasureMapGame {
 
   onStateChange: ((state: any) => void) | null = null;
   onClueChange: ((clue: string) => void) | null = null;
+  onDiscover: ((x: number, y: number) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -254,6 +255,10 @@ export class TreasureMapGame {
         this.currentPos.x === this.treasurePos.x &&
         this.currentPos.y === this.treasurePos.y
       ) {
+        this.onDiscover?.(
+          this.offsetX + (this.currentPos.x + 0.5) * this.cellSize,
+          this.offsetY + (this.currentPos.y + 0.5) * this.cellSize
+        );
         this.status = "won";
         if (this.onStateChange) {
           this.onStateChange({
@@ -536,6 +541,10 @@ export class TreasureMapGame {
 
   public setOnClueChange(cb: (clue: string) => void) {
     this.onClueChange = cb;
+  }
+
+  public setOnDiscover(cb: (x: number, y: number) => void) {
+    this.onDiscover = cb;
   }
 
   public getTotalLevels() {
