@@ -11,8 +11,8 @@ export const i18n = {
   },
   'en': {
     game: {
-      title: 'Don't Breathe',
-      welcome: 'Don't Breathe',
+      title: "Don't Breathe",
+      welcome: "Don't Breathe",
       desc: 'A fun browser game!',
       start: 'Start Game',
       score: 'Score',

@@ -1,0 +1,26 @@
+# Awesome Free Games 1000
+
+Last updated: 2026-04-14
+
+## Summary (English)
+Awesome Free Games 1000 is a frontend-only collection of browser games ranging from puzzle and arcade titles to strategy, sports, and simulation games. The project focuses on instant play, multilingual support, and examples that can run without traditional installation.
+
+## Summary (Traditional Chinese)
+Awesome Free Games 1000 是純前端的瀏覽器遊戲集合，涵蓋益智、街機、策略、運動與模擬等主題。重點是免安裝、可立即遊玩，以及多語言介面與前端實作示例。
+
+## Summary (Japanese)
+Awesome Free Games 1000 は、パズル、アーケード、戦略、スポーツ、シミュレーションなどを含むフロントエンド限定のブラウザゲーム集です。インストール不要ですぐ遊べること、多言語対応、実装例としての学習価値を重視しています。
+
+## Key Pages
+- / : Landing page and FAQ
+- /src/games/{category}/{game}/index.html : Individual playable games
+- /llms.txt : AI-readable project summary
+- /sitemap.xml : Full crawl map
+- /news-sitemap.xml : Recently refreshed pages
+
+## Topics
+- Browser games
+- Frontend-only game development
+- Puzzle, arcade, card, board, racing, and action games
+- Multilingual gameplay experiences
+
