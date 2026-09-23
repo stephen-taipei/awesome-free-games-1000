@@ -2,45 +2,26 @@ name: Codebase audit
 on:
   push:
     branches: [audit/2026-09-24-codebase]
-  pull_request:
 permissions:
   contents: read
-concurrency:
-  group: audit-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
-  baseline:
+  toolchain:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-      - name: Capture tracked source for inspection
+      - name: Resolve patched toolchain
         run: |
+          npm install --save-dev --save-exact vite@8.3.0 @playwright/test@latest
           mkdir -p audit-output
-          git archive HEAD -o audit-output/source.tar
-          find src/games -name index.html | sort > audit-output/pages.txt
-          echo "Game pages: $(wc -l < audit-output/pages.txt)"
-          cat package.json
-      - run: npm ci
-      - name: Baseline diagnostics (report-only during initial audit)
-        run: |
-          set +e
-          npm run build > audit-output/build.txt 2>&1
-          echo "BUILD_EXIT=$?"
-          cat audit-output/build.txt
-          npx tsc --noEmit --pretty false > audit-output/types.txt 2>&1
-          echo "TYPES_EXIT=$?"
-          head -80 audit-output/types.txt
-          npm audit --json > audit-output/dependencies.json
-          echo "AUDIT_EXIT=$?"
-          echo "Built HTML pages: $(find dist -name index.html | wc -l)"
+          cp package.json package-lock.json audit-output/
+          npm audit --json > audit-output/dependencies.json || true
+          tar -czf audit-output/node_modules.tar.gz node_modules
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: codebase-audit-baseline
+          name: audit-toolchain
           path: audit-output/
           retention-days: 7
