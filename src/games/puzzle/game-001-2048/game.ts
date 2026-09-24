@@ -73,7 +73,8 @@ export class Game2048 {
 
   private loadBestScore(): number {
     try {
-      return parseInt(localStorage.getItem('game_001_2048_best') || '0', 10);
+      const value = Number(localStorage.getItem('game_001_2048_best') || '0');
+      return Number.isSafeInteger(value) && value >= 0 ? value : 0;
     } catch {
       return 0;
     }
