@@ -1,0 +1,31 @@
+name: Apply verified startup repairs
+on:
+  push:
+    branches: [audit/2026-09-24-codebase]
+permissions:
+  contents: read
+jobs:
+  apply:
+    if: github.repository == 'stephen-taipei/awesome-free-games-1000'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/2026-09-24-codebase
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply exact idempotent repairs
+        run: |
+          node scripts/migrations/fix-startup.mjs --write
+          node scripts/migrations/fix-startup.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/games
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix: repair startup failures in 34 games and invalid HTML buttons'
+            git push origin HEAD:audit/2026-09-24-codebase
+          fi
