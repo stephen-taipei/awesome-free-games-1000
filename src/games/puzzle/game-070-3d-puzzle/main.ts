@@ -348,8 +348,10 @@ async function initWebGPU() {
   const canvas = document.getElementById("webgpu-canvas") as HTMLCanvasElement;
   if (!canvas) return;
 
-  renderer = new WebGPURenderer();
-  const success = await renderer.initialize(canvas);
+  const candidate = new WebGPURenderer();
+  const success = await candidate.initialize(canvas);
+  // Keep optional effects unavailable until GPU initialization actually succeeds.
+  renderer = success ? candidate : null;
 
   if (success) {
     function renderLoop() {

@@ -385,6 +385,8 @@ export class RobotProgramGame {
   }
 
   private draw() {
+    // Resize can run before Start initializes the board.
+    if (this.grid.length === 0) return;
     const ctx = this.ctx;
     const w = this.canvas.width;
     const h = this.canvas.height;

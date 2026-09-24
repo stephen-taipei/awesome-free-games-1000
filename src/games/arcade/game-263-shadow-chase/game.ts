@@ -376,6 +376,8 @@ export class ShadowChaseGame {
       this.shadow.positions.length - 1 - SHADOW_DELAY
     );
     const shadowPos = this.shadow.positions[shadowIndex];
+    // The idle preview has no movement history yet.
+    if (!shadowPos) return;
     const distToShadow = Math.hypot(
       this.player.x - shadowPos.x,
       this.player.y - shadowPos.y

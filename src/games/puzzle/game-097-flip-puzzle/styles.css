@@ -158,7 +158,9 @@ body {
 .game-area {
   position: relative;
   width: 100%;
-  z-index: 1;
+  /* Reserve space while the board is empty so controls cannot cover Start. */
+  min-height: 320px;
+  z-index: 2;
 }
 
 .boards-container {

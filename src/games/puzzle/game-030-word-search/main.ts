@@ -222,7 +222,7 @@ async function initWebGPU() {
 function initGame() {
   game = new WordSearchGame();
 
-  const words = i18n.t("words") as any as string[];
+  const words = translations[i18n.getLocale() as keyof typeof translations]?.words ?? translations.en.words;
 
   game.setOnStateChange((state: any) => {
     renderGrid(state);
@@ -389,7 +389,7 @@ function startGame() {
   overlay.style.display = "none";
   previousFoundCount = 0;
   audio.playStart();
-  const words = i18n.t("words") as any as string[];
+  const words = translations[i18n.getLocale() as keyof typeof translations]?.words ?? translations.en.words;
   game.start(words);
 }
 

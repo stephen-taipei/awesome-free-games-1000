@@ -241,6 +241,8 @@ export class BlockBlastGame {
   }
 
   public draw() {
+    // Resize can run before Start initializes the board.
+    if (this.grid.length === 0) return;
     this.ctx.fillStyle = "#2c3e50";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
