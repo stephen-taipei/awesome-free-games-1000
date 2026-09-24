@@ -325,6 +325,8 @@ export class StampPuzzleGame {
   }
 
   draw() {
+    // Resize can run before Start initializes the board.
+    if (this.grid.length === 0) return;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Background

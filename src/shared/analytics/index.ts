@@ -22,17 +22,16 @@ export interface GameEventParams {
   [key: string]: string | number | undefined;
 }
 
-class Analytics {
+export class Analytics {
   private initialized = false;
-  private measurementId: string | null = null;
 
   /**
    * 初始化 Google Analytics
    */
   init(measurementId: string): void {
-    if (this.initialized || !measurementId) return;
-
-    this.measurementId = measurementId;
+    if (this.initialized || !/^G-[A-Z0-9]+$/.test(measurementId)) return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    if (navigator.doNotTrack === '1' || (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl) return;
 
     // 載入 gtag.js
     const script = document.createElement('script');
@@ -57,7 +56,6 @@ class Analytics {
    */
   private trackEvent(eventName: string, params?: GameEventParams): void {
     if (!this.initialized || !window.gtag) {
-      console.log(`[Analytics] ${eventName}`, params);
       return;
     }
     window.gtag('event', eventName, params);

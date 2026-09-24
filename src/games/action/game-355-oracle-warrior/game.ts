@@ -532,7 +532,7 @@ export class OracleWarriorGame {
     for (let i = 0; i < 40; i++) {
       const sx = (i * 89 + Date.now() * 0.02) % w;
       const sy = (i * 67 + Math.sin(Date.now() * 0.001 + i) * 50) % h;
-      const size = 1 + Math.sin(Date.now() * 0.003 + i) * 1.5;
+      const size = Math.max(0, 1 + Math.sin(Date.now() * 0.003 + i) * 1.5);
       ctx.beginPath();
       ctx.arc(sx, sy, size, 0, Math.PI * 2);
       ctx.fill();

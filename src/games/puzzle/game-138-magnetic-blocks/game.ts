@@ -373,6 +373,8 @@ export class MagneticBlocksGame {
   }
 
   private render() {
+    // Resize can run before Start initializes the board.
+    if (this.grid.length === 0) return;
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
 

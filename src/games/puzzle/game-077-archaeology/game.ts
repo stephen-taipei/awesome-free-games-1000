@@ -295,6 +295,8 @@ export class ArchaeologyGame {
   }
 
   private draw() {
+    // Resize can run before Start initializes the board.
+    if (this.dirt.length === 0) return;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Draw background (stone layer)

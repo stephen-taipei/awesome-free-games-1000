@@ -1,124 +1,72 @@
-/**
- * i18n 國際化模組
- * 支援多國語言切換
- */
-
+/** Shared translations: resilient storage, literal/nested keys and locale fallback. */
 export type Locale = 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'ko' | 'es' | 'fr' | 'de' | 'pt' | 'ru' | 'it' | 'th' | 'vi' | 'id' | 'ar' | 'hi';
-
 export type TranslationValue = string | readonly string[] | Translations;
-
-export interface Translations {
-  [key: string]: TranslationValue;
+export interface Translations { [key: string]: TranslationValue; }
+export const LOCALES: readonly Locale[] = ['zh-TW', 'zh-CN', 'en', 'ja', 'ko', 'es', 'fr', 'de', 'pt', 'ru', 'it', 'th', 'vi', 'id', 'ar', 'hi'];
+export function detectLocale(language: string): Locale {
+  const tag = language.toLowerCase();
+  if (/^zh(?:-|$)/.test(tag)) return /(?:hant|tw|hk|mo)/.test(tag) ? 'zh-TW' : 'zh-CN';
+  return LOCALES.find(locale => locale.toLowerCase() === tag.split('-')[0]) || 'en';
 }
-
-class I18n {
-  private locale: Locale = 'zh-TW';
-  private translations: Map<Locale, Translations> = new Map();
-  private listeners: Set<(locale: Locale) => void> = new Set();
-
+export class I18n {
+  private locale: Locale;
+  private translations = new Map<Locale, Translations>();
+  private listeners = new Set<(locale: Locale) => void>();
   constructor() {
-    // 從 localStorage 或瀏覽器語言讀取預設語言
-    const savedLocale = localStorage.getItem('gameLocale') as Locale;
-    const browserLang = navigator.language;
-
-    if (savedLocale && this.isValidLocale(savedLocale)) {
-      this.locale = savedLocale;
-    } else if (browserLang.startsWith('zh-TW') || browserLang.startsWith('zh-Hant')) {
-      this.locale = 'zh-TW';
-    } else if (browserLang.startsWith('zh')) {
-      this.locale = 'zh-CN';
-    } else if (browserLang.startsWith('ja')) {
-      this.locale = 'ja';
-    } else if (browserLang.startsWith('ko')) {
-      this.locale = 'ko';
-    } else {
-      this.locale = 'en';
-    }
+    this.locale = detectLocale(typeof navigator === 'undefined' ? 'en' : navigator.language);
+    try {
+      const saved = localStorage.getItem('gameLocale');
+      if (LOCALES.includes(saved as Locale)) this.locale = saved as Locale;
+    } catch { /* Storage may be unavailable in privacy mode or sandboxed embeds. */ }
+    this.syncDocument();
   }
-
-  private isValidLocale(locale: string): locale is Locale {
-    const validLocales: Locale[] = ['zh-TW', 'zh-CN', 'en', 'ja', 'ko', 'es', 'fr', 'de', 'pt', 'ru', 'it', 'th', 'vi', 'id', 'ar', 'hi'];
-    return validLocales.includes(locale as Locale);
-  }
-
-  /**
-   * 載入語言檔案
-   */
   async loadTranslations(locale: Locale, translations: Translations): Promise<void> {
+    if (!LOCALES.includes(locale)) return;
     this.translations.set(locale, translations);
+    this.syncDocument();
   }
-
-  /**
-   * 設定當前語言
-   */
-  setLocale(locale: Locale): void {
-    if (this.isValidLocale(locale)) {
-      this.locale = locale;
-      localStorage.setItem('gameLocale', locale);
-      this.listeners.forEach(listener => listener(locale));
-    }
-  }
-
-  /**
-   * 取得當前語言
-   */
   getLocale(): Locale {
-    return this.locale;
+    if (!this.translations.size || this.translations.has(this.locale)) return this.locale;
+    if (this.translations.has('en')) return 'en';
+    if (this.translations.has('zh-TW')) return 'zh-TW';
+    return this.translations.keys().next().value as Locale;
   }
-
-  /**
-   * 取得翻譯文字
-   * @param key 翻譯鍵，支援巢狀 key，如 'game.title'
-   * @param params 替換參數，如 { score: 100 }
-   */
+  private syncDocument(): void {
+    if (typeof document === 'undefined') return;
+    document.documentElement.lang = this.getLocale();
+    document.documentElement.dir = this.getLocale() === 'ar' ? 'rtl' : 'ltr';
+  }
+  setLocale(locale: Locale): void {
+    if (!LOCALES.includes(locale)) return;
+    this.locale = locale;
+    try { localStorage.setItem('gameLocale', locale); } catch { /* Session-only preference. */ }
+    this.syncDocument();
+    this.listeners.forEach(listener => listener(this.getLocale()));
+  }
+  private lookup(translations: Translations | undefined, key: string): string | undefined {
+    if (!translations) return;
+    if (Object.prototype.hasOwnProperty.call(translations, key) && typeof translations[key] === 'string') return translations[key] as string;
+    let value: TranslationValue | undefined = translations;
+    for (const part of key.split('.')) {
+      if (!value || typeof value !== 'object' || Array.isArray(value) || !Object.prototype.hasOwnProperty.call(value, part)) return;
+      value = (value as Translations)[part];
+    }
+    return typeof value === 'string' ? value : undefined;
+  }
   t(key: string, params?: Record<string, string | number>): string {
-    const translations = this.translations.get(this.locale);
-    if (!translations) {
-      return key;
+    const locales = [...new Set([this.locale, 'en', 'zh-TW', this.getLocale()])];
+    let value: string | undefined;
+    for (const locale of locales) {
+      value = this.lookup(this.translations.get(locale as Locale), key);
+      if (value !== undefined) break;
     }
-
-    // 優先嘗試直接匹配 (支援 flat keys)
-    let value: TranslationValue | undefined = translations[key];
-
-    // 如果直接匹配失敗，嘗試巢狀匹配 (支援 nested keys)
-    if (typeof value !== 'string') {
-      const keys = key.split('.');
-      let current: TranslationValue | undefined = translations;
-
-      for (const k of keys) {
-        if (typeof current === 'object' && current !== null && !Array.isArray(current)) {
-          current = current[k];
-        } else {
-          current = undefined;
-          break;
-        }
-      }
-
-      value = current;
-    }
-
-    if (typeof value !== 'string') {
-      return key;
-    }
-
-    // 替換參數 {{param}}
-    if (params) {
-      return value.replace(/\{\{(\w+)\}\}/g, (_, paramKey) => {
-        return params[paramKey]?.toString() ?? `{{${paramKey}}}`;
-      });
-    }
-
-    return value;
+    if (value === undefined) return key;
+    return value.replace(/\{\{(\w+)\}\}/g, (match, name) => params && Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match);
   }
-
-  /**
-   * 監聽語言變更
-   */
   onLocaleChange(listener: (locale: Locale) => void): () => void {
     this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return () => { this.listeners.delete(listener); };
   }
 }
-
 export const i18n = new I18n();
 export default i18n;

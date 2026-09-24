@@ -261,7 +261,7 @@ const audio = new AudioSystem();
 
 // Initialize WebGPU
 async function initWebGPU() {
-  renderer = new WebGPURenderer();
+  const candidate = new WebGPURenderer();
   const webgpuCanvas = document.createElement('canvas');
   webgpuCanvas.id = 'webgpu-canvas';
   webgpuCanvas.style.cssText = `
@@ -279,7 +279,9 @@ async function initWebGPU() {
     gameArea.insertBefore(webgpuCanvas, gameArea.firstChild);
   }
 
-  const success = await renderer.initialize(webgpuCanvas);
+  const success = await candidate.initialize(webgpuCanvas);
+  // Keep optional effects unavailable until GPU initialization actually succeeds.
+  renderer = success ? candidate : null;
   if (success) {
     function animate() {
       renderer?.render();
