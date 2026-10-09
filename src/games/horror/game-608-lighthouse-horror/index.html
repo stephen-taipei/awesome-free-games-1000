@@ -1,39 +1,86 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lighthouse Horror - Awesome Free Games 1000</title>
-    <link rel="stylesheet" href="./styles.css" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="燈塔守夜 Lighthouse Watch：WebGL 3D 暴風雨恐怖守塔遊戲。轉動燈塔光束拖慢從黑海爬上礁岩的溺魂，按住聚焦把它們燒散，並拉回漂流油桶補充燈油，撐過一夜又一夜。" />
+  <meta name="theme-color" content="#05080e" />
+  <title>燈塔守夜 Lighthouse Watch - Awesome Free Games 1000</title>
+  <link rel="stylesheet" href="../../../shared/three/kit.css" />
+  <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="../../../shared/shell.css">
 </head>
-  <body>
-    <div class="game-container">
-      <header class="game-header">
-        <h1 data-i18n="game.title">Lighthouse Horror</h1>
-        <div class="header-controls">
-          <select id="language-select" aria-label="Language / 語言">
-            <option value="zh-TW">繁體中文</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-      </header>
-      <div class="game-controls">
-        <div class="stats-card"><span data-i18n="game.score">Score</span><span id="score-display">0</span></div>
-        <div class="stats-card"><span data-i18n="game.level">Level</span><span id="level-display">1</span></div>
-      </div>
-      <main class="game-area">
-        <canvas id="game-canvas"></canvas>
-        <div id="game-overlay" class="overlay" style="display: flex">
-          <div class="overlay-content">
-            <h2 id="overlay-title" data-i18n="game.welcome">Lighthouse Horror</h2>
-            <p id="overlay-msg" data-i18n="game.desc">A fun browser game!</p>
-            <button id="start-btn" class="btn primary" data-i18n="game.start">Start Game</button>
-          </div>
-        </div>
-      </main>
+<body>
+  <div class="g3d">
+    <div id="stage" class="g3d-stage"></div>
+    <div class="vignette" aria-hidden="true"></div>
+    <div id="scare" class="scare" aria-hidden="true">
+      <svg viewBox="0 0 200 240" class="scare-face">
+        <path d="M100 8C52 8 26 52 26 104c0 40 10 76 24 104 6 12 4 24 0 32h100c-4-8-6-20 0-32 14-28 24-64 24-104C174 52 148 8 100 8Z" fill="#0b120f" />
+        <ellipse cx="100" cy="112" rx="46" ry="58" fill="#000" />
+        <ellipse cx="80" cy="104" rx="9" ry="6" fill="#b8ffd0" />
+        <ellipse cx="120" cy="104" rx="9" ry="6" fill="#b8ffd0" />
+      </svg>
     </div>
-    <script type="module" src="./main.ts"></script>
+    <div id="popups" class="popups" aria-hidden="true"></div>
+    <div id="threats" class="threats" aria-hidden="true"></div>
+
+    <div class="g3d-hud">
+      <div class="g3d-stats">
+        <div class="g3d-chip accent"><small data-i18n="game.score">Score</small><b id="score">0</b></div>
+        <div class="g3d-chip"><small data-i18n="game.night">Night</small><b id="night">1</b></div>
+        <div class="g3d-chip"><small data-i18n="game.lives">Lanterns</small><b class="lanterns" id="lives" role="img" aria-label="3/3"></b></div>
+        <div class="g3d-chip oil-chip" id="oil-chip"><small><span data-i18n="game.oil">Oil</span> <span id="oil">100</span>%</small><div class="g3d-meter"><i id="oil-bar"></i></div></div>
+      </div>
+      <div class="g3d-actions">
+        <select id="language-select" class="g3d-select" data-i18n-aria="game.language" aria-label="Language / 語言">
+          <option value="zh-TW">繁中</option>
+          <option value="zh-CN">简中</option>
+          <option value="en">EN</option>
+          <option value="ja">日本語</option>
+        </select>
+        <button id="sound-btn" class="g3d-icon" type="button" data-i18n-aria="game.sound" aria-label="Toggle sound" aria-pressed="true">♪</button>
+        <button id="pause-btn" class="g3d-icon" type="button" data-i18n-aria="game.pause" aria-label="Pause">❚❚</button>
+      </div>
+    </div>
+
+    <div id="toast" class="g3d-toast" role="status" aria-live="polite"></div>
+
+    <div class="g3d-touch" id="touch">
+      <div class="touch-group">
+        <button type="button" data-control="left" data-i18n-aria="game.turnLeft" aria-label="Turn beam left">◀</button>
+        <button type="button" data-control="right" data-i18n-aria="game.turnRight" aria-label="Turn beam right">▶</button>
+      </div>
+      <div class="touch-group">
+        <button type="button" class="focus-btn" data-control="focus" data-i18n-aria="game.focus" aria-label="Focus the beam">◉</button>
+      </div>
+    </div>
+
+    <div id="overlay" class="g3d-overlay">
+      <section class="g3d-panel" aria-labelledby="overlay-title">
+        <p class="g3d-kicker" id="overlay-kicker" data-i18n="game.kicker">WebGL 3D storm-night horror</p>
+        <h1 class="g3d-title" id="overlay-title" data-i18n="game.title">Lighthouse Watch</h1>
+        <p class="g3d-lead" id="overlay-lead" data-i18n="game.lead"></p>
+        <div id="result" class="g3d-result" hidden>
+          <div><small data-i18n="game.score">Score</small><b id="result-score">0</b></div>
+          <div><small data-i18n="game.nights">Nights</small><b id="result-nights">0</b></div>
+          <div><small data-i18n="game.banished">Banished</small><b id="result-banished">0</b></div>
+          <div><small data-i18n="game.best">Best</small><b id="result-best">0</b><span id="new-best" class="g3d-badge" data-i18n="game.newBest" hidden>New best</span></div>
+        </div>
+        <ul class="g3d-keys" id="controls">
+          <li><kbd>← → / A D</kbd><span data-i18n="game.keyTurn"></span></li>
+          <li><kbd>Space / ↑ / W</kbd><span data-i18n="game.keyFocus"></span></li>
+          <li><kbd data-i18n="game.mouseKey">Mouse</kbd><span data-i18n="game.keyMouse"></span></li>
+          <li><kbd>P / Esc</kbd><span data-i18n="game.keyPause"></span></li>
+          <li class="touch-only"><kbd data-i18n="game.touchAim"></kbd><span data-i18n="game.touchAimDesc"></span></li>
+          <li class="touch-only"><kbd data-i18n="game.touchTurn"></kbd><span data-i18n="game.touchTurnDesc"></span></li>
+        </ul>
+        <button id="start-btn" class="g3d-btn" type="button" data-i18n="game.start">Light the lamp</button>
+        <p class="g3d-note" data-i18n="game.tip"></p>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="./main.ts"></script>
   <script type="module" src="../../../shared/shell.ts"></script>
 </body>
 </html>
