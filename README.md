@@ -53,7 +53,7 @@ SITE_URL=https://example.com/games/ npm run build
 
 ## 架構與能力邊界
 
-前端為 Vanilla TypeScript / JavaScript、HTML 與 CSS，各遊戲使用 DOM、Canvas 或其自身圖形渲染程式。Vite 執行多頁建置。共用導覽列提供返回首頁與收藏。**首頁設計受保護，可重新設計的範圍限於個別子遊戲**，詳見 [維護與貢獻](CONTRIBUTING.md)。
+前端為 Vanilla TypeScript / JavaScript、HTML 與 CSS，各遊戲使用 DOM、Canvas 或其自身圖形渲染程式。部分遊戲以 WebGL（three.js r186）重製，共用 `src/shared/three/` 的舞台、輸入、音效與版面；three.js 以相對路徑引入隨庫附帶的單檔 ES module，不依賴執行環境的 `node_modules`。沒有 WebGL 的瀏覽器會看到說明文字。Vite 執行多頁建置。共用導覽列提供返回首頁與收藏。**首頁設計受保護，可重新設計的範圍限於個別子遊戲**，詳見 [維護與貢獻](CONTRIBUTING.md)。
 
 共用 i18n 能識別 16 種 locale，但**每款遊戲實際提供的翻譯不同**。缺少目標語言時回退至現有英文或繁體中文，不代表 16 種翻譯已全部完成。WebGPU、觸控、聲音與瀏覽器支援也依個別遊戲而異。驚悚分類可能含驚嚇情節。
 
@@ -63,6 +63,7 @@ GA4 模組預設不啟用，只提供有效 measurement ID 才會初始化，並
 index.html                   # 受保護的原始首頁
 src/portal/                  # 本機收藏與保留的目錄模組，首頁不載入新版大廳
 src/shared/                  # 語系、工具、可選分析與隔離式導覽列
+src/shared/three/            # three.js（vendored）與 WebGL 遊戲共用 kit
 src/games/<category>/<slug>/ # 各子遊戲 HTML、TypeScript、CSS
 scripts/                     # 目錄、sitemap、來源與產物驗證
 public/                      # 靜態資源與自動生成目錄
