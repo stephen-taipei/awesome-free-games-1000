@@ -1,39 +1,88 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Backrooms Escape - Awesome Free Games 1000</title>
-    <link rel="stylesheet" href="./styles.css" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="後室逃生 Backrooms Escape：WebGL 第一人稱恐怖探索。在無盡的黃色辦公室迷宮裡找到 3 瓶杏仁水打開出口，衝刺會被聽見、手電筒會被看見，別被遊蕩的黑影抓住。" />
+  <meta name="theme-color" content="#0d0b04" />
+  <title>後室逃生 Backrooms Escape - Awesome Free Games 1000</title>
+  <link rel="stylesheet" href="../../../shared/three/kit.css" />
+  <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="../../../shared/shell.css">
 </head>
-  <body>
-    <div class="game-container">
-      <header class="game-header">
-        <h1 data-i18n="game.title">Backrooms Escape</h1>
-        <div class="header-controls">
-          <select id="language-select" aria-label="Language / 語言">
-            <option value="zh-TW">繁體中文</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-      </header>
-      <div class="game-controls">
-        <div class="stats-card"><span data-i18n="game.score">Score</span><span id="score-display">0</span></div>
-        <div class="stats-card"><span data-i18n="game.level">Level</span><span id="level-display">1</span></div>
+<body>
+  <div class="g3d">
+    <div id="stage" class="g3d-stage"></div>
+    <div class="br-vignette" aria-hidden="true"></div>
+    <div id="dread" class="br-dread" aria-hidden="true"></div>
+    <div class="br-grain" aria-hidden="true"></div>
+    <div id="flash" class="br-flash" aria-hidden="true"></div>
+    <div id="fade" class="br-fade" aria-hidden="true"></div>
+    <div id="crosshair" class="br-crosshair" aria-hidden="true" hidden></div>
+
+    <div class="g3d-hud">
+      <div class="g3d-stats">
+        <div class="g3d-chip accent"><small data-i18n="game.level">Level</small><b id="level">1</b></div>
+        <div class="g3d-chip"><small><span class="br-long" data-i18n="game.water">Almond water</span><span class="br-short" data-i18n="game.waterShort">Water</span></small><b class="br-pips" id="items"></b></div>
+        <div class="g3d-chip br-meter-chip" id="stamina-chip"><small data-i18n="game.stamina">Stamina</small><div class="g3d-meter"><i id="stamina"></i></div></div>
+        <div class="g3d-chip br-meter-chip" id="battery-chip"><small><span data-i18n="game.battery">Battery</span> <span id="light-state" class="br-light" aria-hidden="true"></span></small><div class="g3d-meter"><i id="battery"></i></div></div>
       </div>
-      <main class="game-area">
-        <canvas id="game-canvas"></canvas>
-        <div id="game-overlay" class="overlay" style="display: flex">
-          <div class="overlay-content">
-            <h2 id="overlay-title" data-i18n="game.welcome">Backrooms Escape</h2>
-            <p id="overlay-msg" data-i18n="game.desc">A fun browser game!</p>
-            <button id="start-btn" class="btn primary" data-i18n="game.start">Start Game</button>
-          </div>
-        </div>
-      </main>
+      <div class="g3d-actions">
+        <select id="language-select" class="g3d-select" data-i18n-aria="game.language" aria-label="Language / 語言">
+          <option value="zh-TW">繁中</option>
+          <option value="zh-CN">简中</option>
+          <option value="en">EN</option>
+          <option value="ja">日本語</option>
+        </select>
+        <button id="sound-btn" class="g3d-icon" type="button" data-i18n-aria="game.sound" aria-label="Toggle sound" aria-pressed="true">♪</button>
+        <button id="pause-btn" class="g3d-icon" type="button" data-i18n-aria="game.pause" aria-label="Pause">❚❚</button>
+      </div>
     </div>
-    <script type="module" src="./main.ts"></script>
+
+    <div id="toast" class="g3d-toast" role="status" aria-live="polite"></div>
+    <p id="look-hint" class="br-hint" data-i18n="game.clickToLook" hidden>Click the view to look with the mouse.</p>
+
+    <div id="stick" class="br-stick" aria-hidden="true" hidden><i></i></div>
+    <div class="br-touch" id="touch-controls" hidden>
+      <button id="chalk-btn" type="button" data-i18n-aria="game.chalk" aria-label="Chalk mark">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+      <button id="light-btn" type="button" data-i18n-aria="game.flashlight" aria-label="Flashlight" aria-pressed="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l-1 6h-4zM10 9h4v12h-4zM12 13v3" /></svg>
+      </button>
+      <button id="sprint-btn" type="button" data-i18n-aria="game.sprint" aria-label="Sprint">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l6 6-6 6M12 6l6 6-6 6" /></svg>
+      </button>
+    </div>
+
+    <div id="overlay" class="g3d-overlay">
+      <section class="g3d-panel br-panel" aria-labelledby="overlay-title">
+        <p class="g3d-kicker" id="overlay-kicker" data-i18n="game.kicker">WebGL first-person horror</p>
+        <h1 class="g3d-title" id="overlay-title" data-i18n="game.title">Backrooms Escape</h1>
+        <p class="g3d-lead" id="overlay-lead" data-i18n="game.lead"></p>
+        <div id="result" class="g3d-result" hidden>
+          <div><small data-i18n="game.reached">Level reached</small><b id="result-level">1</b></div>
+          <div><small data-i18n="game.water">Almond water</small><b id="result-water">0</b></div>
+          <div><small data-i18n="game.score">Score</small><b id="result-score">0</b></div>
+          <div><small data-i18n="game.best">Best</small><b id="result-best">0</b><span id="new-best" class="g3d-badge" data-i18n="game.newBest" hidden>New best</span></div>
+        </div>
+        <ul class="g3d-keys" id="controls">
+          <li><kbd>W A S D / ↑ ↓</kbd><span data-i18n="game.keyMove"></span></li>
+          <li><kbd>Mouse / ← →</kbd><span data-i18n="game.keyLook"></span></li>
+          <li><kbd>Shift</kbd><span data-i18n="game.keySprint"></span></li>
+          <li><kbd>F</kbd><span data-i18n="game.keyLight"></span></li>
+          <li><kbd>E</kbd><span data-i18n="game.keyChalk"></span></li>
+          <li><kbd>P / Esc</kbd><span data-i18n="game.keyPause"></span></li>
+          <li class="touch-only"><kbd data-i18n="game.touchMove"></kbd><span data-i18n="game.keyMove"></span></li>
+          <li class="touch-only"><kbd data-i18n="game.touchLook"></kbd><span data-i18n="game.lookShort"></span></li>
+          <li class="touch-only"><kbd data-i18n="game.touchButtons"></kbd><span data-i18n="game.touchButtonsDesc"></span></li>
+        </ul>
+        <button id="start-btn" class="g3d-btn" type="button" data-i18n="game.start">Enter the Backrooms</button>
+        <p class="g3d-note" id="overlay-tip" data-i18n="game.tip"></p>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="./main.ts"></script>
   <script type="module" src="../../../shared/shell.ts"></script>
 </body>
 </html>
