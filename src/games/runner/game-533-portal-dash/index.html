@@ -1,39 +1,64 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Portal Dash - Awesome Free Games 1000</title>
-    <link rel="stylesheet" href="./styles.css" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="傳送門衝刺 Portal Dash：WebGL 3D 霓虹隧道跑酷。同色牆可穿越、異色牆會撞毀，穿過傳送門換色，收集晶片手動換相。" />
+  <meta name="theme-color" content="#02040c" />
+  <title>傳送門衝刺 Portal Dash - Awesome Free Games 1000</title>
+  <link rel="stylesheet" href="../../../shared/three/kit.css" />
+  <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="../../../shared/shell.css">
 </head>
-  <body>
-    <div class="game-container">
-      <header class="game-header">
-        <h1 data-i18n="game.title">Portal Dash</h1>
-        <div class="header-controls">
-          <select id="language-select" aria-label="Language / 語言">
-            <option value="zh-TW">繁體中文</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-      </header>
-      <div class="game-controls">
-        <div class="stats-card"><span data-i18n="game.score">Score</span><span id="score-display">0</span></div>
-        <div class="stats-card"><span data-i18n="game.level">Level</span><span id="level-display">1</span></div>
+<body>
+  <div class="g3d">
+    <div id="stage" class="g3d-stage"></div>
+
+    <div class="g3d-hud">
+      <div class="g3d-stats">
+        <div class="g3d-chip accent"><small data-i18n="game.distance">Distance</small><b><span id="distance">0</span> m</b></div>
+        <div class="g3d-chip"><small data-i18n="game.shards">Shards</small><b id="shards">0</b></div>
+        <div class="g3d-chip"><small data-i18n="game.charges">Flips</small><b class="pips" id="charges" aria-live="polite"></b></div>
+        <div class="g3d-chip"><small data-i18n="game.sector">Sector</small><b id="sector">1</b></div>
+        <div class="g3d-chip phase-chip"><small data-i18n="game.phase">Current colour</small><b><i id="phase-dot" class="phase-dot"></i></b></div>
       </div>
-      <main class="game-area">
-        <canvas id="game-canvas"></canvas>
-        <div id="game-overlay" class="overlay" style="display: flex">
-          <div class="overlay-content">
-            <h2 id="overlay-title" data-i18n="game.welcome">Portal Dash</h2>
-            <p id="overlay-msg" data-i18n="game.desc">A fun browser game!</p>
-            <button id="start-btn" class="btn primary" data-i18n="game.start">Start Game</button>
-          </div>
-        </div>
-      </main>
+      <div class="g3d-actions">
+        <select id="language-select" class="g3d-select" data-i18n-aria="game.language" aria-label="Language / 語言">
+          <option value="zh-TW">繁中</option>
+          <option value="zh-CN">简中</option>
+          <option value="en">EN</option>
+          <option value="ja">日本語</option>
+        </select>
+        <button id="sound-btn" class="g3d-icon" type="button" data-i18n-aria="game.sound" aria-label="Toggle sound" aria-pressed="true">♪</button>
+        <button id="pause-btn" class="g3d-icon" type="button" data-i18n-aria="game.pause" aria-label="Pause">❚❚</button>
+      </div>
     </div>
-    <script type="module" src="./main.ts"></script>
+
+    <div id="toast" class="g3d-toast" role="status" aria-live="polite"></div>
+
+    <div id="overlay" class="g3d-overlay">
+      <section class="g3d-panel" aria-labelledby="overlay-title">
+        <p class="g3d-kicker" id="overlay-kicker" data-i18n="game.kicker">WebGL tunnel runner</p>
+        <h1 class="g3d-title" id="overlay-title" data-i18n="game.title">Portal Dash</h1>
+        <p class="g3d-lead" id="overlay-lead" data-i18n="game.lead"></p>
+        <div id="result" class="g3d-result" hidden>
+          <div><small data-i18n="game.distance">Distance</small><b><span id="result-distance">0</span> m</b></div>
+          <div><small data-i18n="game.shards">Shards</small><b id="result-shards">0</b></div>
+          <div><small data-i18n="game.best">Best</small><b><span id="result-best">0</span> m</b><span id="new-best" class="g3d-badge" data-i18n="game.newBest" hidden>New best</span></div>
+        </div>
+        <ul class="g3d-keys" id="controls">
+          <li><kbd>← → / A D</kbd><span data-i18n="game.keySteer"></span></li>
+          <li><kbd>Space / ↑</kbd><span data-i18n="game.keyFlip"></span></li>
+          <li><kbd>P / Esc</kbd><span data-i18n="game.keyPause"></span></li>
+          <li class="touch-only"><kbd data-i18n="game.touchSteer"></kbd><span data-i18n="game.keySteer"></span></li>
+          <li class="touch-only"><kbd data-i18n="game.touchFlip"></kbd><span data-i18n="game.keyFlip"></span></li>
+        </ul>
+        <button id="start-btn" class="g3d-btn" type="button" data-i18n="game.start">Start run</button>
+        <p class="g3d-note" data-i18n="game.tip"></p>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="./main.ts"></script>
   <script type="module" src="../../../shared/shell.ts"></script>
 </body>
 </html>
