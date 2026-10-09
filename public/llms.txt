@@ -2,7 +2,7 @@
 
 A collection of 997 source game pages across 6 directory categories. "1000" is the project name and goal, not a certification of 1000 unique completed games.
 
-- [Game lobby](https://stephen-taipei.github.io/awesome-free-games-1000/): search, category filters and local favorites
+- [Homepage](https://stephen-taipei.github.io/awesome-free-games-1000/): original project introduction, featured games and FAQ
 - [Complete catalogue](https://stephen-taipei.github.io/awesome-free-games-1000/catalog.html): crawlable, no-JavaScript directory
 - [Catalogue data](https://stephen-taipei.github.io/awesome-free-games-1000/catalog.json): stable category/slug IDs and literal translated titles
 - [Sitemap](https://stephen-taipei.github.io/awesome-free-games-1000/sitemap.xml)
