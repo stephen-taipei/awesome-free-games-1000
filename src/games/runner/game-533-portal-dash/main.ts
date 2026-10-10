@@ -9,12 +9,13 @@ const overlay = $('overlay');
 const startBtn = $<HTMLButtonElement>('start-btn');
 const pauseBtn = $<HTMLButtonElement>('pause-btn');
 const soundBtn = $<HTMLButtonElement>('sound-btn');
+const languageSelect = $<HTMLSelectElement>('language-select');
 const toast = $('toast');
 const sfx = new Sfx();
 let mode: 'menu' | 'playing' | 'paused' | 'over' = 'menu';
 let lastResult: { distance: number; shards: number; best: number; isNew: boolean } | null = null;
 
-const t = setupI18n(translations, $<HTMLSelectElement>('language-select'), () => renderOverlay());
+const t = setupI18n(translations, languageSelect, () => renderOverlay());
 
 function showToast(text: string, warn = false) {
   toast.textContent = text;
@@ -58,13 +59,13 @@ function renderOverlay() {
   }
 }
 
-function setMode(next: typeof mode) {
+function setMode(next: typeof mode, focusStart = true) {
   mode = next;
   overlay.hidden = next === 'playing';
   pauseBtn.disabled = next !== 'playing';
   renderOverlay();
-  if (!overlay.hidden) focusIfActive(startBtn);
-  else (document.activeElement as HTMLElement | null)?.blur();
+  if (overlay.hidden) (document.activeElement as HTMLElement | null)?.blur();
+  else if (focusStart) focusIfActive(startBtn);
 }
 
 const game = PortalDash.create(stageEl);
@@ -104,13 +105,16 @@ if (!game) {
     setMode('playing');
   });
   // Mode stays 'playing' through the crash animation; there is nothing to pause until game over.
-  const pause = () => { if (mode === 'playing' && game.status === 'running') { game.pause(); setMode('paused'); } };
-  pauseBtn.addEventListener('click', pause);
+  const pause = (focusResume = true) => { if (mode === 'playing' && game.status === 'running') { game.pause(); setMode('paused', focusResume); } };
+  pauseBtn.addEventListener('click', () => pause());
   window.addEventListener('keydown', event => {
     if ((event.code === 'KeyP' || event.code === 'Escape') && mode === 'playing') pause();
     else if (event.code === 'Escape' && mode === 'paused') { game.resume(); setMode('playing'); }
   });
-  onFocusLost(pause);
+  onFocusLost(() => pause());
+  // Keys ignores every key while the language select has focus, so a run would go on with no
+  // steering. Pause instead, and leave focus on the select so its picker stays open.
+  languageSelect.addEventListener('focus', () => pause(false));
 }
 
 bindSoundButton(soundBtn, sfx);
