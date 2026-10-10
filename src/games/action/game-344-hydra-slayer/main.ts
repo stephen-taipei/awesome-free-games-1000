@@ -352,7 +352,7 @@ function renderOverlay() {
     controls.hidden = false;
     more.hidden = true;
     renderLadder();
-    startBtn.textContent = t('game.fight', { beast: beastName(selected.beast) });
+    startBtn.textContent = t('game.fight', { beast: selected.tier === 1 ? `${beastName(selected.beast)} · ${t('game.nightmare')}` : beastName(selected.beast) });
   }
 }
 

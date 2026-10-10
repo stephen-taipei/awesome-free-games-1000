@@ -107,6 +107,7 @@ export class BeastfallGame {
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
   private songPuff = 0;
+  private readonly hemi = new THREE.HemisphereLight(0xffc6d8, 0x2a1830, 1.25);
 
   static create(host: HTMLElement): BeastfallGame | null {
     const stage = createStage(host, { fov: FOV, near: 0.1, far: 900, maxPixelRatio: 1.75 });
@@ -119,7 +120,7 @@ export class BeastfallGame {
     renderer.toneMappingExposure = 1.05;
     scene.background = new THREE.Color(0x2a1838);
 
-    const hemi = new THREE.HemisphereLight(0xffc6d8, 0x2a1830, 1.25);
+    const hemi = this.hemi;
     const key = new THREE.DirectionalLight(0xffd2a8, 2.1);
     key.position.set(-5, 9, 10);
     const rim = new THREE.DirectionalLight(0xff8a5a, 3.2);
@@ -218,6 +219,11 @@ export class BeastfallGame {
     }
     this.view = view;
     view.root.visible = true;
+    // Nightmare: a bloodier haze and a darker dusk.
+    const fog = this.stage.scene.fog as THREE.Fog | null;
+    fog?.color.set(tier === 1 ? 0x6a1f3c : 0x8a4a6a);
+    this.hemi.color.set(tier === 1 ? 0xff9fb4 : 0xffc6d8);
+    this.stage.renderer.toneMappingExposure = tier === 1 ? 0.92 : 1.05;
     this.acc = 0;
     this.outroT = 0;
     this.hitStop = 0;
