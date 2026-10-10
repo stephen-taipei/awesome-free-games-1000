@@ -28,10 +28,13 @@ const sfx = new Sfx();
 type Mode = 'menu' | 'playing' | 'paused' | 'over';
 let mode: Mode = 'menu';
 let lastResult: (Result & { best: number; isNew: boolean }) | null = null;
-let lastHud: Hud = { score: 0, moves: 0, seconds: 0, deal: 1, redeals: MAX_PASSES - 1, stock: 24, left: 28, canUndo: false, canDraw: true };
+let lastHud: Hud = { score: 0, moves: 0, seconds: 0, deal: 1, redeals: MAX_PASSES - 1, stock: 24, left: 28, canUndo: false, canDraw: true, canHint: true };
 let newDealArmedUntil = 0;
 
-const t = setupI18n(translations, $<HTMLSelectElement>('language-select'), () => { renderHud(lastHud); renderOverlay(); });
+const languageSelect = $<HTMLSelectElement>('language-select');
+const t = setupI18n(translations, languageSelect, () => { renderHud(lastHud); renderOverlay(); });
+// Mid-deal, hand focus back to the table after a language change, or the select would keep every game key.
+languageSelect.addEventListener('change', () => { if (mode === 'playing') languageSelect.blur(); });
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 function showToast(text: string, warn = false) {
@@ -58,6 +61,7 @@ function renderHud(hud: Hud) {
   $('draw-label').textContent = label;
   drawBtn.setAttribute('aria-label', label);
   drawBtn.disabled = !hud.canDraw;
+  hintBtn.disabled = !hud.canHint;
 }
 
 function renderOverlay() {
@@ -248,6 +252,12 @@ if (!game) {
 }
 
 bindSoundButton(soundBtn, sfx);
+
+// The HUD stays above the overlay and wraps to two rows on narrow screens: keep the panels below it.
+const clearHud = () => overlay.style.setProperty('--hud-bottom', `${Math.ceil(hudEl.getBoundingClientRect().bottom)}px`);
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(clearHud).observe(hudEl);
+window.addEventListener('resize', clearHud);
+clearHud();
 
 renderHud(lastHud);
 setMode('menu');

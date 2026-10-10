@@ -6,7 +6,7 @@ import {
 } from './logic';
 import { buildAtlas, atlasRect, buildBack, buildFelt, buildGrain, buildGlow, buildDot, buildSlotMark, buildMiniCard, RANK_LABELS, SUIT_CHARS } from './textures';
 
-export interface Hud { score: number; moves: number; seconds: number; deal: number; redeals: number; stock: number; left: number; canUndo: boolean; /** A draw or a redeal is possible. */ canDraw: boolean; }
+export interface Hud { score: number; moves: number; seconds: number; deal: number; redeals: number; stock: number; left: number; canUndo: boolean; /** A draw or a redeal is possible. */ canDraw: boolean; /** The table takes moves (false during the win celebration and before the stuck result). */ canHint: boolean; }
 export interface Result { won: boolean; deal: number; seconds: number; moves: number; left: number; score: FinalScore; }
 export type GameEvent = 'deal' | 'draw' | 'select' | 'match' | 'king' | 'invalid' | 'redeal' | 'undo' | 'hint' | 'row' | 'win' | 'stuck';
 export type Status = 'idle' | 'playing' | 'paused' | 'won' | 'stuck';
@@ -822,7 +822,8 @@ export class PyramidGame {
       score: state.score, moves: state.moves, seconds: Math.floor(this.seconds), deal: this.dealNo,
       redeals: redealsLeft(state), stock: state.stock.length, left: pyramidLeft(state),
       canUndo: this.session.history.length > 0 && (this.state === 'playing' || this.state === 'stuck'),
-      canDraw: canDraw(state) || canRedeal(state),
+      canDraw: this.state === 'playing' && (canDraw(state) || canRedeal(state)),
+      canHint: this.state === 'playing',
     });
   }
 
