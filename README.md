@@ -2,7 +2,7 @@
 
 **免費瀏覽器遊戲實作合集 · Browser games, built for the web**
 
-首頁保留原始專案介紹、代表遊戲與 FAQ 設計，完整遊戲清單見 `catalog.html`。「1000」是專案名稱與目標。目前原始碼有 **997 個遊戲頁面、6 個實際分類**，有頁面不代表所有關卡、裝置或玩法均已完整測試。
+首頁保留原始專案介紹、代表遊戲與 FAQ 設計，完整遊戲清單見 `catalog.html`。「1000」是專案名稱與目標。目前原始碼有 **511 個遊戲頁面、6 個實際分類**，有頁面不代表所有關卡、裝置或玩法均已完整測試。2026 年 10 月下架了 486 個只顯示「Game Running...」的空殼頁面，之後以完整新作補上。
 
 ## 開始使用
 
@@ -28,7 +28,7 @@ npm run preview
 
 `npm run verify` 依序執行單元測試、型別檢查與建置。E2E 另行執行，需要 Chromium，CI 會安裝瀏覽器。
 
-**部署建置完成的 `dist/` 目錄。** 遊戲的 TypeScript 必須先編譯。建置會輸出首頁、完整目錄，以及全部遊戲 HTML（目前共 999 個 HTML）。`base: './'` 保留相對資源路徑，E2E 使用 `/awesome-free-games-1000/` 子路徑驗證部署連結。
+**部署建置完成的 `dist/` 目錄。** 遊戲的 TypeScript 必須先編譯。建置會輸出首頁、完整目錄，以及全部遊戲 HTML（目前共 513 個 HTML）。`base: './'` 保留相對資源路徑，E2E 使用 `/awesome-free-games-1000/` 子路徑驗證部署連結。
 
 自訂網域或子路徑時，設定 canonical / sitemap 使用的網址：
 
@@ -45,15 +45,15 @@ SITE_URL=https://example.com/games/ npm run build
 | puzzle | 益智解謎 | 150 |
 | arcade | 經典街機 | 155 |
 | action | 動作冒險 | 100 |
-| runner | 跑酷挑戰 | 197 |
-| card | 卡牌策略 | 195 |
-| horror | 驚悚探索 | 200 |
+| runner | 跑酷挑戰 | 63 |
+| card | 卡牌策略 | 6 |
+| horror | 驚悚探索 | 37 |
 
 數量由 `src/games/**/index.html` 掃描產生，以 `public/catalog.json` 的當次建置結果為準。歷史遊戲編號會重複，收藏與目錄使用 `category/slug` 作為識別值，不以編號作為唯一 ID。
 
 ## 架構與能力邊界
 
-前端為 Vanilla TypeScript / JavaScript、HTML 與 CSS，各遊戲使用 DOM、Canvas 或其自身圖形渲染程式。Vite 執行多頁建置。共用導覽列提供返回首頁與收藏。**首頁設計受保護，可重新設計的範圍限於個別子遊戲**，詳見 [維護與貢獻](CONTRIBUTING.md)。
+前端為 Vanilla TypeScript / JavaScript、HTML 與 CSS，各遊戲使用 DOM、Canvas 或其自身圖形渲染程式。部分遊戲以 WebGL（three.js r186）重製，共用 `src/shared/three/` 的舞台、輸入、音效與版面；three.js 以相對路徑引入隨庫附帶的單檔 ES module，不依賴執行環境的 `node_modules`。沒有 WebGL 的瀏覽器會看到說明文字。Vite 執行多頁建置。共用導覽列提供返回首頁與收藏。**首頁設計受保護，可重新設計的範圍限於個別子遊戲**，詳見 [維護與貢獻](CONTRIBUTING.md)。
 
 共用 i18n 能識別 16 種 locale，但**每款遊戲實際提供的翻譯不同**。缺少目標語言時回退至現有英文或繁體中文，不代表 16 種翻譯已全部完成。WebGPU、觸控、聲音與瀏覽器支援也依個別遊戲而異。驚悚分類可能含驚嚇情節。
 
@@ -63,6 +63,7 @@ GA4 模組預設不啟用，只提供有效 measurement ID 才會初始化，並
 index.html                   # 受保護的原始首頁
 src/portal/                  # 本機收藏與保留的目錄模組，首頁不載入新版大廳
 src/shared/                  # 語系、工具、可選分析與隔離式導覽列
+src/shared/three/            # three.js（vendored）與 WebGL 遊戲共用 kit
 src/games/<category>/<slug>/ # 各子遊戲 HTML、TypeScript、CSS
 scripts/                     # 目錄、sitemap、來源與產物驗證
 public/                      # 靜態資源與自動生成目錄

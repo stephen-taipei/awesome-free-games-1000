@@ -11,7 +11,8 @@ for (const game of catalog.games) {
     await expect(page.locator('afg-navigation')).toBeVisible();
     await page.waitForTimeout(100);
     const start = page.locator('#start-btn, #start-button, #new-game-btn').first();
-    if (await start.isVisible()) { await start.click({ timeout: 2000 }); await page.waitForTimeout(100); }
+    // WebGL games render on SwiftShader in CI, where starting one can take a few seconds.
+    if (await start.isVisible()) { await start.click({ timeout: 10_000 }); await page.waitForTimeout(100); }
     expect(errors).toEqual([]);
   });
 }

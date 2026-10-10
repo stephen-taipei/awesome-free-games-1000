@@ -1,14 +1,142 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: system-ui, sans-serif; background: #0f0f1a; color: #fff; min-height: 100vh; }
-.game-container { display: flex; flex-direction: column; height: 100vh; }
-.game-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); }
-.game-controls { display: flex; gap: 1rem; padding: 0.5rem 1rem; }
-.stats-card { background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 0.5rem; display: flex; gap: 0.5rem; }
-.game-area { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; }
-canvas { max-width: 100%; max-height: 100%; border: 1px solid rgba(255,255,255,0.2); }
-.overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; }
-.overlay-content { text-align: center; padding: 2rem; }
-.btn { padding: 0.75rem 2rem; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 1rem; margin-top: 1rem; }
-.btn.primary { background: #6366f1; color: #fff; }
-.btn.primary:hover { background: #4f46e5; }
-select { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+:root {
+  --accent: #ffb14e;
+  --accent-ink: #2a1503;
+  --bg: #05080e;
+  --eye: #b8ffd0;
+}
+.g3d-panel { background: rgba(6, 9, 16, 0.7); }
+.g3d-title { text-shadow: 0 0 28px rgba(255, 177, 78, 0.28); }
+.g3d-result { grid-template-columns: repeat(auto-fit, minmax(6.2rem, 1fr)); }
+
+/* Horror dressing: a heavy vignette, a jump-scare flash and floating score text. */
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.6) 100%);
+}
+.scare {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 55%, rgba(200, 255, 220, 0.5), rgba(90, 10, 14, 0.75) 70%);
+}
+.scare-face { width: min(62vw, 46vh); opacity: 0; }
+.scare.hit { animation: scare-flash 0.75s ease-out; }
+.scare.hit .scare-face { animation: scare-face 0.42s ease-out; }
+@keyframes scare-flash {
+  0% { opacity: 1; }
+  12% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+@keyframes scare-face {
+  0% { opacity: 0.85; transform: scale(1.15); }
+  60% { opacity: 0.5; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.96); }
+}
+.popups { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.pop {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--eye);
+  text-shadow: 0 0 12px rgba(120, 255, 180, 0.7), 0 2px 6px rgba(0, 0, 0, 0.8);
+  animation: pop-rise 0.95s ease-out forwards;
+}
+@keyframes pop-rise {
+  from { opacity: 1; transform: translate(-50%, -50%); }
+  to { opacity: 0; transform: translate(-50%, -190%); }
+}
+
+.threats { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.threat {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 16px;
+  margin: -8px 0 0 -15px;
+}
+/* Two upright eyes, with a chevron orbiting them to point out towards the wraith. */
+.threat::before {
+  content: "";
+  position: absolute;
+  inset: 4px 6px;
+  background: radial-gradient(circle at 25% 50%, var(--eye) 0 2.5px, transparent 3.5px), radial-gradient(circle at 75% 50%, var(--eye) 0 2.5px, transparent 3.5px);
+  filter: drop-shadow(0 0 4px rgba(140, 255, 190, 0.9));
+}
+.threat::after {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 4px;
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid var(--eye);
+  border-right: 2px solid var(--eye);
+  transform: rotate(var(--a, 0rad)) translateX(15px) rotate(45deg);
+  opacity: 0.8;
+}
+.threat.near::before { animation: threat-pulse 0.5s ease-in-out infinite alternate; }
+@keyframes threat-pulse { to { filter: drop-shadow(0 0 9px rgba(140, 255, 190, 1)); } }
+
+.lanterns { display: flex; gap: 6px; align-items: center; height: 1.45rem; }
+.lanterns i {
+  width: 11px;
+  height: 15px;
+  border-radius: 4px 4px 3px 3px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+}
+.lanterns i.on { background: var(--accent); border-color: #ffd9a0; box-shadow: 0 0 10px var(--accent); }
+.oil-chip small { white-space: nowrap; }
+.oil-chip.low .g3d-meter > i { background: #ff6b5a; }
+.oil-chip.focus .g3d-meter > i { background: #ffe2b0; box-shadow: 0 0 8px #ffb14e; }
+.g3d-toast { color: #ffe6c2; }
+.g3d-toast.warn { color: #ff9b8f; }
+.g3d-toast.eerie { color: var(--eye); text-shadow: 0 0 18px rgba(120, 255, 180, 0.6), 0 4px 24px rgba(0, 0, 0, 0.7); }
+
+.touch-group { display: flex; gap: 12px; }
+.g3d-touch .focus-btn { width: 88px; height: 88px; font-size: 2rem; color: var(--accent); }
+
+.touch-only { display: none !important; }
+@media (hover: none), (pointer: coarse) {
+  .touch-only { display: flex !important; }
+  .g3d-keys li:not(.touch-only) { display: none; }
+}
+/* Wide screens: the menu sits left so the lighthouse stays in view on the right. */
+@media (min-width: 900px) and (min-aspect-ratio: 23/20) {
+  .g3d-overlay { place-items: center start; padding-left: max(5vw, 32px); }
+}
+/* Below about 660px the stats wrap onto a second row (680px leaves room for a long score). The HUD sits above
+   the overlay, so menus start below it; toasts use the width and stay below it too. */
+@media (max-width: 680px) {
+  .g3d-overlay { padding-top: calc(max(12px, env(safe-area-inset-top)) + 116px); }
+  .g3d-toast { top: max(22%, calc(max(12px, env(safe-area-inset-top)) + 160px)); width: max-content; max-width: calc(100% - 32px); text-align: center; }
+}
+@media (max-width: 560px) {
+  .g3d-stats { display: grid; grid-template-columns: repeat(2, auto); gap: 6px; }
+  .g3d-chip.oil-chip { min-width: 0; }
+  .oil-chip .g3d-meter { width: 3.7rem; }
+  .g3d-result { grid-template-columns: repeat(2, 1fr); }
+}
+/* Phones up to 414px wide, and the site's iframe on them: the language select sits above the sound and
+   pause buttons, so the stats keep their full labels and the pause button stays on screen. */
+@media (max-width: 420px) {
+  .g3d-hud { gap: 8px; }
+  .g3d-stats { grid-template-columns: repeat(2, max-content); }
+  .g3d-actions { display: grid; grid-template-columns: repeat(2, auto); }
+  .g3d-actions .g3d-select { grid-column: 1 / -1; width: 100%; max-width: none; }
+  .g3d-actions .g3d-icon { padding: 0 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scare.hit { animation-duration: 0.4s; }
+  .scare.hit .scare-face { animation: none; }
+  .pop { animation-duration: 0.6s; }
+}

@@ -1,14 +1,20 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: system-ui, sans-serif; background: #0f0f1a; color: #fff; min-height: 100vh; }
-.game-container { display: flex; flex-direction: column; height: 100vh; }
-.game-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.05); }
-.game-controls { display: flex; gap: 1rem; padding: 0.5rem 1rem; }
-.stats-card { background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 0.5rem; display: flex; gap: 0.5rem; }
-.game-area { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; }
-canvas { max-width: 100%; max-height: 100%; border: 1px solid rgba(255,255,255,0.2); }
-.overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; }
-.overlay-content { text-align: center; padding: 2rem; }
-.btn { padding: 0.75rem 2rem; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 1rem; margin-top: 1rem; }
-.btn.primary { background: #6366f1; color: #fff; }
-.btn.primary:hover { background: #4f46e5; }
-select { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+:root {
+  --accent: #2dd4bf;
+  --accent-ink: #022c27;
+  --bg: #02040c;
+  --phase: #2dd4bf;
+}
+.pips { display: flex; gap: 5px; align-items: center; height: 1.45rem; }
+.pips i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.35); transform: rotate(45deg); }
+.pips i.on { background: var(--phase); border-color: var(--phase); box-shadow: 0 0 10px var(--phase); }
+.phase-dot { display: block; width: 1.45rem; height: 1.45rem; border-radius: 50%; background: var(--phase); box-shadow: 0 0 14px var(--phase); transition: background 0.2s ease, box-shadow 0.2s ease; }
+.g3d-toast { color: #fff; }
+.g3d-toast.warn { color: #fda4af; }
+.touch-only { display: none !important; }
+@media (hover: none), (pointer: coarse) {
+  .touch-only { display: flex !important; }
+  .g3d-keys li:not(.touch-only) { display: none; }
+}
+@media (max-width: 560px) {
+  .phase-chip { display: none; }
+}

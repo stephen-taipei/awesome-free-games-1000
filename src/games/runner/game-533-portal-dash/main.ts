@@ -1,44 +1,123 @@
-import { Game } from './game';
-import { i18n } from './i18n';
+import { Sfx, best, setupI18n, focusIfActive, onFocusLost, bindSoundButton } from '../../../shared/three/kit';
+import { PortalDash, PHASE_COLORS, MAX_CHARGES, type Hud } from './game';
+import { translations } from './i18n';
 
-const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-const overlay = document.getElementById('game-overlay') as HTMLDivElement;
-const startBtn = document.getElementById('start-btn') as HTMLButtonElement;
-const scoreDisplay = document.getElementById('score-display') as HTMLSpanElement;
-const levelDisplay = document.getElementById('level-display') as HTMLSpanElement;
-const langSelect = document.getElementById('language-select') as HTMLSelectElement;
+const BEST_KEY = 'afg-portal-dash-best';
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const stageEl = $('stage');
+const overlay = $('overlay');
+const startBtn = $<HTMLButtonElement>('start-btn');
+const pauseBtn = $<HTMLButtonElement>('pause-btn');
+const soundBtn = $<HTMLButtonElement>('sound-btn');
+const languageSelect = $<HTMLSelectElement>('language-select');
+const toast = $('toast');
+const sfx = new Sfx();
+let mode: 'menu' | 'playing' | 'paused' | 'over' = 'menu';
+let lastResult: { distance: number; shards: number; best: number; isNew: boolean } | null = null;
 
-let game: Game | null = null;
-let currentLang = 'zh-TW';
+const t = setupI18n(translations, languageSelect, () => renderOverlay());
 
-function applyTranslations() {
-  const t = i18n[currentLang as keyof typeof i18n];
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n')!;
-    const keys = key.split('.');
-    let value: any = t;
-    for (const k of keys) value = value?.[k];
-    if (value) el.textContent = value;
-  });
+function showToast(text: string, warn = false) {
+  toast.textContent = text;
+  toast.classList.toggle('warn', warn);
+  toast.classList.add('show');
+  window.clearTimeout(Number(toast.dataset.timer));
+  toast.dataset.timer = String(window.setTimeout(() => toast.classList.remove('show'), 1100));
 }
 
-langSelect.addEventListener('change', () => {
-  currentLang = langSelect.value;
-  applyTranslations();
-});
+function renderHud(hud: Hud) {
+  $('distance').textContent = String(hud.distance);
+  $('shards').textContent = String(hud.shards);
+  $('sector').textContent = String(hud.sector);
+  const charges = $('charges');
+  charges.innerHTML = Array.from({ length: MAX_CHARGES }, (_, i) => `<i class="${i < hud.charges ? 'on' : ''}"></i>`).join('');
+  charges.setAttribute('aria-label', `${hud.charges}/${MAX_CHARGES}`);
+  document.documentElement.style.setProperty('--phase', PHASE_COLORS[hud.phase]);
+}
 
-startBtn.addEventListener('click', () => {
-  overlay.style.display = 'none';
-  if (!game) {
-    game = new Game(canvas);
-    game.onScore = (score: number) => { scoreDisplay.textContent = String(score); };
-    game.onLevel = (level: number) => { levelDisplay.textContent = String(level); };
-    game.onGameOver = () => {
-      overlay.style.display = 'flex';
-      document.getElementById('overlay-title')!.textContent = 'Game Over!';
-    };
+function renderOverlay() {
+  const result = $('result');
+  if (mode === 'over' && lastResult) {
+    $('overlay-title').textContent = t('game.over');
+    $('result-distance').textContent = String(lastResult.distance);
+    $('result-shards').textContent = String(lastResult.shards);
+    $('result-best').textContent = String(lastResult.best);
+    $('new-best').hidden = !lastResult.isNew;
+    result.hidden = false;
+    $('overlay-lead').hidden = true;
+    startBtn.textContent = t('game.again');
+  } else if (mode === 'paused') {
+    $('overlay-title').textContent = t('game.paused');
+    result.hidden = true;
+    $('overlay-lead').hidden = true;
+    startBtn.textContent = t('game.resume');
+  } else {
+    $('overlay-title').textContent = t('game.title');
+    result.hidden = true;
+    $('overlay-lead').hidden = false;
+    startBtn.textContent = t('game.start');
   }
-  game.start();
-});
+}
 
-applyTranslations();
+function setMode(next: typeof mode, focusStart = true) {
+  mode = next;
+  overlay.hidden = next === 'playing';
+  pauseBtn.disabled = next !== 'playing';
+  renderOverlay();
+  if (overlay.hidden) (document.activeElement as HTMLElement | null)?.blur();
+  else if (focusStart) focusIfActive(startBtn);
+}
+
+const game = PortalDash.create(stageEl);
+
+if (!game) {
+  const note = document.createElement('div');
+  note.className = 'g3d-fallback';
+  note.setAttribute('role', 'alert');
+  note.dataset.i18n = 'game.fallback';
+  note.textContent = t('game.fallback');
+  // In the menu panel, where the Start button would be.
+  startBtn.after(note);
+  startBtn.disabled = true;
+  startBtn.hidden = true;
+  pauseBtn.disabled = true;
+} else {
+  game.onHud = renderHud;
+  game.onSector = sector => { showToast(t('game.sectorToast', { n: sector })); };
+  game.onEvent = event => {
+    if (event === 'flip') sfx.tone(320, 0.18, { type: 'sawtooth', slideTo: 880, gain: 0.12 });
+    if (event === 'shard') sfx.tone(1320, 0.08, { type: 'triangle', gain: 0.12 });
+    if (event === 'charge') { sfx.tone(660, 0.1, { type: 'square', gain: 0.08 }); sfx.tone(990, 0.14, { type: 'square', gain: 0.08, delay: 0.08 }); }
+    if (event === 'portal') sfx.tone(180, 0.5, { type: 'sine', slideTo: 720, gain: 0.25 });
+    if (event === 'denied') { sfx.tone(120, 0.15, { type: 'square', gain: 0.1 }); showToast(t('game.noCharge'), true); }
+    if (event === 'crash') sfx.noise(0.6, { gain: 0.5, frequency: 900 });
+  };
+  game.onOver = result => {
+    const record = best.submit(BEST_KEY, result.distance);
+    lastResult = { distance: result.distance, shards: result.shards, best: record.best, isNew: record.isNew };
+    setMode('over');
+  };
+
+  startBtn.addEventListener('click', () => {
+    sfx.unlock();
+    if (mode === 'paused') game.resume();
+    else game.start();
+    setMode('playing');
+  });
+  // Mode stays 'playing' through the crash animation; there is nothing to pause until game over.
+  const pause = (focusResume = true) => { if (mode === 'playing' && game.status === 'running') { game.pause(); setMode('paused', focusResume); } };
+  pauseBtn.addEventListener('click', () => pause());
+  window.addEventListener('keydown', event => {
+    if ((event.code === 'KeyP' || event.code === 'Escape') && mode === 'playing') pause();
+    else if (event.code === 'Escape' && mode === 'paused') { game.resume(); setMode('playing'); }
+  });
+  onFocusLost(() => pause());
+  // Keys ignores every key while the language select has focus, so a run would go on with no
+  // steering. Pause instead, and leave focus on the select so its picker stays open.
+  languageSelect.addEventListener('focus', () => pause(false));
+}
+
+bindSoundButton(soundBtn, sfx);
+
+renderHud({ distance: 0, shards: 0, charges: 1, speed: 0, phase: 0, sector: 1 });
+setMode('menu');

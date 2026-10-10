@@ -46,7 +46,7 @@ test('corrupt and blocked storage cannot break favorites', () => {
 test('inventory is deterministic and uses unique safe relative routes', () => {
   const inventory = discoverGames();
   assert.equal(new Set(inventory.map(g => g.id)).size, inventory.length);
-  assert.ok(inventory.length > 900);
+  assert.ok(inventory.length > 500);
   assert.ok(inventory.every(g => /^src\/games\/[a-z]+\/game-\d+-[a-z0-9-]+\/index\.html$/.test(g.url)));
   assert.deepEqual(discoverGames(), inventory);
 });
