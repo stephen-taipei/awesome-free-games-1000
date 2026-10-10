@@ -137,6 +137,10 @@ export class Keys {
   private pressed = new Set<string>();
   constructor(target: Window = window) {
     target.addEventListener('keydown', event => {
+      // A game key held while an overlay button takes focus (game over, pause) keeps auto-repeating
+      // onto that button. Cancel the repeats so releasing the key does not click Start or Resume.
+      if (event.repeat && GAME_KEYS.has(event.code)
+        && !(event.target instanceof HTMLElement && event.target.closest('input, select, textarea'))) event.preventDefault();
       if (isFormField(event.target)) return;
       if (GAME_KEYS.has(event.code)) event.preventDefault();
       if (!event.repeat) this.pressed.add(event.code);
@@ -173,7 +177,7 @@ export function trackPointer(el: HTMLElement, handlers: PointerHandlers): void {
     return [event.clientX - rect.left, event.clientY - rect.top] as const;
   };
   el.addEventListener('pointerdown', event => {
-    if (id !== null) return;
+    if (id !== null || (event.pointerType === 'mouse' && event.button !== 0)) return;
     id = event.pointerId;
     try { el.setPointerCapture(event.pointerId); } catch { /* Synthetic events cannot be captured. */ }
     [startX, startY] = local(event);
@@ -193,15 +197,33 @@ export function trackPointer(el: HTMLElement, handlers: PointerHandlers): void {
     const dx = lastX - startX;
     const dy = lastY - startY;
     const distance = Math.hypot(dx, dy);
-    if (distance > 28 && performance.now() - startTime < 600) {
-      handlers.swipe?.(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
-    } else if (distance < 10) {
-      handlers.tap?.(startX, startY);
+    // A cancelled pointer (the browser took over the touch) is neither a tap nor a swipe.
+    if (event.type !== 'pointercancel') {
+      if (distance > 28 && performance.now() - startTime < 600) {
+        handlers.swipe?.(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+      } else if (distance < 10) {
+        handlers.tap?.(startX, startY);
+      }
     }
     handlers.up?.();
   };
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', end);
+}
+
+/**
+ * Focus an overlay button (Start, Resume) only when this page already has the user's attention.
+ * Embedded in another page's iframe, focusing on load would pull keyboard focus away from the host page,
+ * so Space there would start the game instead of scrolling.
+ */
+export function focusIfActive(el: HTMLElement): void {
+  if (window.top === window || document.hasFocus()) el.focus({ preventScroll: true });
+}
+
+/** Calls `pause` when the player leaves: the tab is hidden or focus moves out of the page (e.g. to the host page of an iframe). */
+export function onFocusLost(pause: () => void): void {
+  window.addEventListener('blur', pause);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 }
 
 /** Best scores in localStorage, validated on read and silent when storage is unavailable. */
@@ -223,6 +245,24 @@ export const best = {
 };
 
 /** Tiny synthesized sound effects. No audio files; silent until a user gesture unlocks the context. */
+/**
+ * Wires a mute toggle button to `sfx`. After a mouse or touch click the button gives up focus,
+ * otherwise Keys would ignore every game key and Space would toggle the sound again.
+ */
+export function bindSoundButton(button: HTMLButtonElement, sfx: Sfx): void {
+  const render = () => {
+    button.setAttribute('aria-pressed', String(!sfx.muted));
+    button.textContent = sfx.muted ? '♪̸' : '♪';
+  };
+  render();
+  button.addEventListener('click', event => {
+    sfx.unlock();
+    sfx.setMuted(!sfx.muted);
+    render();
+    if (event.detail > 0) button.blur();
+  });
+}
+
 export class Sfx {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;

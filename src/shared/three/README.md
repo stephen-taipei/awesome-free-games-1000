@@ -9,9 +9,9 @@ Rebuild the vendored file when upgrading three.js:
 
 ```sh
 npm pack three@<version> && tar xzf three-<version>.tgz
-npx esbuild package/build/three.module.js --bundle --minify --format=esm --target=es2020 --legal-comments=none \
+npx esbuild@0.21.5 package/build/three.module.js --bundle --minify --format=esm --target=es2020 --legal-comments=none \
   --banner:js="/** three.js r<rev> (<version>) | MIT License | Copyright 2010-2026 three.js authors | https://github.com/mrdoob/three.js */" \
   --outfile=src/shared/three/three.module.min.js
 ```
 
-Keep `@types/three` on the same release.
+The current file was built with esbuild 0.21.5; the same version reproduces it byte for byte. Keep `@types/three` on the same release.

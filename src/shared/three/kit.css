@@ -33,7 +33,8 @@ body {
   align-items: flex-start;
   gap: 12px;
   pointer-events: none;
-  z-index: 5;
+  /* Above the overlay (8) so the language and sound controls work in menus; the pause button is disabled there. */
+  z-index: 9;
 }
 .g3d-stats { display: flex; flex-wrap: wrap; gap: 8px; }
 .g3d-chip {
@@ -166,6 +167,8 @@ body {
 @media (hover: none), (pointer: coarse) { .g3d-touch { display: flex; } }
 
 .g3d-fallback { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); }
+/* Inside the menu panel, in place of the hidden Start button. */
+.g3d-panel .g3d-fallback { position: static; inset: auto; display: block; padding: 12px 0 0; color: var(--text); }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 @media (max-width: 560px) {

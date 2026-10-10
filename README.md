@@ -45,9 +45,9 @@ SITE_URL=https://example.com/games/ npm run build
 | puzzle | 益智解謎 | 150 |
 | arcade | 經典街機 | 155 |
 | action | 動作冒險 | 100 |
-| runner | 跑酷挑戰 | 197 |
-| card | 卡牌策略 | 195 |
-| horror | 驚悚探索 | 200 |
+| runner | 跑酷挑戰 | 63 |
+| card | 卡牌策略 | 6 |
+| horror | 驚悚探索 | 37 |
 
 數量由 `src/games/**/index.html` 掃描產生，以 `public/catalog.json` 的當次建置結果為準。歷史遊戲編號會重複，收藏與目錄使用 `category/slug` 作為識別值，不以編號作為唯一 ID。
 
