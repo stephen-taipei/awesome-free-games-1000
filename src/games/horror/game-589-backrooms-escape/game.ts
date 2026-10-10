@@ -1,4 +1,4 @@
-import { THREE, createStage, createLoop, Keys, clamp, damp, lerp, rng, prefersTouch, type Stage } from '../../../shared/three/kit';
+import { THREE, createStage, createLoop, Keys, clamp, damp, lerp, rng, prefersTouch, prefersReducedMotion, type Stage } from '../../../shared/three/kit';
 import {
   TILE, WALL_HEIGHT as H, EYE_HEIGHT, PLAYER_RADIUS, WALK_SPEED, SPRINT_SPEED, ITEMS_PER_LEVEL, PICKUP_RADIUS, EXIT_RADIUS,
   CATCH_DISTANCE, BATTERY_REFILL, SCORE, generateLevel, levelParams, resolveCircle, raycast, isWall, canSee, canHear,
@@ -24,6 +24,11 @@ const FOG_DEEP = new THREE.Color('#0d0b05');
 
 /** Cheap stable pseudo-random in [0, 1) for flicker patterns. */
 const hash = (n: number) => { const s = Math.sin(n) * 43758.5453; return s - Math.floor(s); };
+/**
+ * Tubes, the flashlight and the entity's eyes only switch on this clock's beat. At 4 beats a second, any one-second
+ * window holds at most 5 switches, so never more than 2 flashes (WCAG 2.3.1 allows 3).
+ */
+const FLICKER_HZ = 4;
 
 function makeCanvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const canvas = document.createElement('canvas');
@@ -321,6 +326,10 @@ export class BackroomsEscape {
   private hudTimer = 0;
   private poolTimer = 0;
   private time = 0;
+  private flickerSlot = -1;
+  private torchCut = false;
+  /** Reduced motion: no random flashlight cut-outs, gentler camera shake and caught flash. */
+  private calm = prefersReducedMotion();
   private killer: Stalker | null = null;
 
   // Input state.
@@ -517,6 +526,7 @@ export class BackroomsEscape {
     this.panelLit = new Uint8Array(count);
     this.panelFlicker = new Uint8Array(count);
     this.panelBright = new Float32Array(count);
+    this.flickerSlot = -1;
     const m = new THREE.Matrix4();
     level.panels.forEach((p, i) => {
       const x = tileCenter(p.x), z = tileCenter(p.y);
@@ -790,6 +800,7 @@ export class BackroomsEscape {
   // ---------------------------------------------------------------- lifecycle
 
   start(): void {
+    this.calm = prefersReducedMotion();
     this.water = 0;
     this.score = 0;
     this.seconds = 0;
@@ -1030,7 +1041,7 @@ export class BackroomsEscape {
     this.killer = s;
     this.phaseTime = 0;
     this.shake = 1.2;
-    this.flash = 0.7;
+    this.flash = this.calm ? 0.25 : 0.7;
     this.dread = 1;
     this.resetInput();
     this.releasePointer();
@@ -1064,29 +1075,35 @@ export class BackroomsEscape {
   private updatePanels(t: number): void {
     const panels = this.panels, glows = this.glows;
     if (!panels || !glows) return;
-    const q = Math.floor(t * 14);
+    // Brightness is decided once per flicker slot and held until the next, so tubes cannot flash faster than the clock.
+    const q = Math.floor(t * FLICKER_HZ);
+    const fresh = q !== this.flickerSlot;
+    this.flickerSlot = q;
     const dying = this.state === 'dying' || this.state === 'over';
     const near = this.fog.near, far = this.fog.far;
     for (let i = 0; i < this.panelX.length; i++) {
       const x = this.panelX[i], z = this.panelZ[i];
-      let b = this.panelLit[i] ? 1 : 0;
-      if (b && this.panelFlicker[i]) {
-        const h = hash(i * 7.31 + q * 0.917);
-        if (h < 0.18) b = 0.1 + h; else if (h < 0.26) b = 0.55;
-      }
-      if (b > 0) {
-        // Tubes stutter and die around the entity.
-        for (const s of this.stalkers) {
-          if (!s.mesh.visible) continue;
-          const d2 = (s.data.x - x) ** 2 + (s.data.z - z) ** 2;
-          if (d2 > 81) continue;
-          const closeness = 1 - Math.sqrt(d2) / 9;
-          const h = hash(i * 3.71 + q * 1.37 + 11.1);
-          if (h < closeness * 0.85) b *= h * 0.35;
+      let b = this.panelBright[i];
+      if (fresh) {
+        b = this.panelLit[i] ? 1 : 0;
+        if (b && this.panelFlicker[i]) {
+          const h = hash(i * 7.31 + q * 0.917);
+          if (h < 0.18) b = 0.1 + h; else if (h < 0.26) b = 0.55;
         }
-        if (dying && hash(i * 1.9 + q * 2.3) < 0.6) b *= 0.05;
+        if (b > 0) {
+          // Tubes stutter and die around the entity.
+          for (const s of this.stalkers) {
+            if (!s.mesh.visible) continue;
+            const d2 = (s.data.x - x) ** 2 + (s.data.z - z) ** 2;
+            if (d2 > 81) continue;
+            const closeness = 1 - Math.sqrt(d2) / 9;
+            const h = hash(i * 3.71 + q * 1.37 + 11.1);
+            if (h < closeness * 0.85) b *= h * 0.35;
+          }
+          if (dying && hash(i * 1.9 + q * 2.3) < 0.6) b *= 0.05;
+        }
+        this.panelBright[i] = b;
       }
-      this.panelBright[i] = b;
       this.scratch.copy(PANEL_OFF).lerp(PANEL_ON, b);
       panels.setColorAt(i, this.scratch);
       const d = Math.hypot(x - this.pos.x, z - this.pos.z);
@@ -1096,6 +1113,8 @@ export class BackroomsEscape {
     }
     panels.instanceColor!.needsUpdate = true;
     glows.instanceColor!.needsUpdate = true;
+    // The flashlight stutters on the same clock, near empty or when the entity is close.
+    if (fresh) this.torchCut = !this.calm && (this.battery < 0.12 || this.dread > 0.6) && hash(q * 1.7) < 0.25;
     // The whole floor browns out a little when the entity is near.
     this.hemi.intensity = this.params.ambient * 2.2 * (1 - this.dread * 0.45);
   }
@@ -1136,12 +1155,12 @@ export class BackroomsEscape {
       this.pool[s].intensity = panel >= 0 ? LIGHT_POWER * this.slotFade[s] * this.panelBright[panel] : 0;
     }
 
-    // Flashlight: dims as the battery runs low and stutters near empty or when the entity is close.
+    // Flashlight: dims as the battery runs low and stutters near empty or when the entity is close (see updatePanels).
     let torch = 0;
     if (this.state === 'idle') torch = 22;
     else if (this.lightOn) {
       torch = 30 * (0.45 + 0.55 * Math.min(1, this.battery / 0.3));
-      if ((this.battery < 0.12 || this.dread > 0.6) && hash(Math.floor(this.time * 18) * 1.7) < 0.25) torch *= 0.15;
+      if (this.torchCut) torch *= 0.15;
     }
     this.flashlight.intensity = torch;
     this.exitLight.intensity = (this.unlocked ? 2.4 : 1.8) * (0.85 + 0.15 * Math.sin(this.time * 3));
@@ -1149,6 +1168,7 @@ export class BackroomsEscape {
 
   private updateStalkers(dt: number, t: number): void {
     const q = Math.floor(t * 12);
+    const blink = Math.floor(t * FLICKER_HZ);
     this.entityTime.value = t;
     for (let i = 0; i < this.stalkers.length; i++) {
       const s = this.stalkers[i];
@@ -1158,16 +1178,16 @@ export class BackroomsEscape {
       let delta = e.heading - s.heading;
       delta = Math.atan2(Math.sin(delta), Math.cos(delta));
       s.heading += delta * damp(6, dt);
-      // Never quite still and never quite there: a jittering, swaying shape that drops out for a frame.
+      // Never quite still and never quite there: a jittering, swaying shape that now and then drops out.
       const glitch = hash(q * 0.77 + i * 5.3);
       const jitter = d < 8 ? 0.06 : 0.02;
       const gait = e.mode === 'chase' ? 7 : 3;
       s.mesh.position.set(e.x + (glitch - 0.5) * jitter, Math.abs(Math.sin(t * gait)) * 0.04, e.z + (hash(q * 1.31 + i) - 0.5) * jitter);
       s.mesh.rotation.set(0, s.heading, Math.sin(t * 1.3 + i) * 0.04);
       s.mesh.scale.set(1, 1 + (glitch - 0.5) * 0.05, 1);
-      const show = !(d < 7 && glitch < 0.07 && this.state === 'running');
+      const show = !(d < 7 && hash(blink * 0.77 + i * 5.3) < 0.07 && this.state === 'running');
       for (const part of s.body) part.visible = show;
-      const eyesOn = d < 13 && hash(q * 0.53 + i * 9.1) > 0.25;
+      const eyesOn = d < 13 && hash(blink * 0.53 + i * 9.1) > 0.25;
       for (const eye of s.eyes) eye.visible = eyesOn;
     }
   }
@@ -1183,7 +1203,7 @@ export class BackroomsEscape {
   private updateCamera(dt: number): void {
     const { camera } = this.stage;
     this.shake = Math.max(0, this.shake - dt * 1.5);
-    const tremor = this.state === 'paused' ? 0 : this.shake * 0.06 + this.dread * 0.006;
+    const tremor = this.state === 'paused' ? 0 : (this.shake * 0.06 + this.dread * 0.006) * (this.calm ? 0.25 : 1);
     const bobY = Math.abs(Math.sin(this.bob)) * this.bobAmp - this.bobAmp * 0.5;
     const swayX = Math.cos(this.bob) * this.bobAmp * 0.35;
     const cos = Math.cos(this.yaw), sin = Math.sin(this.yaw);

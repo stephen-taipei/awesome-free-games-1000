@@ -1,4 +1,4 @@
-import { Sfx, best, setupI18n, prefersTouch } from '../../../shared/three/kit';
+import { Sfx, best, setupI18n, prefersTouch, bindSoundButton, focusIfActive, onFocusLost } from '../../../shared/three/kit';
 import { BackroomsEscape, type Atmos, type GameEvent, type Hud } from './game';
 import { Hum } from './hum';
 import { translations } from './i18n';
@@ -112,7 +112,7 @@ function setMode(next: typeof mode, game: BackroomsEscape | null) {
   if (next !== 'playing') sprintBtn.classList.remove('on');
   if (game) updateHint(game);
   renderOverlay();
-  if (!overlay.hidden) startBtn.focus({ preventScroll: true });
+  if (!overlay.hidden) focusIfActive(startBtn);
   else (document.activeElement as HTMLElement | null)?.blur();
 }
 
@@ -214,14 +214,18 @@ if (!game) {
   note.setAttribute('role', 'alert');
   note.dataset.i18n = 'game.fallback';
   note.textContent = t('game.fallback');
-  stageEl.append(note);
+  startBtn.after(note);
   startBtn.disabled = true;
   startBtn.hidden = true;
   pauseBtn.disabled = true;
 } else {
+  const alive = () => game.status === 'running' || game.status === 'transition';
   const pause = () => {
-    if (mode !== 'playing') return;
+    // Nothing to pause once it has caught you: the death animation runs on into game over.
+    if (mode !== 'playing' || !alive()) return;
     game.pause();
+    // Hand the mouse back so the Paused menu can be clicked.
+    game.releasePointer();
     pausedAt = performance.now();
     setMode('paused', game);
   };
@@ -246,7 +250,9 @@ if (!game) {
   };
   game.onLock = locked => {
     // Esc releases the mouse first; treat that as a pause request.
-    if (!locked && mode === 'playing' && (game.status === 'running' || game.status === 'transition')) pause();
+    if (!locked && mode === 'playing' && alive()) pause();
+    // A lock request still pending when the run paused or ended lands too late: hand the mouse straight back.
+    else if (locked && (mode !== 'playing' || !alive())) game.releasePointer();
     updateHint(game);
   };
   game.onStick = (active, x, y, kx, ky) => {
@@ -267,10 +273,12 @@ if (!game) {
   });
   pauseBtn.addEventListener('click', pause);
   window.addEventListener('keydown', event => {
+    // A held pause key would toggle pause and resume through auto-repeat.
+    if (event.repeat) return;
     if ((event.code === 'KeyP' || event.code === 'Escape') && mode === 'playing') pause();
     else if ((event.code === 'Escape' || event.code === 'KeyP') && mode === 'paused' && performance.now() - pausedAt > 400) resume();
   });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+  onFocusLost(pause);
 
   // Touch buttons: sprint is held, flashlight and chalk are taps.
   const sprintOff = () => { game.setSprint(false); sprintBtn.classList.remove('on'); };
@@ -287,17 +295,9 @@ if (!game) {
   chalkBtn.addEventListener('click', () => game.markChalk());
 }
 
-function syncSound() {
-  soundBtn.setAttribute('aria-pressed', String(!sfx.muted));
-  soundBtn.textContent = sfx.muted ? '♪̸' : '♪';
-}
-syncSound();
-soundBtn.addEventListener('click', () => {
-  sfx.unlock();
-  sfx.setMuted(!sfx.muted);
-  hum.setMuted(sfx.muted);
-  syncSound();
-});
+bindSoundButton(soundBtn, sfx);
+// Runs after the kit's toggle, so the hum follows the new setting.
+soundBtn.addEventListener('click', () => hum.setMuted(sfx.muted));
 
 renderHud({ level: 1, items: 0, stamina: 1, exhausted: false, battery: 1, light: true, score: 0 });
 setMode('menu', game);
