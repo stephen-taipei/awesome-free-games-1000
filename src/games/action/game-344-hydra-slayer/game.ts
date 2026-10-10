@@ -86,6 +86,7 @@ export class BeastfallGame {
   private tier: Tier = 0;
   private acc = 0;
   private clock = 0;
+  private viewClock = 0;
   private outroT = 0;
   private hitStop = 0;
   private slowT = 0;
@@ -235,6 +236,8 @@ export class BeastfallGame {
   private frame(dt: number, _elapsed: number, render = true): void {
     if (this.state === 'paused') { if (render) this.stage.render(); return; }
     this.clock += dt;
+    // Poses and particles run on the duel's clock, so hit-stop freezes them and slow motion slows them.
+    let viewDt = dt;
     if (this.state === 'running' || this.state === 'outro') {
       this.readKeys();
       let simDt = dt;
@@ -247,6 +250,7 @@ export class BeastfallGame {
         this.slowT -= dt;
         simDt *= this.slowScale;
       }
+      viewDt = simDt;
       this.acc = Math.min(this.acc + simDt, 0.25);
       while (this.acc >= STEP) {
         this.acc -= STEP;
@@ -261,9 +265,10 @@ export class BeastfallGame {
         }
       }
     }
-    this.updateViews(dt);
+    this.viewClock += viewDt;
+    this.updateViews(viewDt);
     this.updateZones();
-    this.sparks.update(dt);
+    this.sparks.update(viewDt);
     this.env.update(this.clock);
     this.updateCamera(dt);
     this.publishHud();
@@ -470,14 +475,14 @@ export class BeastfallGame {
   private updateViews(dt: number): void {
     const duel = this.match;
     const ctx = this.ctx;
-    ctx.t = this.clock;
+    ctx.t = this.viewClock;
     ctx.dt = dt;
     ctx.heroX = duel.hero.x;
     ctx.dying = duel.state === 'won' ? clamp(this.outroT / (OUTRO_WON * 0.8), 0, 1) : 0;
     ctx.gloat = duel.state === 'lost';
     this.view.update(duel.beast, ctx);
     const outro = duel.state === 'won' ? 'won' : duel.state === 'lost' ? 'lost' : 'none';
-    this.heroView.update(dt, this.clock, duel.hero, outro, this.reduced);
+    this.heroView.update(dt, this.viewClock, duel.hero, outro, this.reduced);
 
     // The song: a cyan current drags past the hero toward the edge.
     if (duel.pull > 0 && dt > 0) {
@@ -499,7 +504,7 @@ export class BeastfallGame {
       if (!zone) continue;
       const phase = phaseOf(s);
       if (phase === 'recovery') continue;
-      z.show(s.x0, Math.min(s.x1, EDGE_X), 0, zone.depth, tellColor(s), clamp(s.t / s.windup, 0, 1), this.clock, zone.disc, phase === 'active');
+      z.show(s.x0, Math.min(s.x1, EDGE_X), 0, zone.depth, tellColor(s), clamp(s.t / s.windup, 0, 1), this.viewClock, zone.disc, phase === 'active');
     }
     // While the Siren sings, the lip of the cliff glows as a warning.
     const beast = duel.beast;

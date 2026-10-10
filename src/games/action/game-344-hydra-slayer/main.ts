@@ -324,7 +324,8 @@ function renderOverlay() {
     controls.hidden = true;
     more.hidden = false;
     const next = nextAfter(r);
-    startBtn.textContent = next ? t('game.next', { beast: beastName(next.beast) }) : t('game.retry');
+    const nextName = next ? (next.tier === 1 ? `${beastName(next.beast)} · ${t('game.nightmare')}` : beastName(next.beast)) : '';
+    startBtn.textContent = next ? t('game.next', { beast: nextName }) : t('game.retry');
     retryBtn.hidden = !next;
     retryBtn.textContent = t('game.retry');
     ladderBtn.textContent = t('game.ladderBtn');
@@ -490,6 +491,7 @@ if (!game) {
   const pause = (focusResume = true) => { if (mode === 'playing' && game.status === 'running') { game.pause(); setMode('paused', focusResume); } };
   pauseBtn.addEventListener('click', () => pause());
   window.addEventListener('keydown', event => {
+    if (mode === 'playing' && !event.repeat && !last.ready && (event.code === 'KeyI' || event.code === 'ArrowUp' || event.code === 'KeyW')) notReady();
     if ((event.code === 'KeyP' || event.code === 'Escape') && mode === 'playing') pause();
     else if (event.code === 'Escape' && mode === 'paused') { game.resume(); setMode('playing'); }
   });
@@ -518,6 +520,13 @@ if (!game) {
     },
     up: () => { game.setStick(0); stick.hidden = true; },
   });
+  /** The finisher asked for before Focus is full: a dull click, and the Focus meter nudges. */
+  const notReady = () => {
+    sfx.tone(140, 0.07, { type: 'square', gain: 0.05 });
+    focusChip.classList.remove('nudge');
+    void focusChip.offsetWidth;
+    focusChip.classList.add('nudge');
+  };
   const bindAction = (id: string, action: Action) => {
     const button = $<HTMLButtonElement>(id);
     const release = () => button.classList.remove('on');
@@ -526,6 +535,7 @@ if (!game) {
       sfx.unlock();
       button.classList.add('on');
       if (mode === 'playing') game.press(action);
+      if (mode === 'playing' && action === 'finisher' && !last.ready) notReady();
     });
     button.addEventListener('pointerup', release);
     button.addEventListener('pointercancel', release);
