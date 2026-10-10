@@ -16,7 +16,10 @@ export interface Arc {
   /** Angular width in radians; TAU means a closed ring. */
   span: number;
   phase: Phase;
-  /** Angular velocity in rad/s (0 for static blocks). */
+  /**
+   * Rotation in radians per unit of track travelled (0 for static blocks). The rotation follows distance, not time,
+   * so a spinning arc sits at `angle` when it reaches the player (z = 0), at any speed; see arcAngleAt.
+   */
   spin: number;
 }
 export interface Shard { kind: 'shard'; angle: number; offset: number; }
@@ -40,6 +43,21 @@ export function overlaps(playerAngle: number, arcAngle: number, span: number, ma
 /** An arc blocks the player only when its colour differs from the player's phase. */
 export const isSolid = (arc: Arc, playerPhase: Phase) => arc.phase !== playerPhase;
 
+/** Centre angle of `arc` at depth `z` (negative ahead of the player, 0 where it reaches the player). */
+export const arcAngleAt = (arc: Arc, z: number) => (arc.spin ? wrap(arc.angle + arc.spin * z) : arc.angle);
+
+/**
+ * A portal hands the player `phase`. Every closed ring between that portal and the next one takes that colour,
+ * so it is a phantom for the player whatever they flipped by hand before the portal. `ahead` lists the pieces
+ * past the portal, nearest first.
+ */
+export function syncRings(ahead: readonly (Arc | { kind: 'shard' | 'portal' })[], phase: Phase): void {
+  for (const piece of ahead) {
+    if (piece.kind === 'portal') break;
+    if (piece.kind === 'arc' && piece.span >= TAU - 1e-6) piece.phase = phase;
+  }
+}
+
 export interface GeneratorState {
   row: number;
   gapAngle: number;
@@ -54,8 +72,9 @@ export function createGenerator(): GeneratorState {
 
 /**
  * Produces the next row of the track. Every row keeps a geometric gap the player can reach by
- * steering alone, so flipping phase is a shortcut and never mandatory, except for closed rings,
- * which always match the phase a portal just gave the player.
+ * steering alone, so flipping phase is a shortcut and never mandatory. Closed rings are the exception:
+ * the generator colours them for a player who never flips by hand, and the game recolours them with
+ * syncRings when the portal is crossed, so they always match the phase that portal gave the player.
  */
 export function nextRow(state: GeneratorState, speed: number, random: () => number): Row {
   state.row += 1;
@@ -73,7 +92,7 @@ export function nextRow(state: GeneratorState, speed: number, random: () => numb
   }
 
   if (state.sector >= 2 && state.row % PORTAL_EVERY === 2) {
-    // A closed ring in the colour the portal just gave the player: trust the portal, or flip twice.
+    // A closed ring in the colour the portal gives the player (syncRings corrects it for manual flips): trust the portal.
     return { pieces: [{ kind: 'arc', angle: 0, span: TAU, phase: state.expectedPhase, spin: 0 }], spacing };
   }
 
@@ -90,8 +109,9 @@ export function nextRow(state: GeneratorState, speed: number, random: () => numb
   }
 
   if (roll < 0.3 && level >= 1) {
-    // Two opposed spinning blades. Their gaps are wide and rotate, so timing matters more than steering.
-    const spin = (0.5 + random() * 0.6 + level * 0.05) * (random() < 0.5 ? -1 : 1);
+    // Two opposed spinning blades. They turn with distance (0.5-1.6 rad/s at the current speed), so when the row
+    // reaches the player its gaps sit at gapAngle and gapAngle + PI: wider than a static gap, and just as reachable.
+    const spin = (0.5 + random() * 0.6 + level * 0.05) * (random() < 0.5 ? -1 : 1) / speed;
     const span = Math.min(1.9, 1.3 + level * 0.06);
     const phase = (random() < 0.5 ? 0 : 1) as Phase;
     return {

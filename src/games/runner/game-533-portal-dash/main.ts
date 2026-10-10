@@ -1,4 +1,4 @@
-import { Sfx, best, setupI18n } from '../../../shared/three/kit';
+import { Sfx, best, setupI18n, focusIfActive, onFocusLost, bindSoundButton } from '../../../shared/three/kit';
 import { PortalDash, PHASE_COLORS, MAX_CHARGES, type Hud } from './game';
 import { translations } from './i18n';
 
@@ -63,7 +63,7 @@ function setMode(next: typeof mode) {
   overlay.hidden = next === 'playing';
   pauseBtn.disabled = next !== 'playing';
   renderOverlay();
-  if (!overlay.hidden) startBtn.focus({ preventScroll: true });
+  if (!overlay.hidden) focusIfActive(startBtn);
   else (document.activeElement as HTMLElement | null)?.blur();
 }
 
@@ -75,7 +75,8 @@ if (!game) {
   note.setAttribute('role', 'alert');
   note.dataset.i18n = 'game.fallback';
   note.textContent = t('game.fallback');
-  stageEl.append(note);
+  // In the menu panel, where the Start button would be.
+  startBtn.after(note);
   startBtn.disabled = true;
   startBtn.hidden = true;
   pauseBtn.disabled = true;
@@ -102,22 +103,17 @@ if (!game) {
     else game.start();
     setMode('playing');
   });
-  pauseBtn.addEventListener('click', () => { if (mode === 'playing') { game.pause(); setMode('paused'); } });
+  // Mode stays 'playing' through the crash animation; there is nothing to pause until game over.
+  const pause = () => { if (mode === 'playing' && game.status === 'running') { game.pause(); setMode('paused'); } };
+  pauseBtn.addEventListener('click', pause);
   window.addEventListener('keydown', event => {
-    if ((event.code === 'KeyP' || event.code === 'Escape') && mode === 'playing') { game.pause(); setMode('paused'); }
+    if ((event.code === 'KeyP' || event.code === 'Escape') && mode === 'playing') pause();
     else if (event.code === 'Escape' && mode === 'paused') { game.resume(); setMode('playing'); }
   });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'playing') { game.pause(); setMode('paused'); } });
+  onFocusLost(pause);
 }
 
-soundBtn.setAttribute('aria-pressed', String(!sfx.muted));
-soundBtn.textContent = sfx.muted ? '♪̸' : '♪';
-soundBtn.addEventListener('click', () => {
-  sfx.unlock();
-  sfx.setMuted(!sfx.muted);
-  soundBtn.setAttribute('aria-pressed', String(!sfx.muted));
-  soundBtn.textContent = sfx.muted ? '♪̸' : '♪';
-});
+bindSoundButton(soundBtn, sfx);
 
 renderHud({ distance: 0, shards: 0, charges: 1, speed: 0, phase: 0, sector: 1 });
 setMode('menu');

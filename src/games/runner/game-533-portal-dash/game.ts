@@ -1,7 +1,7 @@
-import { THREE, createStage, createLoop, Keys, trackPointer, clamp, damp, lerp, type Stage } from '../../../shared/three/kit';
+import { THREE, createStage, createLoop, Keys, trackPointer, clamp, damp, lerp, prefersReducedMotion, type Stage } from '../../../shared/three/kit';
 import {
   TAU, TUNNEL_RADIUS as R, TURN_SPEED, OBSTACLE_DEPTH,
-  createGenerator, nextRow, overlaps, isSolid, wrap, type Arc, type Phase,
+  createGenerator, nextRow, overlaps, isSolid, wrap, arcAngleAt, syncRings, type Arc, type Phase,
 } from './logic';
 
 export interface Hud { distance: number; shards: number; charges: number; speed: number; phase: Phase; sector: number; }
@@ -87,6 +87,7 @@ export class PortalDash {
   private bgColor = new THREE.Color(SECTORS[0].bg);
   private targetLine = new THREE.Color(SECTORS[0].line);
   private targetBg = new THREE.Color(SECTORS[0].bg);
+  private reducedMotion = prefersReducedMotion();
 
   private generator = createGenerator();
   private state: 'idle' | 'running' | 'paused' | 'dying' | 'over' = 'idle';
@@ -233,8 +234,9 @@ export class PortalDash {
       if (piece.kind === 'arc') {
         const { solid, edges } = this.arcGeometry(piece.span);
         group.add(new THREE.Mesh(solid, this.solidMats[piece.phase]), new THREE.LineSegments(edges, this.edgeSolid[piece.phase]));
-        group.rotation.z = piece.angle;
-        this.place(group, z, { ...piece });
+        const angle = arcAngleAt(piece, z);
+        group.rotation.z = angle;
+        this.place(group, z, { ...piece, angle });
       } else if (piece.kind === 'shard') {
         const glow = new THREE.Sprite(this.shardGlow);
         glow.scale.set(1.4, 1.4, 1);
@@ -360,7 +362,7 @@ export class PortalDash {
     this.lineColor.lerp(this.targetLine, damp(2.5, dt));
     this.bgColor.lerp(this.targetBg, damp(2.5, dt));
     this.flash = Math.max(0, this.flash - dt * 1.6);
-    this.tunnel.material.uniforms.uFlash.value = this.flash * 0.35;
+    this.tunnel.material.uniforms.uFlash.value = this.flash * (this.reducedMotion ? 0.12 : 0.35);
     this.shake = Math.max(0, this.shake - dt * 2.5);
     if (this.state === 'idle') this.angle = wrap(this.angle + dt * 0.25);
     this.updateShip(t);
@@ -387,7 +389,7 @@ export class PortalDash {
       item.object.position.z = item.z;
       const piece = item.piece;
       if (piece.kind === 'arc' && piece.spin) {
-        piece.angle = wrap(piece.angle + piece.spin * dt);
+        piece.angle = wrap(piece.angle + piece.spin * travel);
         item.object.rotation.z = piece.angle;
       }
       if (piece.kind === 'shard') {
@@ -419,7 +421,10 @@ export class PortalDash {
       }
     } else if (before < 0 && item.z >= 0) {
       item.done = true;
-      this.setPhase((1 - this.phase) as Phase);
+      const next = (1 - this.phase) as Phase;
+      // Closed rings ahead take the colour this portal gives, even after manual flips. setPhase repaints them.
+      syncRings(this.live.filter(other => other.z < item.z).map(other => other.piece), next);
+      this.setPhase(next);
       this.setSector(this.sector + 1);
       this.speed += 1.5;
       this.onEvent('portal');
@@ -430,7 +435,7 @@ export class PortalDash {
   private crash(): void {
     this.state = 'dying';
     this.dyingTime = 0;
-    this.shake = 1;
+    this.shake = this.reducedMotion ? 0 : 1;
     this.flash = 0.8;
     this.ship.visible = false;
     this.onEvent('crash');

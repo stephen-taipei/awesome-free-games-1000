@@ -6,7 +6,7 @@ import ts from 'typescript';
 const source = fs.readFileSync('src/games/runner/game-533-portal-dash/logic.ts', 'utf8');
 const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
 const logic = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
-const { TAU, PORTAL_EVERY, TURN_SPEED, PLAYER_HALF_ANGLE, wrap, overlaps, isSolid, createGenerator, nextRow } = logic;
+const { TAU, PORTAL_EVERY, TURN_SPEED, PLAYER_HALF_ANGLE, OBSTACLE_DEPTH, wrap, overlaps, isSolid, arcAngleAt, syncRings, createGenerator, nextRow } = logic;
 
 function seeded(seed) {
   let a = seed >>> 0;
@@ -46,8 +46,7 @@ test('every generated row leaves a gap the player can reach by steering alone', 
       if (row.pieces.some(p => p.kind === 'portal')) { expected = 1 - expected; continue; }
       const ring = arcs.find(a => a.span >= TAU - 1e-6);
       if (ring) { assert.equal(ring.phase, expected, 'closed rings match the phase the last portal gave'); continue; }
-      if (arcs.some(a => a.spin)) { previousGap = state.gapAngle; continue; }
-      // Some angle inside the reachable window must be free of every static block.
+      // Some angle inside the reachable window must be free of every block (spinning blades at the angle they reach the player).
       const window = TURN_SPEED * (row.spacing / speed);
       let free = false;
       for (let k = -40; k <= 40 && !free; k++) {
@@ -57,6 +56,96 @@ test('every generated row leaves a gap the player can reach by steering alone', 
       assert.ok(free, `row ${state.row} (seed ${seed}) has no reachable gap`);
       previousGap = state.gapAngle;
     }
+  }
+});
+
+test('at top speed every row stays reachable by keyboard steering, spinning blades included', () => {
+  // Sweeps the set of reachable ship angles row by row at the top speed (62), for many seeds. Between rows the
+  // set grows by what keyboard steering covers from a standstill (steer() ramps up at damp(14)); every non-ring
+  // block removes what it covers while it passes the ship (game.ts interact(): |z| < OBSTACLE_DEPTH / 2 + 0.45,
+  // plus one 1/20 s frame of travel), with spinning blades turning as they pass.
+  const SPEED = 62;
+  const BINS = 720;
+  const STEP = TAU / BINS;
+  const HULL = OBSTACLE_DEPTH / 2 + 0.45;
+  const turned = t => TURN_SPEED * (t - (1 - Math.exp(-14 * t)) / 14);
+  for (let seed = 1; seed <= 100; seed++) {
+    const random = seeded(seed);
+    const state = createGenerator();
+    let reach = new Uint8Array(BINS);
+    reach[Math.round((state.gapAngle + Math.PI) / STEP)] = 1;
+    let distance = 34; // the first row spawns 34 ahead of the ship
+    for (let i = 0; i < 400; i++) {
+      const row = nextRow(state, SPEED, random);
+      const k = Math.floor(turned(distance / SPEED) / STEP);
+      // A bin is reachable when a reachable bin lies within k of it, either way round the circle.
+      const grown = new Uint8Array(BINS);
+      for (let j = 0, last = -Infinity; j < 2 * BINS; j++) { if (reach[j % BINS]) last = j; if (j - last <= k) grown[j % BINS] = 1; }
+      for (let j = 2 * BINS - 1, next = Infinity; j >= 0; j--) { if (reach[j % BINS]) next = j; if (next - j <= k) grown[j % BINS] = 1; }
+      reach = grown;
+      for (const arc of row.pieces) {
+        if (arc.kind !== 'arc' || arc.span >= TAU - 1e-6) continue; // closed rings match the player's phase
+        const from = arcAngleAt(arc, -HULL);
+        const sweep = wrap(arcAngleAt(arc, HULL + SPEED / 20) - from);
+        for (let j = 0; j < BINS; j++) if (reach[j] && overlaps(-Math.PI + j * STEP, from + sweep / 2, arc.span + Math.abs(sweep))) reach[j] = 0;
+      }
+      assert.ok(reach.some(Boolean), `row ${state.row} (seed ${seed}) cannot be reached at top speed`);
+      distance = row.spacing;
+    }
+  }
+});
+
+test('flip once before the portal: the closed ring after it is still passable', () => {
+  for (const flipRows of [[1], [3, 20], [5, 18, 40], []]) {
+    const state = createGenerator();
+    const random = seeded(11);
+    const pieces = [];
+    const flipsAt = new Set();
+    for (let i = 0; i < PORTAL_EVERY * 4; i++) {
+      if (flipRows.includes(state.row + 1)) flipsAt.add(pieces.length);
+      pieces.push(...nextRow(state, 40, random).pieces);
+    }
+    let phase = 0;
+    let rings = 0;
+    pieces.forEach((piece, i) => {
+      if (flipsAt.has(i)) phase = 1 - phase; // a manual flip just before this row
+      if (piece.kind === 'portal') {
+        phase = 1 - phase;
+        syncRings(pieces.slice(i + 1), phase);
+      } else if (piece.kind === 'arc' && piece.span >= TAU - 1e-6) {
+        rings++;
+        assert.equal(isSolid(piece, phase), false, `ring ${rings} is solid after manual flips at rows ${flipRows}`);
+      }
+    });
+    assert.equal(rings, 3);
+  }
+  // Without the sync, one manual flip before the first portal leaves the generator's ring solid.
+  const state = createGenerator();
+  const random = seeded(11);
+  const rows = Array.from({ length: PORTAL_EVERY + 2 }, () => nextRow(state, 40, random));
+  const ring = rows[PORTAL_EVERY + 1].pieces[0];
+  const playerPhase = 0; // flipped by hand to 1, then the portal flips it back to 0
+  assert.equal(isSolid(ring, playerPhase), true);
+  syncRings(rows.slice(PORTAL_EVERY).flatMap(row => row.pieces), playerPhase);
+  assert.equal(isSolid(ring, playerPhase), false);
+});
+
+test('syncRings stops at the next portal', () => {
+  const ring = phase => ({ kind: 'arc', angle: 0, span: TAU, phase, spin: 0 });
+  const block = { kind: 'arc', angle: 0, span: 1, phase: 1, spin: 0 };
+  const ahead = [ring(1), block, { kind: 'portal' }, ring(1)];
+  syncRings(ahead, 0);
+  assert.deepEqual(ahead.map(p => p.phase), [0, 1, undefined, 1]);
+});
+
+test('a spinning blade is back at its generated angle when it reaches the ship, at any speed', () => {
+  const arc = { kind: 'arc', angle: 0.4, span: 1.5, phase: 0, spin: 0.03 };
+  for (const speed of [24, 40, 62]) {
+    // As in game.ts: spawned about 190 ahead at arcAngleAt, then turned by spin * travel each frame.
+    let z = -190;
+    let angle = arcAngleAt(arc, z);
+    while (z < 0) { const travel = Math.min(-z, speed / 60); z += travel; angle = wrap(angle + arc.spin * travel); }
+    assert.ok(Math.abs(wrap(angle - arc.angle)) < 1e-9);
   }
 });
 
