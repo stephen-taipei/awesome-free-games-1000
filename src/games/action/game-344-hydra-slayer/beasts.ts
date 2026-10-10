@@ -339,7 +339,7 @@ export class HydraView extends BeastView {
       rig.flash = Math.max(0, rig.flash - dt);
       const live = strike && state.state === 'alive' && phaseOf(strike) !== 'queued' && phaseOf(strike) !== 'recovery';
       const k = live ? Math.min(1, tellAmount(strike)) : 0;
-      rig.tint.copy(live ? tellColor(strike) : this.eyeRest).multiplyScalar(k * k * 0.32);
+      rig.tint.copy(live ? tellColor(strike) : this.eyeRest).multiplyScalar(k * k * 0.18);
     });
     this.applyFlash(dt, ctx.reduced);
     for (const head of this.heads) {
@@ -517,7 +517,7 @@ export class HoundView extends BeastView {
     this.tailFlame.position.copy(this.tailPoints[3]);
     this.tailFlame.material.opacity = 0.75 + 0.15 * Math.sin(t * 2.2);
     if (ctx.dying > 0 && Math.random() < 0.5) ctx.sparks.emit(base.x + (Math.random() - 0.5) * 2.5, 1 + Math.random(), -0.5, 1, { color: EMBER, speed: 1.2, up: 1.5, life: 1, size: 0.25, gravity: -0.5 });
-    this.applyFlash(dt, ctx.reduced, this.tellTint(beast.strikes));
+    this.applyFlash(dt, ctx.reduced, this.tellTint(beast.strikes, 0.08));
   }
 }
 
@@ -744,7 +744,7 @@ export class SirenView extends BeastView {
     }
     for (; n < this.notes.length; n++) this.notes[n].mesh.visible = this.notes[n].glow.visible = false;
     if (ctx.dying > 0 && Math.random() < 0.6) ctx.sparks.emit(p.x + (Math.random() - 0.5), p.y, p.z, 2, { color: SONG, speed: 1.5, up: 0.5, life: 1.2, size: 0.3, gravity: 1 });
-    this.applyFlash(dt, ctx.reduced, this.tellTint(beast.strikes));
+    this.applyFlash(dt, ctx.reduced, this.tellTint(beast.strikes, 0.1));
   }
 }
 
@@ -900,7 +900,7 @@ export class KrakenView extends BeastView {
     }
     for (; n < this.bursts.length; n++) { this.bursts[n].mesh.visible = false; this.bursts[n].glow.material.opacity = 0; }
     if (ctx.dying > 0 && Math.random() < 0.5) ctx.sparks.emit(EDGE_X + 1 + Math.random(), -0.5 + Math.random() * 2, -1, 1, { color: new THREE.Color(0xbfe8ff), speed: 0.8, up: 2, life: 1, size: 0.25, gravity: -2 });
-    this.applyFlash(dt, ctx.reduced, this.tellTint(beast.strikes, 0.18));
+    this.applyFlash(dt, ctx.reduced, this.tellTint(beast.strikes, 0.08));
   }
 
   private readonly tmpVec = new THREE.Vector3();

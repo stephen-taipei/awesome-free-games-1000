@@ -225,3 +225,4 @@ body[data-tier="1"] { --accent: #ff5a6e; --accent-ink: #2a0008; }
 @media (max-width: 900px) and (min-width: 641px) {
   .g3d-chip .g3d-meter { width: 6.2rem; }
 }
+.ladder-hint.warn { color: #ff9aa8; }

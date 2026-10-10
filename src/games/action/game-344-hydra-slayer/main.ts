@@ -219,7 +219,12 @@ const cardButtons = BEASTS.map((_id, i) => {
   button.className = `card card-${BEASTS[i]}`;
   button.innerHTML = '<span class="card-rung"></span><b class="card-name"></b><small class="card-status"></small>';
   button.addEventListener('click', () => {
-    if (!isUnlocked(progress, i, selected.tier)) { sfx.tone(160, 0.1, { type: 'square', gain: 0.05 }); return; }
+    if (!isUnlocked(progress, i, selected.tier)) {
+      sfx.tone(160, 0.1, { type: 'square', gain: 0.05 });
+      const before = rungAt(rungOf(i, selected.tier) - 1);
+      showHint(t('game.lockedHint', { beast: beastName(before.beast) }));
+      return;
+    }
     sfx.unlock();
     sfx.tone(520 + i * 80, 0.08, { type: 'triangle', gain: 0.06 });
     selected.beast = i;
@@ -231,13 +236,20 @@ const cardButtons = BEASTS.map((_id, i) => {
 const tierButtons = [0, 1].map(tier => {
   const button = $<HTMLButtonElement>(`tier-${tier}`);
   button.addEventListener('click', () => {
-    if (tier === 1 && !nightmareOpen(progress)) { showToast(t('game.nightmareLocked'), 'warn', 1800); return; }
+    if (tier === 1 && !nightmareOpen(progress)) { sfx.tone(160, 0.1, { type: 'square', gain: 0.05 }); showHint(t('game.nightmareLocked')); return; }
     selected.tier = tier as Tier;
     if (!isUnlocked(progress, selected.beast, selected.tier)) selected.beast = 0;
     selectionChanged();
   });
   return button;
 });
+
+/** Locked cards explain themselves in the hint line under the ladder (a toast would sit behind the menu). */
+function showHint(text: string) {
+  const hint = $('ladder-hint');
+  hint.textContent = text;
+  hint.classList.add('warn');
+}
 
 function selectionChanged() {
   current = { beast: selected.beast, tier: selected.tier };
@@ -265,6 +277,7 @@ function renderLadder() {
     status.textContent = !unlocked ? `🔒 ${t('game.locked')}` : time > 0 ? `${formatTime(time)}${hasMedal(i, selected.tier) ? ' ★' : ''}` : t('game.fresh');
   });
   $('ladder-hint').textContent = t(`hint.${BEASTS[selected.beast]}`);
+  $('ladder-hint').classList.remove('warn');
 }
 
 function renderOverlay() {

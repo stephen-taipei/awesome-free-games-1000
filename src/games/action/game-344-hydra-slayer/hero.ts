@@ -326,7 +326,7 @@ export class HeroView {
 
     // Hit flash on every hero material.
     this.flashT = Math.max(0, this.flashT - dt);
-    const f = reduced ? Math.min(0.3, this.flashT * 3) : Math.min(0.42, this.flashT * 4);
+    const f = reduced ? Math.min(0.18, this.flashT * 2) : Math.min(0.3, this.flashT * 4);
     for (const m of this.materials) {
       if (m === steel) continue;
       rimOf(m).uFlash.value.copy(this.flashColor).multiplyScalar(Math.min(1, f));

@@ -540,7 +540,9 @@ export class BeastfallGame {
     const safeW = Math.max(120, w - right);
     const fitW = (x1 - x0) / (2 * TAN_HALF * aspect * (safeW / w) * 0.94);
     const fitH = (high - low) / (2 * TAN_HALF * (safeH / h) * 0.9);
-    const d = clamp(Math.max(fitW, fitH), 10, 90);
+    let d = clamp(Math.max(fitW, fitH), 10, 90);
+    // A finisher pulls the camera in a little (not under reduced motion).
+    if (!this.reduced && duel.hero.action === 'finisher') d *= 0.86;
     const unitsPerPx = (2 * TAN_HALF * d) / h;
     const x = (x0 + x1) / 2 - (safeW / 2 - w / 2) * unitsPerPx;
     const y = (low + high) / 2 + (top + safeH / 2 - h / 2) * unitsPerPx;

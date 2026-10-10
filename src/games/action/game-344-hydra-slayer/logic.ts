@@ -734,7 +734,11 @@ export class Hydra extends Beast {
     this.hp = this.maxHp;
   }
 
-  health(): number { return this.heads.filter(h => h.state !== 'gone').length / this.heads.length; }
+  /** Burned heads are gone for good; a stump still counts for something until it is burned too. */
+  health(): number {
+    const left = this.heads.reduce((sum, h) => sum + (h.state === 'gone' ? 0 : h.state === 'stump' ? 0.4 : 0.4 + 0.6 * h.hp / h.max), 0);
+    return clamp01(left / this.heads.length);
+  }
   get defeated(): boolean { return this.heads.every(h => h.state === 'gone'); }
   frontX(): number { return HYDRA_FRONT; }
 
