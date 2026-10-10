@@ -253,7 +253,7 @@ if (!game) {
 
 bindSoundButton(soundBtn, sfx);
 
-// The HUD stays above the overlay and wraps to two rows on narrow screens: keep the panels below it.
+// The HUD wraps to two rows on narrow screens and its actions sit above the overlay: keep the panels below it.
 const clearHud = () => overlay.style.setProperty('--hud-bottom', `${Math.ceil(hudEl.getBoundingClientRect().bottom)}px`);
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(clearHud).observe(hudEl);
 window.addEventListener('resize', clearHud);

@@ -33,10 +33,10 @@ body {
   align-items: flex-start;
   gap: 12px;
   pointer-events: none;
-  /* Above the overlay (8) so the language and sound controls work in menus; the pause button is disabled there. */
-  z-index: 9;
 }
-.g3d-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+/* No z-index on .g3d-hud, so its children stack against the overlay (8): the stats stay under it and the
+   actions sit above it, so the language and sound controls work in menus (pause is disabled there). */
+.g3d-stats { position: relative; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; }
 .g3d-chip {
   display: flex;
   flex-direction: column;
@@ -54,7 +54,7 @@ body {
 .g3d-meter { width: 7.5rem; height: 6px; margin-top: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
 .g3d-meter > i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left; transition: transform 0.15s linear; }
 
-.g3d-actions { display: flex; gap: 8px; pointer-events: auto; }
+.g3d-actions { position: relative; z-index: 9; display: flex; gap: 8px; pointer-events: auto; }
 .g3d-icon, .g3d-select {
   min-width: 44px;
   min-height: 44px;

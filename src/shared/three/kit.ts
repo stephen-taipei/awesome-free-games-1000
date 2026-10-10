@@ -244,7 +244,6 @@ export const best = {
   },
 };
 
-/** Tiny synthesized sound effects. No audio files; silent until a user gesture unlocks the context. */
 /**
  * Wires a mute toggle button to `sfx`. After a mouse or touch click the button gives up focus,
  * otherwise Keys would ignore every game key and Space would toggle the sound again.
@@ -263,6 +262,7 @@ export function bindSoundButton(button: HTMLButtonElement, sfx: Sfx): void {
   });
 }
 
+/** Tiny synthesized sound effects. No audio files; silent until a user gesture unlocks the context. */
 export class Sfx {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -341,7 +341,18 @@ export function setupI18n(dictionary: Dictionary, select: HTMLSelectElement | nu
     if (select) select.value = i18n.getLocale();
     if (notify) onChange?.();
   };
-  select?.addEventListener('change', () => i18n.setLocale(select.value as Locale));
+  if (select) {
+    // Keys ignores keys aimed at a focused select, so a language picked with a mouse or finger hands focus
+    // back to the game. Keyboard users keep focus on the select and can keep arrowing through languages.
+    let pointerPick = false;
+    select.addEventListener('pointerdown', () => { pointerPick = true; });
+    select.addEventListener('keydown', () => { pointerPick = false; });
+    select.addEventListener('change', () => {
+      i18n.setLocale(select.value as Locale);
+      if (pointerPick) select.blur();
+      pointerPick = false;
+    });
+  }
   i18n.onLocaleChange(() => apply());
   // The first pass runs before the caller holds `t`, so it does not call back.
   apply(false);
