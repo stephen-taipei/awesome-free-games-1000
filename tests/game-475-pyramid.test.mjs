@@ -153,3 +153,22 @@ test('the solver finds real winning lines', () => {
   }
   assert.ok(wins >= 3, `expected several provably winnable deals, got ${wins}`);
 });
+
+test('the fallback deals for New deal are provably winnable', () => {
+  // The deal numbers must mean the same deals as in the game, so check the copy above against the kit's rng.
+  const kit = fs.readFileSync('src/shared/three/kit.ts', 'utf8');
+  const rngSource = /export function rng\([\s\S]*?\n\}\n/.exec(kit)[0];
+  const rngJs = ts.transpileModule(rngSource, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
+  const kitRng = new Function(`${rngJs.replace('export ', '')}; return rng;`)();
+  for (const seed of [1, 475, 99999]) assert.deepEqual(L.shuffleDeck(kitRng(seed)), L.shuffleDeck(seeded(seed)));
+
+  assert.ok(L.WINNABLE_DEALS.length >= 5);
+  for (const deal of L.WINNABLE_DEALS) {
+    const start = L.newGame(L.shuffleDeck(seeded(deal)));
+    const { result, line } = L.solve(start, 5000);
+    assert.equal(result, 'win', `deal #${deal}`);
+    let s = start;
+    for (const action of line) { s = L.apply(s, action); assert.ok(s, `deal #${deal}: every move in the line is legal`); }
+    assert.equal(L.isWon(s), true, `deal #${deal}: the line clears the pyramid`);
+  }
+});

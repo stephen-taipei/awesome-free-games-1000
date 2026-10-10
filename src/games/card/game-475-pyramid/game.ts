@@ -1,12 +1,12 @@
 import { THREE, createStage, createLoop, Keys, trackPointer, clamp, damp, lerp, rng, prefersReducedMotion, type Stage } from '../../../shared/three/kit';
 import {
   WASTE, PYRAMID_SIZE, MAX_PASSES, ROW_BONUS, rowOf, colOf, rankOf, cardAt, isAvailable, availableSlots, canPair, canDraw,
-  canRedeal, redealsLeft, pyramidLeft, rowsEmpty, isWon, isStuck, findHint, finalScore, newGame, shuffleDeck, startSession,
-  play, undo as undoSession, solve, type Action, type State, type Session, type FinalScore,
+  canRedeal, redealsLeft, pyramidLeft, rowsEmpty, isWon, isStuck, findHint, removals, finalScore, newGame, shuffleDeck, startSession,
+  play, undo as undoSession, solve, WINNABLE_DEALS, type Action, type State, type Session, type FinalScore,
 } from './logic';
 import { buildAtlas, atlasRect, buildBack, buildFelt, buildGrain, buildGlow, buildDot, buildSlotMark, buildMiniCard, RANK_LABELS, SUIT_CHARS } from './textures';
 
-export interface Hud { score: number; moves: number; seconds: number; deal: number; redeals: number; stock: number; left: number; canUndo: boolean; }
+export interface Hud { score: number; moves: number; seconds: number; deal: number; redeals: number; stock: number; left: number; canUndo: boolean; /** A draw or a redeal is possible. */ canDraw: boolean; }
 export interface Result { won: boolean; deal: number; seconds: number; moves: number; left: number; score: FinalScore; }
 export type GameEvent = 'deal' | 'draw' | 'select' | 'match' | 'king' | 'invalid' | 'redeal' | 'undo' | 'hint' | 'row' | 'win' | 'stuck';
 export type Status = 'idle' | 'playing' | 'paused' | 'won' | 'stuck';
@@ -203,7 +203,11 @@ export class PyramidGame {
   private time = 0;
   private lockedUntil = 0;
   private seconds = 0;
+  /** performance.now() at the last frame the clock ran, or 0 when it was stopped. */
+  private clockAt = 0;
   private lastSecond = -1;
+  /** Bumped on every stuck position, so a stale game-over timer from before an undo does nothing. */
+  private overToken = 0;
   private winStart = -1;
   private timers: Array<{ at: number; fn: () => void }> = [];
   // Render on demand: a resting card table needs no new frames (or shadow maps) every vsync.
@@ -609,14 +613,13 @@ export class PyramidGame {
 
   // ---------------------------------------------------------------- public actions
 
-  /** A random deal number whose deal the solver can prove winnable (falls back to any deal). */
+  /** A random deal number whose deal the solver proves winnable (or a known winnable deal if none is found). */
   pickDeal(): number {
-    let deal = 1;
-    for (let i = 0; i < 14; i++) {
-      deal = 1 + Math.floor(Math.random() * 99999);
-      if (solve(newGame(shuffleDeck(rng(deal))), 5000).result === 'win') break;
+    for (let i = 0; i < 60; i++) {
+      const deal = 1 + Math.floor(Math.random() * 99999);
+      if (solve(newGame(shuffleDeck(rng(deal))), 5000).result === 'win') return deal;
     }
-    return deal;
+    return WINNABLE_DEALS[Math.floor(Math.random() * WINNABLE_DEALS.length)];
   }
 
   /** Lays a deal out instantly behind the menu. */
@@ -670,6 +673,7 @@ export class PyramidGame {
     this.hintCards = [];
     this.hintStock = false;
     this.seconds = 0;
+    this.clockAt = 0;
     this.lastSecond = -1;
     this.winStart = -1;
     this.timers = [];
@@ -685,7 +689,7 @@ export class PyramidGame {
     const state = this.session.state;
     if (canDraw(state)) this.act({ type: 'draw' });
     else if (canRedeal(state)) this.act({ type: 'redeal' });
-    else { this.onEvent('invalid'); this.onToast('game.noRedeals', undefined, true); }
+    else { this.onEvent('invalid'); this.onToast(state.waste.length ? 'game.noRedeals' : 'game.nothingToDraw', undefined, true); }
   }
 
   undo(): void {
@@ -716,7 +720,8 @@ export class PyramidGame {
     else if (action.type === 'king') this.hintCards = [cardAt(state, action.slot)!];
     else {
       this.hintStock = true;
-      this.onToast(action.type === 'draw' ? 'game.hintDraw' : 'game.hintRedeal');
+      // The solver may prefer drawing although a pair is free, when every free pair loses.
+      this.onToast(action.type === 'redeal' ? 'game.hintRedeal' : removals(state).length ? 'game.hintDrawFirst' : 'game.hintDraw');
     }
     if (solution.result === 'lose') this.onToast('game.hintLost', undefined, true);
     this.onEvent('hint');
@@ -751,16 +756,18 @@ export class PyramidGame {
       else if (state.streak >= 3) this.onToast('game.streakToast', { n: state.streak });
     }
     this.validateFocus();
-    this.emitHud();
     if (isWon(state)) this.win();
     else if (isStuck(state)) {
       this.state = 'stuck';
+      const token = ++this.overToken;
       this.later(1.15, () => {
-        if (this.state !== 'stuck') return;
+        if (this.state !== 'stuck' || token !== this.overToken) return;
         this.onEvent('stuck');
         this.onOver(this.result(false));
       });
     }
+    // After the status change, so the toolbar does not offer Undo during the win celebration.
+    this.emitHud();
     return true;
   }
 
@@ -815,6 +822,7 @@ export class PyramidGame {
       score: state.score, moves: state.moves, seconds: Math.floor(this.seconds), deal: this.dealNo,
       redeals: redealsLeft(state), stock: state.stock.length, left: pyramidLeft(state),
       canUndo: this.session.history.length > 0 && (this.state === 'playing' || this.state === 'stuck'),
+      canDraw: canDraw(state) || canRedeal(state),
     });
   }
 
@@ -1188,8 +1196,13 @@ export class PyramidGame {
       }
     }
     if (this.ready) {
-      this.seconds += dt;
+      // Real elapsed time, not the clamped dt, so the clock and the time bonus stay true below 20 fps.
+      const now = performance.now();
+      this.seconds += this.clockAt ? Math.min(now - this.clockAt, 1000) / 1000 : dt;
+      this.clockAt = now;
       if (Math.floor(this.seconds) !== this.lastSecond) { this.lastSecond = Math.floor(this.seconds); this.emitHud(); }
+    } else {
+      this.clockAt = 0;
     }
     if (this.state === 'playing' || this.state === 'stuck') this.handleKeys();
     else this.keys.clear();

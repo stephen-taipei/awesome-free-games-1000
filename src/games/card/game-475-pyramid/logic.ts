@@ -22,6 +22,8 @@ export const ROW_BONUS = 25;
 export const CLEAR_BONUS = 500;
 export const REDEAL_BONUS = 150;
 export const TIME_BONUS_SECONDS = 300;
+/** Deal numbers the solver proves winnable (checked in the tests); the fallback when a random search finds none. */
+export const WINNABLE_DEALS: readonly number[] = [3, 6, 8, 12, 14, 15, 20, 21];
 
 export type Suit = 0 | 1 | 2 | 3;
 export const rankOf = (card: number) => (card % 13) + 1;
@@ -231,7 +233,7 @@ export function undo(session: Session): Session | null {
 export interface Solution { result: 'win' | 'lose' | 'unknown'; /** The winning moves when result is 'win'. */ line: Action[]; }
 
 /**
- * Depth-first search for a winning line, used to prefer winnable random deals and to give smart
+ * Depth-first search for a winning line, used to pick winnable random deals and to give smart
  * hints. Result is 'win', 'lose' (search space exhausted) or 'unknown' (node budget spent).
  */
 export function solve(state: State, budget = 20000): Solution {

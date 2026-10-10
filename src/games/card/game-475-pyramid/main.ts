@@ -1,4 +1,4 @@
-import { Sfx, best, setupI18n } from '../../../shared/three/kit';
+import { Sfx, best, bindSoundButton, focusIfActive, onFocusLost, setupI18n } from '../../../shared/three/kit';
 import { PyramidGame, type GameEvent, type Hud, type Result } from './game';
 import { MAX_PASSES } from './logic';
 import { translations } from './i18n';
@@ -28,7 +28,7 @@ const sfx = new Sfx();
 type Mode = 'menu' | 'playing' | 'paused' | 'over';
 let mode: Mode = 'menu';
 let lastResult: (Result & { best: number; isNew: boolean }) | null = null;
-let lastHud: Hud = { score: 0, moves: 0, seconds: 0, deal: 1, redeals: MAX_PASSES - 1, stock: 24, left: 28, canUndo: false };
+let lastHud: Hud = { score: 0, moves: 0, seconds: 0, deal: 1, redeals: MAX_PASSES - 1, stock: 24, left: 28, canUndo: false, canDraw: true };
 let newDealArmedUntil = 0;
 
 const t = setupI18n(translations, $<HTMLSelectElement>('language-select'), () => { renderHud(lastHud); renderOverlay(); });
@@ -57,7 +57,7 @@ function renderHud(hud: Hud) {
   const label = hud.stock > 0 ? t('game.draw') : t('game.redeal');
   $('draw-label').textContent = label;
   drawBtn.setAttribute('aria-label', label);
-  drawBtn.disabled = hud.stock === 0 && hud.redeals === 0;
+  drawBtn.disabled = !hud.canDraw;
 }
 
 function renderOverlay() {
@@ -66,7 +66,7 @@ function renderOverlay() {
   const show = (id: string, visible: boolean) => { $(id).hidden = !visible; };
   const menu = mode === 'menu';
   show('controls', menu || mode === 'paused');
-  show('deal-row', menu);
+  show('deal-row', menu && !!game);
   show('values', menu);
   show('tip', menu);
   show('secondary', !menu);
@@ -113,7 +113,7 @@ function setMode(next: Mode) {
   pauseBtn.disabled = next !== 'playing';
   bar.classList.toggle('off', next === 'menu');
   renderOverlay();
-  if (!overlay.hidden) startBtn.focus({ preventScroll: true });
+  if (!overlay.hidden) focusIfActive(startBtn);
   else (document.activeElement as HTMLElement | null)?.blur();
 }
 
@@ -158,7 +158,7 @@ if (!game) {
   note.setAttribute('role', 'alert');
   note.dataset.i18n = 'game.fallback';
   note.textContent = t('game.fallback');
-  stageEl.append(note);
+  startBtn.after(note);
   startBtn.disabled = true;
   startBtn.hidden = true;
   pauseBtn.disabled = true;
@@ -212,7 +212,8 @@ if (!game) {
   dealInput.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); startBtn.click(); } });
 
   const requestNewDeal = () => {
-    if (mode !== 'playing') return;
+    // Not during the win celebration or before the stuck result: the round must end and its score count.
+    if (mode !== 'playing' || game.status === 'won' || game.status === 'stuck') return;
     if (lastHud.moves > 0 && game.status === 'playing' && performance.now() > newDealArmedUntil) {
       newDealArmedUntil = performance.now() + 2500;
       showToast(t('game.newDealConfirm'));
@@ -243,17 +244,10 @@ if (!game) {
     else if (event.code === 'Escape' && mode === 'paused') { game.resume(); setMode('playing'); }
     else if (event.code === 'KeyN' && mode === 'playing' && !event.ctrlKey && !event.metaKey) requestNewDeal();
   });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+  onFocusLost(pauseGame);
 }
 
-soundBtn.setAttribute('aria-pressed', String(!sfx.muted));
-soundBtn.textContent = sfx.muted ? '♪̸' : '♪';
-soundBtn.addEventListener('click', () => {
-  sfx.unlock();
-  sfx.setMuted(!sfx.muted);
-  soundBtn.setAttribute('aria-pressed', String(!sfx.muted));
-  soundBtn.textContent = sfx.muted ? '♪̸' : '♪';
-});
+bindSoundButton(soundBtn, sfx);
 
 renderHud(lastHud);
 setMode('menu');
