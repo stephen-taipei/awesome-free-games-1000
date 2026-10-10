@@ -30,6 +30,8 @@ const BEAM_NEAR = 1.8;
 const BEAM_FAR = 30;
 const PLAY_PITCH = 0.9;
 const IDLE_PITCH = 0.5;
+/** A finger held on the sea focuses the beam only once the beam is this close (radians) to it. */
+const TOUCH_FOCUS_ARC = 0.2;
 
 /** Swell: direction x, direction z, wavenumber, angular speed, amplitude. Shared by the shader and the CPU bobbing. */
 const WAVES: ReadonlyArray<readonly [number, number, number, number, number]> = [
@@ -385,6 +387,8 @@ export class LighthouseWatch {
   private aimMode: 'keys' | 'point' = 'keys';
   private aimTarget = 0;
   private pointerHeld = false;
+  /** The held pointer is a finger or pen, which aims and focuses with one press; a mouse aims by hovering first. */
+  private pointerTouch = false;
   private touchLeft = false;
   private touchRight = false;
   private touchFocus = false;
@@ -445,6 +449,7 @@ export class LighthouseWatch {
       const rect = host.getBoundingClientRect();
       this.aimAt(event.clientX - rect.left, event.clientY - rect.top);
     });
+    host.addEventListener('pointerdown', event => { this.pointerTouch = event.pointerType !== 'mouse'; });
     host.addEventListener('contextmenu', event => event.preventDefault());
     this.stageDecor();
     this.loop.start();
@@ -1101,7 +1106,10 @@ export class LighthouseWatch {
 
     if (running) {
       this.steer(dt);
-      const wantsFocus = this.keys.isDown('Space', 'ArrowUp', 'KeyW') || this.pointerHeld || this.touchFocus;
+      // A finger swings the beam at the wide rate, burning no oil, and focuses once the beam has reached it.
+      const pointerFocus = this.pointerHeld
+        && (!this.pointerTouch || this.aimMode !== 'point' || Math.abs(wrap(this.aimTarget - this.beam)) < TOUCH_FOCUS_ARC);
+      const wantsFocus = this.keys.isDown('Space', 'ArrowUp', 'KeyW') || pointerFocus || this.touchFocus;
       const events = this.sim.step(dt, { beam: this.beam, focus: wantsFocus, flash: this.flash > 0.45 });
       for (let i = 0; i < events.length; i++) this.handle(events[i]);
       if (this.sim.focused && !this.wasFocused) this.onEvent('focus');

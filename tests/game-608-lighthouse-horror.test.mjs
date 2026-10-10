@@ -7,7 +7,7 @@ const source = fs.readFileSync('src/games/horror/game-608-lighthouse-horror/logi
 const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
 const logic = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
 const {
-  TAU, MAX_LIVES, OIL_MAX, OIL_DRAIN, OIL_RELIGHT, BARREL_OIL, WIDE_HALF, FOCUS_HALF, DOOR_RADIUS, SPAWN_RADIUS, STATS, KINDS,
+  TAU, MAX_LIVES, OIL_MAX, OIL_DRAIN, OIL_REGEN, OIL_RELIGHT, BARREL_OIL, WIDE_HALF, FOCUS_HALF, DOOR_RADIUS, SPAWN_RADIUS, STATS, KINDS,
   wrap, turnToward, beamHalf, inBeam, speedFactor, nightPlan, pickKind, introducedOn, scoreFor, nightBonus, WatchSim,
 } = logic;
 
@@ -167,10 +167,18 @@ test('focusing drains oil; a dry lamp cannot focus until it has trickled back', 
   assert.ok(sim.oil < OIL_RELIGHT);
   run(sim, 0.5, { beam: 0, focus: true });
   assert.equal(sim.focused, false, 'still too dry to relight');
-  run(sim, 4, { beam: 0, focus: false });
+  run(sim, OIL_RELIGHT / OIL_REGEN + 0.5, { beam: 0, focus: false });
   assert.ok(sim.oil >= OIL_RELIGHT);
   run(sim, 0.1, { beam: 0, focus: true });
   assert.equal(sim.focused, true);
+});
+
+test('a dry lamp held on drifting oil relights with enough focus to haul it in', () => {
+  const sim = quietNight();
+  sim.oil = 0;
+  sim.flotsam.push({ id: 903, kind: 'oil', angle: 0, dist: 12, drift: 0, life: 60, pull: 0, caught: false });
+  const events = run(sim, OIL_RELIGHT / OIL_REGEN + 2, { beam: 0, focus: true });
+  assert.ok(events.some(e => e.type === 'caught' && e.item.id === 903), 'one relit burst is enough to haul a barrel');
 });
 
 test('holding the focused beam on drifting oil hauls it in and refills the lamp; crates relight a lantern', () => {

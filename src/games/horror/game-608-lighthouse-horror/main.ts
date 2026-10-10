@@ -1,4 +1,4 @@
-import { Sfx, best, setupI18n, prefersReducedMotion } from '../../../shared/three/kit';
+import { Sfx, best, setupI18n, prefersReducedMotion, bindSoundButton, focusIfActive, onFocusLost } from '../../../shared/three/kit';
 import { LighthouseWatch, type Hud, type EventDetail, type GameEvent, type Threat } from './game';
 import { MAX_LIVES, BARREL_OIL, CRATE_OIL, CRATE_SCORE } from './logic';
 import { translations } from './i18n';
@@ -77,7 +77,7 @@ function setMode(next: typeof mode) {
   pauseBtn.disabled = next !== 'playing';
   document.body.classList.toggle('is-playing', next === 'playing');
   renderOverlay();
-  if (!overlay.hidden) startBtn.focus({ preventScroll: true });
+  if (!overlay.hidden) focusIfActive(startBtn);
   else (document.activeElement as HTMLElement | null)?.blur();
 }
 
@@ -187,10 +187,11 @@ if (!game) {
   note.setAttribute('role', 'alert');
   note.dataset.i18n = 'game.fallback';
   note.textContent = t('game.fallback');
-  stageEl.append(note);
+  startBtn.after(note);
   startBtn.disabled = true;
   startBtn.hidden = true;
   pauseBtn.disabled = true;
+  $('touch').hidden = true;
 } else {
   game.onHud = renderHud;
   game.onPopup = popup;
@@ -230,12 +231,14 @@ if (!game) {
     else game.start();
     setMode('playing');
   });
-  pauseBtn.addEventListener('click', () => { if (mode === 'playing') { game.pause(); setMode('paused'); } });
+  // While the last lantern gutters out (the game is 'dying') there is nothing to pause: the results follow.
+  const pause = () => { if (mode === 'playing' && game.status === 'running') { game.pause(); setMode('paused'); } };
+  pauseBtn.addEventListener('click', pause);
   window.addEventListener('keydown', event => {
-    if ((event.code === 'KeyP' || event.code === 'Escape') && mode === 'playing') { game.pause(); setMode('paused'); }
+    if ((event.code === 'KeyP' || event.code === 'Escape') && mode === 'playing') pause();
     else if (event.code === 'Escape' && mode === 'paused') { game.resume(); setMode('playing'); }
   });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'playing') { game.pause(); setMode('paused'); } });
+  onFocusLost(pause);
 
   // Hold-to-use touch buttons.
   document.querySelectorAll<HTMLButtonElement>('#touch [data-control]').forEach(button => {
@@ -260,14 +263,7 @@ if (!game) {
   }, 1000);
 }
 
-soundBtn.setAttribute('aria-pressed', String(!sfx.muted));
-soundBtn.textContent = sfx.muted ? '♪̸' : '♪';
-soundBtn.addEventListener('click', () => {
-  sfx.unlock();
-  sfx.setMuted(!sfx.muted);
-  soundBtn.setAttribute('aria-pressed', String(!sfx.muted));
-  soundBtn.textContent = sfx.muted ? '♪̸' : '♪';
-});
+bindSoundButton(soundBtn, sfx);
 
 renderHud({ score: 0, night: 1, lives: MAX_LIVES, oil: 100, banished: 0, focused: false });
 setMode('menu');

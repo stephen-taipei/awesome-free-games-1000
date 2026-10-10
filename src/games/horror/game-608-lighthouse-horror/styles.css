@@ -114,11 +114,26 @@
 @media (min-width: 900px) and (min-aspect-ratio: 23/20) {
   .g3d-overlay { place-items: center start; padding-left: max(5vw, 32px); }
 }
+/* Below about 660px the stats wrap onto a second row (680px leaves room for a long score). The HUD sits above
+   the overlay, so menus start below it; toasts use the width and stay below it too. */
+@media (max-width: 680px) {
+  .g3d-overlay { padding-top: calc(max(12px, env(safe-area-inset-top)) + 116px); }
+  .g3d-toast { top: max(22%, calc(max(12px, env(safe-area-inset-top)) + 160px)); width: max-content; max-width: calc(100% - 32px); text-align: center; }
+}
 @media (max-width: 560px) {
   .g3d-stats { display: grid; grid-template-columns: repeat(2, auto); gap: 6px; }
   .g3d-chip.oil-chip { min-width: 0; }
   .oil-chip .g3d-meter { width: 3.7rem; }
   .g3d-result { grid-template-columns: repeat(2, 1fr); }
+}
+/* Phones up to 414px wide, and the site's iframe on them: the language select sits above the sound and
+   pause buttons, so the stats keep their full labels and the pause button stays on screen. */
+@media (max-width: 420px) {
+  .g3d-hud { gap: 8px; }
+  .g3d-stats { grid-template-columns: repeat(2, max-content); }
+  .g3d-actions { display: grid; grid-template-columns: repeat(2, auto); }
+  .g3d-actions .g3d-select { grid-column: 1 / -1; width: 100%; max-width: none; }
+  .g3d-actions .g3d-icon { padding: 0 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .scare.hit { animation-duration: 0.4s; }

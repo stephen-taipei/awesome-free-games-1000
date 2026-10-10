@@ -13,8 +13,8 @@ export const OIL_MAX = 100;
 export const OIL_DRAIN = 12;
 /** Oil the wick trickles back per second while the beam is wide. */
 export const OIL_REGEN = 2;
-/** A dry lamp needs this much oil before it can focus again. */
-export const OIL_RELIGHT = 6;
+/** A dry lamp needs this much oil, a full second of focus, before it can focus again. */
+export const OIL_RELIGHT = 12;
 export const BARREL_OIL = 40;
 export const CRATE_OIL = 20;
 export const CRATE_SCORE = 50;
