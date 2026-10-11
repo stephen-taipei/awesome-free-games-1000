@@ -8,9 +8,10 @@ const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarg
 const logic = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
 const {
   SUB_STEP, HALF_WIDTH, STAND_HEIGHT, LOW_HEIGHT, VAULT_MAX, WALL_MIN, PIPE_LOW, PIPE_HIGH, HARD_FALL, CANOPY_DROP, CORNER,
-  TAKEOFF_SLACK, LEAD_START, LEAD_MAX, LEAD_WARN, WINDOW_START, WINDOW_END, DISTRICT_LENGTH, SET_PIECES, COYOTE,
-  speedsAt, districtAt, timingWindow, boostedSpeed, stumbleSpeed, relaxSpeed, advanceLead, airStep, flightTime, jumpApex, maxGap,
-  Course, RunSim,
+  TAKEOFF_SLACK, LEAD_START, LEAD_MAX, LEAD_WARN, WINDOW_START, WINDOW_END, DISTRICT_LENGTH, DISTRICT_BLEND, SET_PIECES, COYOTE,
+  SWIPE_CREDIT, ROLL_LATE,
+  speedsAt, districtAt, districtKey, timingWindow, boostedSpeed, stumbleSpeed, relaxSpeed, advanceLead, airStep, flightTime, jumpApex, maxGap,
+  longestJump, signatureOf, signatureCount, Course, RunSim,
 } = logic;
 
 function seeded(seed) {
@@ -265,7 +266,7 @@ test('course layout: obstacles sit inside roofs with run-up room, walls join the
       const top = speedsAt(deck.x0).top;
       assert.ok(deck.x1 - last.x1 >= top * (0.22 + Math.sqrt(2 * CANOPY_DROP / 34)));
     }
-    // Set pieces do not appear before their district.
+    // Every kind of set piece turns up on every seed (each one's own district is checked above).
     assert.ok(course.counts.wall > 0 && course.counts.crane > 0 && course.counts.zip > 0 && course.counts.canopy > 0, `seed ${seed}: ${JSON.stringify(course.counts)}`);
   }
 });
@@ -525,18 +526,6 @@ test('more precise play lasts longer', () => {
   assert.ok(low < mid && mid < high, `${low.toFixed(0)} < ${mid.toFixed(0)} < ${high.toFixed(0)}`);
 });
 
-test('a swipe that starts as a tap slams back down into a slide', () => {
-  const sim = staged({ roofs: [[-20, 60, 0]], speed: 6 });
-  step(sim, 0.2);
-  step(sim, DT, press('jump'));
-  step(sim, 0.05, { jump: true, slide: false, jumpPressed: false, slidePressed: false });
-  assert.equal(sim.mode, 'air');
-  const events = [...step(sim, DT, press('slide')), ...step(sim, 0.12, { jump: false, slide: true, jumpPressed: false, slidePressed: false })];
-  assert.equal(sim.mode, 'slide');
-  assert.ok(events.some(e => e.type === 'land' && !e.hard), 'a slam is never a hard landing');
-  assert.equal(stumbles(events), 0);
-});
-
 test('the start is fair: a long runway, a full lead and no obstacles before the first gap', () => {
   const sim = new RunSim(seeded(4));
   assert.equal(sim.lead, LEAD_START);
@@ -546,4 +535,226 @@ test('the start is fair: a long runway, a full lead and no obstacles before the 
   assert.ok(sim.course.obstacles.every(o => o.x0 > first.x1));
   const start = sim.speed;
   assert.ok(start > speedsAt(0).drone, 'starts out faster than the drone');
+});
+
+/** A sim on a copy of part of a generated course (roofs i-1 to i+2 and their canopy panels; no obstacles or zips). */
+function slice(course, i) {
+  const sim = new RunSim(seeded(1), { pursuit: false });
+  const roofs = course.roofs.slice(i - 1, i + 3).map(r => ({ ...r }));
+  const x0 = roofs[0].x0;
+  const x1 = roofs[roofs.length - 1].x1;
+  sim.course.roofs = roofs;
+  sim.course.obstacles = [];
+  sim.course.zips = [];
+  sim.course.panels = course.panels.filter(p => p.x0 >= x0 && p.x1 <= x1).map(p => ({ ...p }));
+  sim.course.cursor = 1e9;
+  return sim;
+}
+
+/** Jumps off the end of roof i-1 at a steady `speed`, pressing `tau` s before its edge (negative: in coyote time) and holding jump until touchdown. */
+function fullHold(course, i, speed, tau) {
+  const sim = slice(course, i);
+  const prev = sim.course.roofs[0];
+  const edge = prev.x1 + HALF_WIDTH;
+  sim.x = edge - Math.max(tau, 0) * speed - 1.5;
+  sim.y = sim.lastTop = prev.top;
+  sim.speed = speed;
+  sim.support = sim.supportAt(sim.x, sim.y);
+  let pressed = null;
+  for (let k = 0; k < 900 && sim.alive; k++) {
+    const input = { jump: pressed !== null, slide: false, jumpPressed: false, slidePressed: false };
+    if (pressed === null && sim.x >= edge - tau * speed) { pressed = sim.clock; input.jump = input.jumpPressed = true; }
+    sim.speed = speed;
+    sim.step(SUB_STEP, input);
+    if (pressed !== null && sim.clock - pressed > 0.05 && sim.grounded && !sim.support?.panel) break;
+  }
+  return sim;
+}
+
+test('a jump held until touchdown never falls: at any speed, from the earliest perfect press to the end of coyote time', () => {
+  let checked = 0;
+  let booms = 0;
+  for (let seed = 1; seed <= 10; seed++) {
+    const course = new Course(seeded(seed));
+    course.extend(5600);
+    const roofs = course.roofs;
+    for (let i = 1; i < roofs.length - 3; i++) {
+      const prev = roofs[i - 1];
+      const roof = roofs[i];
+      // Kick walls are climbed and zip-lines carry the runner: neither is jumped.
+      if (roof.wall || roof.zipIn) continue;
+      const { floor } = speedsAt(Math.max(0, prev.x1 - 6));
+      const { top } = speedsAt(prev.x1 + 1);
+      for (const speed of [floor, (floor + top) / 2, top]) {
+        for (const tau of [timingWindow(prev.x1), 0, -(COYOTE - 0.02)]) {
+          const sim = fullHold(course, i, speed, tau);
+          checked++;
+          if (roof.kind === 'boom') booms++;
+          assert.ok(sim.alive, `seed ${seed}: full hold at ${speed.toFixed(1)} m/s, ${(tau * 1000).toFixed(0)} ms before the edge at ${prev.x1.toFixed(0)} m onto a ${roof.kind} fell (${sim.fallReason})`);
+        }
+      }
+    }
+  }
+  assert.ok(checked > 3000 && booms > 150, `checked ${checked} jumps, ${booms} onto crane booms`);
+  // The generator's promise behind it: whatever follows a gap reaches past the furthest full-hold landing.
+  assert.ok(longestJump(16, 0) > longestJump(8, 0) && longestJump(16, -5) > longestJump(16, 0));
+});
+
+test('a fall says how it happened: ran off the edge, came up short, or flew past the landing', () => {
+  const gap = { roofs: [[-20, 8, 0], [14, 60, 0]], speed: 6 };
+  const runoff = staged(gap);
+  const runEvents = step(runoff, 4);
+  assert.equal(runoff.status, 'fell');
+  assert.equal(runoff.fallReason, 'runoff');
+  assert.equal(runEvents.find(e => e.type === 'fell')?.fall, 'runoff');
+  const short = staged(gap);
+  step(short, (8 + HALF_WIDTH) / 6 - 0.1);
+  step(short, DT, press('jump', false));
+  step(short, 4);
+  assert.equal(short.fallReason, 'short');
+  // A short one-way boom with a high roof well past it: a held jump passes over the boom and meets the roof's face.
+  const long = staged({ roofs: [[-20, 8, 0], [10, 13, -0.5, { kind: 'boom', oneWay: true }], [21, 60, 1.5]], speed: 10 });
+  step(long, (8 + HALF_WIDTH) / 10 - 0.05);
+  step(long, DT, press('jump'));
+  step(long, 4, { jump: true, slide: false, jumpPressed: false, slidePressed: false });
+  assert.equal(long.status, 'fell');
+  assert.equal(long.fallReason, 'long');
+});
+
+test('keyboard: a slide pressed just after a jump buffers for the landing and never slams the runner into the gap', () => {
+  for (const after of [0.05, 0.1, 0.14]) {
+    const sim = staged({ roofs: [[-20, 10, 0], [13, 60, -1]], speed: 7 });
+    step(sim, (10 + HALF_WIDTH) / 7 - 0.06);
+    const start = sim.clock;
+    let slid = false;
+    const events = step(sim, 2.5, s => {
+      if (s.clock < start + DT / 2) return press('jump');
+      if (!slid && s.clock >= start + after - 1e-9) { slid = true; return { jump: true, slide: true, jumpPressed: false, slidePressed: true }; }
+      return { jump: true, slide: false, jumpPressed: false, slidePressed: false };
+    });
+    assert.ok(sim.alive && sim.x > 13, `S ${after * 1000} ms after the jump: ${sim.status}`);
+    assert.ok(!events.some(e => e.type === 'tuck' || e.type === 'bonk'));
+  }
+});
+
+/** A touch that comes down at `down` (a jump press) and is read as a swipe `lag` s later, then stays down. */
+const touch = (down, lag, { swipe = true, held = true } = {}) => {
+  let swiped = false;
+  return s => {
+    const age = s.clock - down;
+    if (age < DT / 2) return { jump: true, slide: false, jumpPressed: true, slidePressed: false, undecided: true };
+    if (age < lag - 1e-9) return { jump: true, slide: false, jumpPressed: false, slidePressed: false, undecided: true };
+    if (swipe && !swiped) { swiped = true; return { jump: true, slide: true, jumpPressed: false, slidePressed: true, swipeAge: age, sameTouch: true }; }
+    return { jump: held, slide: false, jumpPressed: false, slidePressed: false };
+  };
+};
+
+test('touch: a swipe is timed from when the finger came down, and takes back the hop that touch began', () => {
+  const w = timingWindow(0);
+  const pipe = () => staged({ roofs: [[-20, 60, 0]], obstacles: [{ kind: 'pipe', x0: 10, x1: 10.5, y0: PIPE_LOW, y1: PIPE_HIGH }], speed: 8 });
+  // Runs until the pipe is `before` seconds away (speed drifts towards the pace, so go by distance).
+  const until = (sim, before) => { while (10 - (sim.x + HALF_WIDTH) > before * sim.speed) sim.step(SUB_STEP, idle()); };
+  for (const lag of [0.05, 0.083, 0.12]) {
+    for (const before of [w - 0.01, w * 0.5, 0.03]) {
+      const sim = pipe();
+      until(sim, before);
+      const events = step(sim, 2, touch(sim.clock, lag));
+      const label = `finger down ${(before * 1000).toFixed(0)} ms before the pipe, swipe read after ${lag * 1000} ms`;
+      assert.equal(stumbles(events), 0, label);
+      assert.equal(perfects(events, 'slide'), 1, label);
+      assert.ok(events.some(e => e.type === 'tuck'), `${label}: the hop is taken back`);
+    }
+  }
+  // Swiping well before the window still ducks under, just without the boost.
+  const early = pipe();
+  until(early, w + 0.15);
+  const earlyEvents = step(early, 2, touch(early.clock, 0.08));
+  assert.equal(stumbles(earlyEvents), 0);
+  assert.equal(perfects(earlyEvents, 'slide'), 0);
+  // A touch that stays a tap hops into the pipe: one stumble, once the touch is read.
+  const tap = pipe();
+  until(tap, 0.05);
+  const tapEvents = step(tap, 2, touch(tap.clock, 0.14, { swipe: false, held: false }));
+  assert.equal(stumbles(tapEvents, 'pipe'), 1);
+  // A held long jump that later swipes down is not taken back: the slide waits for the landing.
+  const heldSim = staged({ roofs: [[-20, 60, 0]], speed: 8 });
+  step(heldSim, 0.3);
+  const heldEvents = step(heldSim, 2, touch(heldSim.clock, SWIPE_CREDIT + 0.15));
+  assert.ok(!heldEvents.some(e => e.type === 'tuck'));
+});
+
+test('touch: a swipe at a gap edge never takes back the leap', () => {
+  for (const lag of [0.05, 0.1]) {
+    const sim = staged({ roofs: [[-20, 10, 0], [13.5, 60, 0]], speed: 8 });
+    step(sim, (10 + HALF_WIDTH) / 8 - 0.05);
+    const events = step(sim, 2.5, touch(sim.clock, lag));
+    assert.ok(sim.alive && sim.x > 14, `swipe read after ${lag * 1000} ms: ${sim.status}`);
+    assert.ok(!events.some(e => e.type === 'tuck'));
+    assert.equal(perfects(events, 'edge'), 1);
+  }
+});
+
+test('touch: a swipe begun around a hard landing rolls even when it is read after touchdown, with no extra hop', () => {
+  const layout = { roofs: [[-20, 8, 0], [8, 60, -5.5]], speed: 6 };
+  // [seconds before touchdown the finger comes down (negative: after), recognition lag, rolls?]
+  for (const [early, lag, rolls] of [[0.1, 0.12, true], [0.05, 0.08, true], [0.02, 0.06, true], [-0.04, 0.07, true], [-ROLL_LATE - 0.04, 0.07, false]]) {
+    const sim = staged(layout);
+    const events = [];
+    const wait = () => events.push(...sim.step(SUB_STEP, idle()));
+    if (early >= 0) {
+      while (!(sim.mode === 'air' && sim.predict().landed && sim.predict().time <= early + 1e-9)) wait();
+    } else {
+      while (!events.some(e => e.type === 'land' && e.hard)) wait();
+      for (let t = SUB_STEP; t < -early - 1e-9; t += SUB_STEP) wait();
+    }
+    const input = touch(sim.clock, lag);
+    for (let k = 0; k < 240; k++) events.push(...sim.step(SUB_STEP, input(sim)));
+    const label = `finger down ${(early * 1000).toFixed(0)} ms before touchdown, read after ${lag * 1000} ms`;
+    assert.equal(perfects(events, 'roll'), rolls ? 1 : 0, label);
+    assert.equal(stumbles(events), rolls ? 0 : 1, label);
+    if (rolls) assert.equal(events.filter(e => e.type === 'jump').length, 0, `${label}: no hop`);
+  }
+});
+
+test('the edge cue stays up through coyote time', () => {
+  const sim = staged({ roofs: [[-20, 10, 0], [13, 60, 0]], speed: 6 });
+  while (sim.mode !== 'air') sim.step(SUB_STEP, idle());
+  sim.step(SUB_STEP * 4, idle());
+  assert.ok(sim.coyote > 0);
+  const cue = sim.cue();
+  assert.ok(cue && cue.move === 'edge' && cue.tau < 0 && cue.tau >= -cue.late, JSON.stringify(cue));
+  while (sim.coyote > 0) sim.step(SUB_STEP, idle());
+  assert.notEqual(sim.cue()?.move, 'edge');
+});
+
+test('every district shows its own set piece several times, and set pieces get denser with distance', () => {
+  const seeds = 20;
+  const districts = 10;
+  const total = Array.from({ length: districts }, () => 0);
+  for (let seed = 1; seed <= seeds; seed++) {
+    const course = new Course(seeded(seed));
+    course.extend(districts * DISTRICT_LENGTH + 300);
+    const counts = Array.from({ length: districts }, () => ({ wall: 0, crane: 0, zip: 0, canopy: 0 }));
+    const add = (kind, d) => {
+      if (d >= districts) return;
+      assert.ok(d >= SET_PIECES[kind], `seed ${seed}: ${kind} in district ${d}, before it is introduced`);
+      counts[d][kind]++;
+      total[d]++;
+    };
+    for (const roof of course.roofs) {
+      if (roof.wall) add('wall', roof.district);
+      if (roof.kind === 'boom') add('crane', districtAt(roof.x0 - roof.gap));
+    }
+    for (const zip of course.zips) add('zip', zip.district);
+    for (const group of new Set(course.panels.map(p => p.group))) add('canopy', course.panels.find(p => p.group === group).district);
+    for (let d = 1; d < districts; d++) {
+      const signature = signatureOf(d);
+      if (signature) assert.ok(counts[d][signature] >= signatureCount(d), `seed ${seed}: ${districtKey(d)} (district ${d + 1}) has ${counts[d][signature]} × ${signature}`);
+    }
+  }
+  assert.equal(signatureOf(0), null);
+  assert.ok(signatureCount(2) >= 3 && signatureCount(7) >= 2);
+  const early = (total[1] + total[2]) / 2 / seeds;
+  const late = (total[6] + total[7] + total[8]) / 3 / seeds;
+  assert.ok(late > early + 0.5, `set pieces per district: ${early.toFixed(1)} early, ${late.toFixed(1)} later`);
 });

@@ -1,7 +1,7 @@
 import { THREE, createStage, createLoop, Keys, trackPointer, clamp, damp, lerp, rng, prefersReducedMotion, type Stage } from '../../../shared/three/kit';
 import {
   RunSim, HALF_WIDTH, PIPE_LOW, PIPE_HIGH, ROLL_TIME, LEAD_MAX, ZIP_HANG, districtKey,
-  type SimEvent, type Input, type Cue, type Move, type Roof, type DistrictKey,
+  type SimEvent, type Input, type Cue, type Move, type Roof, type DistrictKey, type FallReason,
 } from './logic';
 import {
   PALETTES, LivePalette, BUILDING_VERTEX, BUILDING_FRAGMENT, SKY_VERTEX, SKY_FRAGMENT, SILHOUETTE_VERTEX, SILHOUETTE_FRAGMENT,
@@ -20,7 +20,12 @@ export interface Hud {
   combo: number;
   district: number;
 }
-export interface Result { distance: number; district: number; perfects: number; bestCombo: number; topSpeed: number; cause: 'caught' | 'fell'; }
+export interface Result {
+  distance: number; district: number; perfects: number; bestCombo: number; topSpeed: number;
+  cause: 'caught' | 'fell';
+  /** For a fall: ran off the edge, came up short, or jumped past the landing. */
+  fall: FallReason | null;
+}
 /** Sim events, plus footfalls for the step sound. */
 export type GameEvent = SimEvent | { type: 'step'; x: number; y: number };
 
@@ -30,11 +35,34 @@ const ROOF_Z1 = 2.2;
 const MAX_ROOFS = 48;
 const MAX_PROPS = 48;
 const FOV = 50;
+/** Landscape: at least this many metres of view above and below the camera's centre line. */
+const MIN_HALF_HEIGHT = 6.6;
 const JUMP_KEYS = ['Space', 'KeyW', 'ArrowUp'];
 const SLIDE_KEYS = ['KeyS', 'ArrowDown'];
+/** Touch: a downward drag this long (CSS px) is a swipe... */
+const SWIPE_PX = 20;
+/** ...if it took no longer than this (ms) from where the downward motion began. */
+const SWIPE_MS = 320;
+/** Touch: a fresh touch is undecided (it may still become a swipe) for at most this long (ms). */
+const DECIDE_MS = 140;
+/** After a pause, the run eases back from slow motion over this many seconds. */
+const RESUME_RAMP = 0.9;
 const ICONS: Record<Move, number> = { vault: 0, edge: 0, slide: 1, roll: 1, kick: 2, zip: 3 };
 
 type Status = 'idle' | 'running' | 'paused' | 'dying' | 'over';
+
+/** The finger trackPointer follows: where it came down, and where its current downward motion began. */
+interface Gesture {
+  /** Came down at (x, y) at time t (ms, the event's own time), and was seen by the page at `seen`. */
+  t: number; x: number; y: number; seen: number;
+  /** Anchor of the current downward motion, and when that motion began. */
+  ax: number; ay: number; at: number;
+  /** Latest position and time. */
+  cy: number; ct: number;
+  /** Known to be a tap, hold or swipe (timedOut: only because the frame clock ran out); a new swipe is possible
+   *  (after one, the finger must move back up first). */
+  decided: boolean; timedOut: boolean; armed: boolean; swipeY: number;
+}
 
 interface Particle { x: number; y: number; z: number; vx: number; vy: number; vz: number; life: number; max: number; size: number; grow: number; gravity: number; r: number; g: number; b: number; alpha: number; }
 
@@ -201,7 +229,6 @@ export class SkylineGetaway {
   private shadow!: THREE.Mesh;
   private drone = new THREE.Group();
   private droneLights: THREE.Sprite[] = [];
-  private rotors!: THREE.Mesh;
   private cone!: THREE.Mesh<THREE.ConeGeometry, THREE.ShaderMaterial>;
   private dust = new Particles(260, false);
   private sparks = new Particles(220, true);
@@ -209,6 +236,8 @@ export class SkylineGetaway {
   private rainDrops = new Float32Array(0);
   private lines!: THREE.LineSegments;
   private cue!: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
+  private cueTarget = new THREE.Vector3();
+  private cueNdc = new THREE.Vector3();
 
   // Camera and feel
   private camX = 0;
@@ -229,7 +258,18 @@ export class SkylineGetaway {
   /** Top band of the screen (a fraction of its height) covered by the HUD; the drone stays below it. */
   safeTop = 0.16;
   private autopilot = { hold: false, done: '' };
-  private pointer = { held: false, jump: false, slide: false, swiped: false, x: 0, y: 0, t: 0 };
+  /** Touch input: the fingers down, and the one whose press is the latest (it holds the jump). trackPointer's finger can also swipe. */
+  private fingers = new Set<number>();
+  private holdFinger = -1;
+  private gesture: Gesture | null = null;
+  private claimed = false;
+  /** The timeStamp of the pointer event being handled: when the finger actually moved, not when the page got to it. */
+  private stamp = Infinity;
+  private lastJumpBy: 'finger' | 'other' = 'other';
+  private queued = { jump: false, slide: false, swipeAt: 0, sameTouch: false };
+  private resumeRamp = 0;
+  /** A hop taken back by a swipe: the runner is drawn this much higher, settling quickly. */
+  private tuckOffset = 0;
   private lastDistrictShown = 0;
   private decorAnchor: Record<string, number> = { cranes: -1e9, wheel: -1e9 };
 
@@ -241,24 +281,32 @@ export class SkylineGetaway {
   private constructor(host: HTMLElement, stage: Stage) {
     this.stage = stage;
     this.buildScene();
+    // trackPointer follows one finger: a tap or hold jumps, a swipe down slides or rolls.
+    const stamp = (event: PointerEvent) => { this.stamp = event.timeStamp; };
+    host.addEventListener('pointerdown', stamp, true);
+    host.addEventListener('pointermove', stamp, true);
     trackPointer(host, {
-      down: (x, y) => {
-        if (this.status !== 'running') return;
-        Object.assign(this.pointer, { held: true, jump: true, swiped: false, x, y, t: performance.now() });
-      },
-      drag: (_dx, _dy, x, y) => {
-        const p = this.pointer;
-        if (this.status !== 'running' || p.swiped || !p.held) return;
-        const down = y - p.y;
-        // A quick downward swipe slides (or rolls); it cancels the hold so the hop it began stays short.
-        if (down > 26 && down > Math.abs(x - p.x) && performance.now() - p.t < 900) {
-          p.swiped = true;
-          p.held = false;
-          p.slide = true;
-        }
-      },
-      up: () => { this.pointer.held = false; },
+      down: (x, y) => this.fingerDown(x, y),
+      drag: (_dx, _dy, x, y) => this.fingerDrag(x, y),
+      up: () => { this.gesture = null; },
     });
+    // Every other finger (a thumb resting on the glass, the other hand) still jumps and holds.
+    host.addEventListener('pointerdown', event => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (this.claimed) {
+        this.claimed = false; // The finger trackPointer just took.
+      } else if (this.status === 'running') {
+        this.queued.jump = true;
+        this.lastJumpBy = 'other';
+      }
+      if (this.status === 'running') {
+        this.fingers.add(event.pointerId);
+        this.holdFinger = event.pointerId;
+      }
+    });
+    const lift = (event: PointerEvent) => { this.fingers.delete(event.pointerId); };
+    window.addEventListener('pointerup', lift);
+    window.addEventListener('pointercancel', lift);
     this.newRun(false);
     this.loop.start();
   }
@@ -278,6 +326,7 @@ export class SkylineGetaway {
     this.droneY = 5;
     this.dyingTime = 0;
     this.shake = 0;
+    this.tuckOffset = 0;
     this.lastDistrictShown = 0;
     this.paletteKey = 'dusk';
     this.palette.snap(PALETTES.dusk);
@@ -290,18 +339,89 @@ export class SkylineGetaway {
 
   start(): void {
     this.newRun(true);
-    this.keys.clear();
-    this.pointer = { held: false, jump: false, slide: false, swiped: false, x: 0, y: 0, t: 0 };
+    this.resetTouch();
+    this.resumeRamp = 0;
     this.status = 'running';
     this.emitHud();
   }
 
   pause(): void { if (this.status === 'running') this.status = 'paused'; }
+  /** Back from a pause: the run eases in from slow motion, so a pause just before an edge is not a fall. */
   resume(): void {
     if (this.status !== 'paused') return;
-    this.keys.clear();
-    this.pointer.held = false;
+    this.resetTouch();
+    this.resumeRamp = 1;
     this.status = 'running';
+  }
+
+  private resetTouch(): void {
+    this.keys.clear();
+    this.fingers.clear();
+    this.holdFinger = -1;
+    this.gesture = null;
+    this.claimed = false;
+    this.queued = { jump: false, slide: false, swipeAt: 0, sameTouch: false };
+  }
+
+  // --- Touch ---------------------------------------------------------------------------------------------------
+
+  private fingerDown(x: number, y: number): void {
+    if (this.status !== 'running') return;
+    const seen = performance.now();
+    const now = this.eventTime(seen);
+    this.claimed = true;
+    this.gesture = { t: now, x, y, seen, ax: x, ay: y, at: now, cy: y, ct: now, decided: false, timedOut: false, armed: true, swipeY: y };
+    this.queued.jump = true;
+    this.lastJumpBy = 'finger';
+  }
+
+  private fingerDrag(x: number, y: number): void {
+    const g = this.gesture;
+    if (!g || this.status !== 'running') return;
+    // Gesture times are the events' own: on a busy page a move can reach us long after the finger made it.
+    const now = this.eventTime(performance.now());
+    // Still the touch's first motion. Judged by event times: the frame clock may already have timed the touch out
+    // although the move itself came within DECIDE_MS of the touch.
+    const fresh = !g.decided || (g.timedOut && now - g.t < DECIDE_MS);
+    const prevY = g.cy;
+    const prevT = g.ct;
+    g.cy = y;
+    g.ct = now;
+    if (!g.armed && y < g.swipeY - 8) g.armed = true;
+    // Where the current downward motion began. A fresh touch counts from where it came down, so a swipe that begins
+    // at once is timed from the touch itself; a finger that has rested counts from when it left its resting place.
+    if (y < g.ay) { g.ax = x; g.ay = y; g.at = now; }
+    else if (!fresh && y - g.ay <= 3) { g.ax = x; g.at = now; }
+    else if (!fresh && prevY - g.ay <= 3) g.at = Math.max(prevT, now - 34);
+    const down = y - g.ay;
+    if (g.armed && down >= SWIPE_PX && down > Math.abs(x - g.ax) && now - g.at <= SWIPE_MS) {
+      // Read as a swipe: the slide (or roll) is credited to when the motion began, and takes back the hop it started.
+      this.queued.slide = true;
+      this.queued.swipeAt = g.at;
+      this.queued.sameTouch = this.lastJumpBy === 'finger' && fresh;
+      g.decided = true;
+      g.timedOut = false;
+      g.armed = false;
+      g.swipeY = y;
+      g.ax = x; g.ay = y; g.at = now;
+    } else if (fresh && Math.hypot(x - g.x, y - g.y) > SWIPE_PX) {
+      g.decided = true;
+      g.timedOut = false;
+    }
+  }
+
+  /** When the event being handled happened (its timeStamp, if that is on the performance clock and recent). */
+  private eventTime(now: number): number {
+    return this.stamp <= now && this.stamp > now - 1000 ? this.stamp : now;
+  }
+
+  /** A touch is down that may still turn out to be a swipe. */
+  private undecided(now: number): boolean {
+    const g = this.gesture;
+    if (!g) return false;
+    // Timed from when the page saw the touch: on a busy main thread the event itself can be much older.
+    if (!g.decided && now - g.seen >= DECIDE_MS) { g.decided = true; g.timedOut = true; }
+    return !g.decided || (g.armed && g.cy - g.ay >= 6 && now - g.at < SWIPE_MS);
   }
 
   // --- Scene construction --------------------------------------------------------------------------------------
@@ -401,8 +521,8 @@ export class SkylineGetaway {
     const positions: number[] = [];
     for (const g of rotorParts) { const p = g.toNonIndexed().getAttribute('position'); for (let i = 0; i < p.count; i++) positions.push(p.getX(i), p.getY(i), p.getZ(i)); }
     rotors.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    this.rotors = new THREE.Mesh(rotors, new THREE.MeshBasicMaterial({ color: '#cfd8e8', transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
-    this.drone.add(hull, this.rotors);
+    const rotorDiscs = new THREE.Mesh(rotors, new THREE.MeshBasicMaterial({ color: '#dfe8f6', transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide }));
+    this.drone.add(hull, rotorDiscs);
     const glow = softDisc();
     for (const color of ['#ff2a3a', '#2a6bff']) {
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
@@ -460,13 +580,24 @@ export class SkylineGetaway {
   // --- Frame ---------------------------------------------------------------------------------------------------
 
   private readInput(): Input {
-    const take = (key: 'jump' | 'slide') => { const v = this.pointer[key]; this.pointer[key] = false; return v; };
-    return {
-      jump: this.keys.isDown(...JUMP_KEYS) || this.pointer.held,
+    const now = performance.now();
+    const q = this.queued;
+    const keyJump = this.keys.consume(...JUMP_KEYS);
+    const keySlide = this.keys.consume(...SLIDE_KEYS);
+    if (keyJump) this.lastJumpBy = 'other';
+    const swipe = q.slide && !keySlide;
+    const input: Input = {
+      // A resting thumb does not hold every jump long: the finger that pressed last decides.
+      jump: this.keys.isDown(...JUMP_KEYS) || this.fingers.has(this.holdFinger),
       slide: this.keys.isDown(...SLIDE_KEYS),
-      jumpPressed: this.keys.consume(...JUMP_KEYS) || take('jump'),
-      slidePressed: this.keys.consume(...SLIDE_KEYS) || take('slide'),
+      jumpPressed: keyJump || q.jump,
+      slidePressed: keySlide || q.slide,
+      swipeAge: swipe ? Math.max(0, now - q.swipeAt) / 1000 : 0,
+      sameTouch: swipe && q.sameTouch && this.lastJumpBy === 'finger',
+      undecided: this.undecided(now),
     };
+    this.queued = { jump: false, slide: false, swipeAt: 0, sameTouch: false };
+    return input;
   }
 
   /** Attract mode: a bot that times every move, so the menu shows the game being played well. */
@@ -495,8 +626,15 @@ export class SkylineGetaway {
   private frame(dt: number, t: number): void {
     const sim = this.sim;
     let simDt = 0;
-    if (this.status === 'running') simDt = dt;
-    else if (this.status === 'idle') simDt = dt * 0.9;
+    if (this.status === 'running') {
+      simDt = dt;
+      if (this.resumeRamp > 0) {
+        // Ease back in after a pause: from a quarter speed to full over RESUME_RAMP seconds.
+        const k = 1 - this.resumeRamp;
+        simDt = dt * (0.25 + 0.75 * k * k * (3 - 2 * k));
+        this.resumeRamp = Math.max(0, this.resumeRamp - dt / RESUME_RAMP);
+      }
+    } else if (this.status === 'idle') simDt = dt * 0.9;
     else if (this.status === 'dying') simDt = dt * (this.dyingTime < 0.45 ? 0.45 : 1);
 
     if (simDt > 0) {
@@ -512,7 +650,7 @@ export class SkylineGetaway {
         this.status = 'over';
         this.onOver({
           distance: Math.floor(sim.distance), district: sim.district + 1, perfects: sim.perfects, bestCombo: sim.bestCombo,
-          topSpeed: Math.round(sim.maxSpeed * 3.6), cause: sim.status === 'caught' ? 'caught' : 'fell',
+          topSpeed: Math.round(sim.maxSpeed * 3.6), cause: sim.status === 'caught' ? 'caught' : 'fell', fall: sim.fallReason,
         });
       }
     }
@@ -570,6 +708,10 @@ export class SkylineGetaway {
         break;
       case 'district':
         this.lastDistrictShown = event.district ?? 0;
+        break;
+      case 'tuck':
+        // A swipe took back the hop its touch began: ease the drawn runner down instead of snapping.
+        this.tuckOffset = Math.max(this.tuckOffset, event.impact ?? 0);
         break;
       case 'caught': case 'fell':
         if (this.status === 'running') {
@@ -718,7 +860,9 @@ export class SkylineGetaway {
     const snap = sim.mode === 'roll' || sim.mode === 'vault' ? 30 : 16;
     blendPose(this.pose, p, dt > 0 ? damp(snap, dt) : 0);
     applyPose(rig, this.pose);
-    rig.root.position.set(sim.x, sim.y + (sim.mode === 'roll' ? 0 : 0), 0);
+    this.tuckOffset = dt > 0 ? lerp(this.tuckOffset, 0, damp(24, dt)) : this.tuckOffset;
+    if (this.tuckOffset < 0.01) this.tuckOffset = 0;
+    rig.root.position.set(sim.x, sim.y + this.tuckOffset, 0);
     if (sim.mode === 'roll') {
       // Roll about the body's centre, not the feet.
       rig.root.position.y = sim.y + 0.5;
@@ -763,25 +907,47 @@ export class SkylineGetaway {
     const aspect = width / height;
     const portrait = aspect < 1;
     const speed = sim.mode === 'zip' ? sim.zipSpeed : sim.speed;
-    const ahead = portrait ? clamp(6 + speed * 0.7, 10, 17.5) : clamp(10 + speed * 0.75, 13, 22);
-    const behind = portrait ? 3.2 : 8;
+    // About a second of look-ahead. Portrait screens are narrow, so they keep less behind the runner.
+    const ahead = portrait ? clamp(4.5 + speed * 0.7, 9.5, 16) : clamp(10 + speed * 0.75, 13, 22);
+    const behind = portrait ? 2.4 : 8;
     let span = ahead + behind;
     if (!portrait) span = Math.max(span, 9.5 * aspect);
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV) / 2);
-    const dist = clamp(span / (2 * tanHalf * aspect), 9, 70);
+    let dist = span / (2 * tanHalf * aspect);
+    // Short landscape screens (a phone held sideways): keep enough height in view for a big drop and the jump above it.
+    if (!portrait) dist = Math.max(dist, MIN_HALF_HEIGHT / tanHalf);
+    dist = clamp(dist, 9, 70);
+    const halfHeight = dist * tanHalf;
 
-    // Follow the roofs, and the runner when they go well above or below them.
+    // Follow the roofs. In the air, frame where the runner will come down; on the ground, lean towards lower roofs ahead.
     if (sim.alive || sim.status === 'caught') {
       let target = sim.lastTop;
       const off = sim.y - sim.lastTop;
-      if (off > 1.6) target += (off - 1.6) * 0.6;
-      if (off < -1) target += Math.max(off + 1, -4);
-      if (sim.mode === 'zip') target = sim.y;
-      this.groundY = lerp(this.groundY, target, damp(sim.mode === 'zip' ? 4 : 2.6, dt));
+      let rate = 2.6;
+      if (sim.mode === 'zip') {
+        target = sim.y;
+        rate = 4;
+      } else if (sim.mode === 'air') {
+        const landing = sim.blocked ? null : sim.predict();
+        if (landing?.landed) {
+          target = landing.y;
+          rate = 3.4;
+        } else if (off < -1) {
+          target += Math.max(off + 1, -4);
+        }
+      } else if (sim.grounded) {
+        let low = sim.lastTop;
+        for (const roof of sim.course.roofs) if (roof.x0 > sim.x && roof.x0 < sim.x + ahead * 0.75) low = Math.min(low, roof.top);
+        if (low < sim.lastTop - 1.5) target += Math.max(-1.5, (low - sim.lastTop) * 0.3);
+      }
+      if (off > 1.6 && sim.mode !== 'air') target += (off - 1.6) * 0.6;
+      this.groundY = lerp(this.groundY, target, damp(rate, dt));
     }
     const centerX = sim.x + (ahead - behind) / 2;
     this.camX = lerp(this.camX, centerX, damp(8, dt));
-    const centerY = this.groundY + (portrait ? 2.6 : 2.3);
+    // Roof line about two thirds of the way down: in portrait that leaves the sky, the drone and the drops in view
+    // rather than a tall facade below.
+    const centerY = this.groundY + (portrait ? halfHeight * 0.32 : 2.3);
     this.camY = lerp(this.camY, centerY, damp(6, dt));
     this.fovKick = Math.max(0, this.fovKick - dt * 5);
     this.shake = Math.max(0, this.shake - dt * 2.2);
@@ -936,8 +1102,9 @@ export class SkylineGetaway {
     this.droneX = lerp(this.droneX, wantX, damp(caught ? 3 : 9, dt));
     const bob = Math.sin(t * 2.1) * 0.25;
     this.drone.position.set(this.droneX, this.droneY + bob, 1.2);
+    // Tipped towards the camera so its rotors and guard rings show: seen exactly side-on it reads as a bar.
+    this.drone.rotation.x = 0.5;
     this.drone.rotation.z = -0.12 + Math.sin(t * 1.3) * 0.04;
-    this.rotors.rotation.y = t * 30;
     // Police lights alternate at about 1.2 Hz, gently (steady and dim when reduced motion is preferred).
     const phase = this.reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(t * Math.PI * 2 * 1.2);
     this.droneLights[0].material.opacity = this.reducedMotion ? 0.6 : 0.25 + 0.75 * phase;
@@ -1012,7 +1179,7 @@ export class SkylineGetaway {
         this.rainDrops[i * 3] = x;
         this.rainDrops[i * 3 + 1] = y;
         const z = this.rainDrops[i * 3 + 2];
-        const wx = ((x - cx * 0.0 + 1e4) % 70) - 35 + cx;
+        const wx = x + cx;
         pos.setXYZ(i * 2, wx, cy + y, z);
         pos.setXYZ(i * 2 + 1, wx + 0.12 + speed * 0.012, cy + y + 0.9, z);
       }
@@ -1057,16 +1224,25 @@ export class SkylineGetaway {
       u.uHot.value = hot ? 1 : 0;
       u.uProgress.value = hot ? 1 : clamp(1 - (cue.tau - cue.window) / 0.9, 0, 1);
       // Above the contact point, clear of the runner's head when they arrive there.
-      this.cue.position.set(cue.x, cue.y + 1.2, 0.8);
+      this.cueTarget.set(cue.x, cue.y + 1.2, 0.8);
     }
     u.uAlpha.value = this.cueAlpha;
     const camera = this.stage.camera;
     this.cue.quaternion.copy(camera.quaternion);
-    // A steady size on screen: about 7% of the view height, 44-68 px.
-    const { height } = this.stage;
+    // A steady size on screen: about 7% of the view height (12% of the width on narrow screens), 40-68 px.
+    const { width, height } = this.stage;
+    const px = clamp(Math.min(height * 0.075, width * 0.12), 40, 68) * (u.uHot.value ? 1.12 : 1);
     const metresPerPx = (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * (camera.position.z - 0.8)) / Math.max(1, height);
-    const size = clamp(height * 0.075, 44, 68) * metresPerPx * (u.uHot.value ? 1.12 : 1);
-    this.cue.scale.set(size, size, 1);
+    this.cue.scale.set(px * metresPerPx, px * metresPerPx, 1);
+    // Never off-screen: a telegraph the player cannot see is no telegraph. Keep the whole ring below the HUD and
+    // above the bottom edge.
+    const v = this.cueNdc.copy(this.cueTarget).project(camera);
+    const halfX = px / Math.max(1, width);
+    const halfY = px / Math.max(1, height);
+    const bottom = -1 + (2 * Math.min(64, height * 0.12)) / Math.max(1, height) + halfY;
+    const top = Math.max(bottom, 1 - 2 * this.safeTop - halfY);
+    v.set(clamp(v.x, -1 + halfX, 1 - halfX), clamp(v.y, bottom, top), v.z);
+    this.cue.position.copy(v.unproject(camera));
   }
 
   private emitHud(): void {

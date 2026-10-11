@@ -73,7 +73,8 @@
   .district-chip { display: none; }
 }
 @media (max-width: 560px) {
-  .combo-chip { display: none; }
+  /* Phones keep the flow counter, compact, on the second row next to the lead. */
+  .combo-chip { min-width: 2.9rem; }
   .g3d-chip { min-width: 3.6rem; padding: 4px 8px 5px; }
   .g3d-chip small { font-size: 0.6rem; letter-spacing: 0.08em; }
   .g3d-meter { width: 4.2rem; margin-top: 4px; height: 5px; }
@@ -107,6 +108,26 @@
   .g3d-panel > .g3d-btn, .g3d-panel > .g3d-fallback { order: 1; margin-bottom: 14px; }
   .g3d-panel > .g3d-keys { order: 2; margin-bottom: 0; font-size: 0.84rem; gap: 4px; }
   .g3d-panel > .g3d-note { order: 3; }
+  /* The result: what happened and Run again on the left, the numbers on the right. The panel then fits the screen,
+     and the button sits high, clear of the collection's button in the bottom-right corner. */
+  .g3d-overlay.is-over > .g3d-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    column-gap: 18px;
+    align-items: start;
+    width: min(100%, 44rem);
+  }
+  .g3d-overlay.is-over .g3d-kicker { grid-column: 1; grid-row: 1; }
+  .g3d-overlay.is-over .g3d-title { grid-column: 1; grid-row: 2; }
+  .g3d-overlay.is-over .g3d-lead { grid-column: 1; grid-row: 3; }
+  .g3d-overlay.is-over .g3d-panel > .g3d-btn { grid-column: 1; grid-row: 4; margin-bottom: 0; }
+  .g3d-overlay.is-over .g3d-result {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-self: center;
+    margin: 0;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .glare, .combo-chip b { transition: none; }

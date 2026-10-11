@@ -77,7 +77,9 @@ function renderOverlay() {
   if (mode === 'over' && lastResult) {
     const r = lastResult;
     $('overlay-title').textContent = t(r.cause === 'caught' ? 'game.caught' : 'game.fell');
-    lead.textContent = t(r.cause === 'caught' ? 'game.causeCaught' : 'game.causeFell', { n: r.distance });
+    // A fall explains itself: ran off the edge, came up short, or jumped past the landing.
+    const cause = r.cause === 'caught' ? 'game.causeCaught' : r.fall === 'long' ? 'game.causeLong' : r.fall === 'runoff' ? 'game.causeRunoff' : 'game.causeShort';
+    lead.textContent = t(cause, { n: r.distance });
     lead.hidden = false;
     $('result-distance').textContent = String(r.distance);
     $('result-best').textContent = String(r.best);

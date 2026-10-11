@@ -599,17 +599,24 @@ export function wheelStandGeometry(): THREE.BufferGeometry {
 /** Police drone body: hull, arms, motor pods and the searchlight housing. Faces +x. */
 export function droneGeometry(): THREE.BufferGeometry {
   const hull = '#1d2330';
+  const trim = '#3b4456';
+  const guard = '#b7c3d6';
+  // A rounded body with a white roof stripe and a lamp pod under the nose.
+  const body = new THREE.SphereGeometry(0.5, 18, 10);
+  body.scale(1.1, 0.42, 0.82);
   const parts: Part[] = [
-    box(1.1, 0.3, 0.8, hull, 0, 0, 0),
-    box(0.8, 0.12, 0.6, '#2c3546', 0, 0.2, 0),
-    box(0.5, 0.06, 0.82, '#e8eef6', 0.1, 0.02, 0),
-    part(new THREE.SphereGeometry(0.24, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), '#0c1220', 0.32, 0.12, 0),
-    part(new THREE.CylinderGeometry(0.16, 0.2, 0.3, 12), '#3b4456', 0.35, -0.26, 0),
+    part(body, hull),
+    box(0.56, 0.05, 0.86, '#e8eef6', 0.06, 0.19, 0),
+    part(new THREE.CylinderGeometry(0.16, 0.2, 0.3, 12), trim, 0.35, -0.26, 0),
   ];
+  // Four diagonal arms, each with a motor and a guard ring round its rotor, so it reads as a quadcopter from the side.
   for (const [x, z] of [[0.75, 0.6], [-0.75, 0.6], [0.75, -0.6], [-0.75, -0.6]]) {
-    parts.push(box(Math.abs(x) * 1.2, 0.06, 0.08, '#2c3546', x / 2, 0.08, z / 2, Math.atan2(z, x) * 0));
-    parts.push(box(0.08, 0.06, Math.abs(z), '#2c3546', x * 0.75, 0.08, z / 2));
-    parts.push(part(new THREE.CylinderGeometry(0.09, 0.1, 0.16, 10), '#3b4456', x, 0.12, z));
+    const arm = new THREE.BoxGeometry(Math.hypot(x, z), 0.07, 0.09);
+    arm.rotateY(-Math.atan2(z, x));
+    arm.translate(x / 2, 0.08, z / 2);
+    parts.push(part(arm, trim));
+    parts.push(part(new THREE.CylinderGeometry(0.09, 0.1, 0.16, 10), trim, x, 0.12, z));
+    parts.push(part(new THREE.TorusGeometry(0.47, 0.035, 6, 28), guard, x, 0.21, z, 0, Math.PI / 2));
   }
   return merge(parts);
 }

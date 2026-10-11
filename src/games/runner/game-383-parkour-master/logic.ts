@@ -23,9 +23,10 @@ export const LOW_HEIGHT = 0.8;
 export const COYOTE = 0.1;
 /** Seconds a press is remembered, so a jump pressed just before landing fires on landing. */
 export const BUFFER = 0.13;
-/** A slide pressed this soon after a jump slams the runner back down (a swipe that began as a tap). */
-export const SLAM_WINDOW = 0.15;
-export const SLAM_SPEED = 12;
+/** Touch: a swipe is credited at most this long before it was recognised, and takes back a hop at most this old. */
+export const SWIPE_CREDIT = 0.25;
+/** Touch: a hard landing waits at most this long past ROLL_LATE for a touch that may still become a swipe. */
+export const SWIPE_WAIT = 0.16;
 export const SLIDE_TIME = 0.6;
 export const SLIDE_MAX = 1.1;
 export const ROLL_TIME = 0.45;
@@ -190,6 +191,19 @@ export function maxGap(speed: number, dh: number): number {
   return Math.max(0, GAP_SAFETY * speed * t + 2 * HALF_WIDTH - TAKEOFF_SLACK * speed);
 }
 
+/** How far the feet sink during coyote time, before the latest possible jump. */
+const COYOTE_DROP = 0.5 * GRAVITY * COYOTE * COYOTE;
+
+/**
+ * The furthest a jump held until touchdown carries the body's centre past a roof's edge at `speed` before the feet
+ * come down through `dh` (relative to the roof). The latest takeoff is at the end of coyote time. Whatever a gap
+ * leads to must reach at least this far, so holding jump the whole way (as the controls teach) never sails past it.
+ */
+export function longestJump(speed: number, dh: number): number {
+  const t = flightTime(dh + COYOTE_DROP);
+  return HALF_WIDTH + speed * (COYOTE + (Number.isFinite(t) ? t : 0));
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Course
 
@@ -259,8 +273,17 @@ export interface Panel {
 export type ChunkKind = 'plain' | 'drop' | 'step' | 'wall' | 'crane' | 'zip' | 'canopy';
 /** The district that introduces each set piece. */
 export const SET_PIECES: Partial<Record<ChunkKind, number>> = { wall: 1, crane: 2, zip: 3, canopy: 4 };
+/** Each district's own set piece, which it is guaranteed to show several times. */
+const SIGNATURES: Partial<Record<DistrictKey, ChunkKind>> = { rain: 'wall', harbour: 'crane', park: 'zip', station: 'canopy' };
+export const signatureOf = (district: number): ChunkKind | null => (district > 0 ? SIGNATURES[districtKey(district)] ?? null : null);
+/** How many of its signature set piece a district is guaranteed: more on the first visit, when it is new. */
+export const signatureCount = (district: number) => (district < DISTRICT_KEYS.length ? 3 : 2);
+/** Chunks between two guaranteed signature pieces. */
+const SIGNATURE_SPACING = 2;
 
 const START_X1 = 30;
+/** A chunk that cannot fit at the current height is replaced by a plain roof that heads where it can. */
+type Nudge = 'up' | 'down' | null;
 
 export class Course {
   roofs: Roof[] = [];
@@ -274,6 +297,10 @@ export class Course {
   private lastDistrict = 0;
   private lastKind: ChunkKind = 'plain';
   private pending: ChunkKind[] = [];
+  private signature: ChunkKind | null = null;
+  /** Guaranteed signature pieces the current district still owes, and chunks since the last one. */
+  private owed = 0;
+  private sinceSignature = 0;
   /** The newest roof gets its obstacles once the following chunk is known, so its run-out fits what comes next. */
   private unfilled: { roof: Roof; startClear: number } | null = null;
 
@@ -315,15 +342,19 @@ export class Course {
   }
 
   private pickKind(d: number): ChunkKind {
+    // Set pieces get denser the further the run goes: each one's weight grows for six districts after it appears.
+    const grow = (kind: ChunkKind) => {
+      const intro = SET_PIECES[kind] ?? 0;
+      return d >= intro ? 1 + 0.25 * Math.min(d - intro, 6) : 0;
+    };
     const weights: Array<[ChunkKind, number]> = [
-      // Set pieces get denser the further the run goes.
-      ['plain', Math.max(0.6, 1 - 0.08 * d)], ['drop', 0.2], ['step', 0.14],
-      ['wall', d >= 1 ? 0.3 : 0], ['crane', d >= 2 ? 0.3 : 0], ['zip', d >= 3 ? 0.26 : 0], ['canopy', d >= 4 ? 0.26 : 0],
+      ['plain', Math.max(0.3, 1 - 0.12 * d)], ['drop', 0.2], ['step', 0.14],
+      ['wall', 0.3 * grow('wall')], ['crane', 0.3 * grow('crane')], ['zip', 0.26 * grow('zip')], ['canopy', 0.26 * grow('canopy')],
     ];
     const top = this.last.top;
     for (const entry of weights) {
       // The district's own set piece shows up more while it is new.
-      if (SET_PIECES[entry[0]] === d) entry[1] *= 1.6;
+      if (entry[0] === this.signature) entry[1] *= 1.6;
       // Climb out of low stretches and come down from high ones.
       if (top < -2 && (entry[0] === 'step' || entry[0] === 'wall')) entry[1] *= 1.8;
       if (top < -2 && entry[0] === 'drop') entry[1] *= 0.4;
@@ -337,34 +368,59 @@ export class Course {
     return 'plain';
   }
 
+  /** Why a chunk cannot go here: null when it fits, otherwise the way the skyline should head first. */
+  private blocked(kind: ChunkKind, prev: Roof): { nudge: Nudge } | null {
+    const top = prev.top;
+    switch (kind) {
+      case 'wall': return top > 5 ? { nudge: 'down' } : prev.kind !== 'roof' ? { nudge: null } : null;
+      case 'drop': return top < -4 ? { nudge: 'up' } : null;
+      case 'canopy': return top < -4 ? { nudge: 'up' } : null;
+      case 'zip': return top < -4 ? { nudge: 'up' } : prev.kind !== 'roof' || prev.zipIn || prev.x1 - prev.x0 < 10 ? { nudge: null } : null;
+      case 'step': return top > 8 ? { nudge: 'down' } : null;
+      default: return null;
+    }
+  }
+
   private chunk(): void {
     const d = districtAt(this.cursor);
     if (d > this.lastDistrict) {
       this.lastDistrict = d;
-      // A breather roof, then the new district's set piece.
-      const signature = (Object.keys(SET_PIECES) as ChunkKind[]).find(kind => SET_PIECES[kind] === d);
-      this.pending = signature ? ['plain', signature] : [];
+      // A breather roof, then the new district's set piece, which keeps coming back until it has been seen enough.
+      this.signature = signatureOf(d);
+      this.owed = this.signature ? signatureCount(d) : 0;
+      this.sinceSignature = SIGNATURE_SPACING - 1;
+      this.pending = ['plain'];
     }
-    let kind = this.pending.shift() ?? this.pickKind(d);
+    const forced = !this.pending.length && this.owed > 0 && this.sinceSignature >= SIGNATURE_SPACING;
+    let kind = this.pending.shift() ?? (forced ? this.signature! : this.pickKind(d));
     const prev = this.last;
     const top = prev.top;
-    // Set pieces that need room fall back to a plain roof when the skyline is too high or too low for them.
-    if (kind === 'wall' && (top > 5 || prev.kind !== 'roof')) kind = 'plain';
-    if (kind === 'drop' && top < -4) kind = 'plain';
-    if (kind === 'canopy' && top < -4) kind = 'plain';
-    if (kind === 'zip' && (prev.kind !== 'roof' || prev.zipIn || top < -4 || prev.x1 - prev.x0 < 10)) kind = 'plain';
-    if (kind === 'step' && top > 8) kind = 'plain';
+    // Set pieces that need room become a plain roof that heads up or down towards where they fit.
+    let nudge: Nudge = null;
+    const block = this.blocked(kind, prev);
+    if (block) {
+      nudge = block.nudge;
+      kind = 'plain';
+    }
     this.counts[kind] += 1;
     this.lastKind = kind;
+    if (kind === this.signature && this.signature) {
+      this.owed = Math.max(0, this.owed - 1);
+      this.sinceSignature = 0;
+    } else {
+      this.sinceSignature += 1;
+    }
     const sp = speedsAt(Math.max(0, this.cursor));
     const floorV = speedsAt(Math.max(0, this.cursor - 6)).floor;
+    // The fastest the runner can be anywhere in this chunk: speeds never fall, so look a blend's length ahead.
+    const topV = speedsAt(Math.max(0, this.cursor + DISTRICT_BLEND)).top;
 
     switch (kind) {
       case 'plain': {
         this.fillPrevious(this.edgeClear(sp.top));
-        const dh = this.pickDh(-2.5, 1.2);
+        const dh = nudge === 'up' ? this.pickDh(0.4, 1.2) : nudge === 'down' ? this.pickDh(-2.5, -0.8) : this.pickDh(-2.5, 1.2);
         const gap = this.pickGap(floorV, dh, d);
-        const roof = this.addRoof(this.cursor + gap, this.roofLength(d), top + dh, 'roof', gap, dh);
+        const roof = this.addRoof(this.cursor + gap, Math.max(this.roofLength(d), this.reach(topV, gap, dh)), top + dh, 'roof', gap, dh);
         this.unfilled = { roof, startClear: this.landClear(gap, dh, sp.top) };
         break;
       }
@@ -372,14 +428,14 @@ export class Course {
         this.fillPrevious(0.3 * sp.top + 2.5);
         const dh = -(4.4 + this.random() * 1.6);
         const gap = this.random() < 0.5 ? 0 : Math.min(maxGap(floorV, dh), 0.8 + this.random() * 1.6);
-        const roof = this.addRoof(this.cursor + gap, this.roofLength(d), top + dh, 'roof', gap, dh);
+        const roof = this.addRoof(this.cursor + gap, Math.max(this.roofLength(d), this.reach(topV, gap, dh)), top + dh, 'roof', gap, dh);
         this.unfilled = { roof, startClear: this.landClear(gap, dh, sp.top) };
         break;
       }
       case 'step': {
         this.fillPrevious(0.35 * sp.top + 2.5);
         const dh = 0.5 + this.random() * 0.6;
-        const roof = this.addRoof(this.cursor, this.roofLength(d), top + dh, 'roof', 0, dh);
+        const roof = this.addRoof(this.cursor, Math.max(this.roofLength(d), this.reach(topV, 0, dh)), top + dh, 'roof', 0, dh);
         this.unfilled = { roof, startClear: 0.45 * sp.top + 2.5 };
         break;
       }
@@ -394,11 +450,13 @@ export class Course {
         this.fillPrevious(this.edgeClear(sp.top));
         const dh1 = this.pickDh(-1.2, 0.3);
         const gap1 = this.pickGap(floorV, dh1, d);
-        const boom = this.addRoof(this.cursor + gap1, Math.min(15, 8 + this.random() * 4 + d * 0.5), top + dh1, 'boom', gap1, dh1);
+        // Long enough to catch a jump held all the way at top speed, with room to line up the next one.
+        const length = Math.max(Math.min(15, 8 + this.random() * 4 + d * 0.5), this.reach(topV, gap1, dh1));
+        const boom = this.addRoof(this.cursor + gap1, length, top + dh1, 'boom', gap1, dh1);
         const floor2 = speedsAt(Math.max(0, boom.x1 - 6)).floor;
         const dh2 = this.pickDh(-1.5, 0.6, boom.top);
         const gap2 = this.pickGap(floor2, dh2, d);
-        const roof = this.addRoof(this.cursor + gap2, this.roofLength(d), boom.top + dh2, 'roof', gap2, dh2);
+        const roof = this.addRoof(this.cursor + gap2, Math.max(this.roofLength(d), this.reach(topV, gap2, dh2)), boom.top + dh2, 'roof', gap2, dh2);
         this.unfilled = { roof, startClear: this.landClear(gap2, dh2, sp.top) };
         break;
       }
@@ -421,9 +479,10 @@ export class Course {
         const gap = this.pickGap(floorV, dh, d);
         const panelTop = top + dh;
         const span = 12 + this.random() * 8;
-        // Run-out past the canopy, so a fall from its far end still lands on the deck.
+        // Run-out past the canopy, so a fall from its far end still lands on the deck, and so does a jump held over it.
         const tail = sp.top * (CRACK_TIME + Math.sqrt(2 * CANOPY_DROP / GRAVITY)) + 3;
-        const deck = this.addRoof(this.cursor + gap, span + tail, panelTop - CANOPY_DROP, 'deck', gap, dh);
+        const length = Math.max(span + tail, this.reach(topV, gap, dh - CANOPY_DROP));
+        const deck = this.addRoof(this.cursor + gap, length, panelTop - CANOPY_DROP, 'deck', gap, dh);
         const count = Math.max(3, Math.round(span / 4));
         const width = span / count;
         const group = this.id();
@@ -434,6 +493,11 @@ export class Course {
         break;
       }
     }
+  }
+
+  /** Length a surface `gap` metres past an edge needs so a full-hold jump at `top` lands on it with room to spare. */
+  private reach(top: number, gap: number, dh: number): number {
+    return longestJump(top, dh) + 0.3 * top + 1 - gap;
   }
 
   private pickDh(lo: number, hi: number, from = this.last.top): number {
@@ -455,7 +519,7 @@ export class Course {
   }
 
   private roofLength(d: number): number {
-    return 13 + this.random() * 13 + 2.5 * Math.min(d, 6);
+    return 13 + this.random() * 12 + 1.5 * Math.min(d, 6);
   }
 
   /** Room before a gap's edge: time to come out of a vault or stumble and line up the jump. */
@@ -503,9 +567,11 @@ export class Course {
 export type Mode = 'run' | 'slide' | 'roll' | 'air' | 'vault' | 'climb' | 'kick' | 'cling' | 'zip' | 'caught' | 'fallen';
 export type Move = 'vault' | 'slide' | 'roll' | 'kick' | 'edge' | 'zip';
 export type StumbleReason = 'vault' | 'pipe' | 'hard' | 'wall' | 'ledge';
+/** How a fall happened: ran off an edge without jumping, jumped and came down short, or jumped past the landing. */
+export type FallReason = 'runoff' | 'short' | 'long';
 export type SimEventType =
   | 'jump' | 'land' | 'perfect' | 'stumble' | 'slide' | 'roll' | 'vault' | 'kick' | 'crack' | 'collapse'
-  | 'zip' | 'release' | 'district' | 'warn' | 'bonk' | 'caught' | 'fell';
+  | 'zip' | 'release' | 'district' | 'warn' | 'bonk' | 'caught' | 'fell' | 'tuck';
 export interface SimEvent {
   type: SimEventType;
   x: number;
@@ -515,7 +581,9 @@ export interface SimEvent {
   combo?: number;
   district?: number;
   hard?: boolean;
+  /** Landing speed; for 'tuck', how far the hop that was taken back had risen. */
   impact?: number;
+  fall?: FallReason;
 }
 export interface Input {
   /** Held state of the jump and slide controls. */
@@ -524,6 +592,15 @@ export interface Input {
   /** A new press since the last step. */
   jumpPressed: boolean;
   slidePressed: boolean;
+  /**
+   * Touch only: the slide press is a swipe that began this many seconds ago. It is timed from when the swipe began,
+   * not from when it was recognised (capped at SWIPE_CREDIT).
+   */
+  swipeAge?: number;
+  /** Touch only: the swipe is the same touch that made the latest jump press, so the hop that press began is taken back. */
+  sameTouch?: boolean;
+  /** Touch only: a touch is down that may still turn into a swipe; a hop into a pipe or out of a hard landing waits for it. */
+  undecided?: boolean;
 }
 /** The next thing to time, for the on-screen cue and for bots. `tau` is seconds to contact. */
 export interface Cue {
@@ -581,6 +658,8 @@ export class RunSim {
   jumpStartedAt = -Infinity;
   /** The last jump left the ground (rather than a ledge, wall or zip). */
   groundJump = false;
+  /** Height of the surface the last jump left. */
+  takeoffTop = 0;
   airSince = 0;
   peak = 0;
   lastTop = 0;
@@ -605,11 +684,25 @@ export class RunSim {
   clingFloor = 0;
   /** A hard landing waiting ROLL_LATE for a late roll before it becomes a stumble. */
   pendingHard = 0;
+  /** When the last hard landing happened. */
+  hardAt = -Infinity;
+  /** Touch: a touch is down that may still become a swipe (from the latest input). */
+  undecided = false;
+  /** Why the run ended in a fall. */
+  fallReason: FallReason | null = null;
   /** Hit a building face too low to mantle: sliding down it into the alley. */
   blocked = false;
   lastStumble = -Infinity;
   lastPerfect = -Infinity;
   events: SimEvent[] = [];
+  /** The current flight began with a jump, from this roof, and has since passed above another surface. */
+  private flightJumped = false;
+  private flightFrom: Roof | null = null;
+  private overflew = false;
+  /** Seconds the pending slide press is credited back (a touch swipe timed from when it began). */
+  private slideAge = 0;
+  /** A pipe met during a hop that may still be taken back by a swipe. */
+  private deferredPipe: Obstacle | null = null;
   private warned = false;
   private accumulator = 0;
   private options: Required<SimOptions>;
@@ -633,21 +726,23 @@ export class RunSim {
   /** Advances by dt seconds (split into fixed steps). Returns the events of this call; the array is reused. */
   step(dt: number, input: Input): SimEvent[] {
     this.events.length = 0;
+    const wasUndecided = this.undecided;
+    this.undecided = !!input.undecided && this.alive;
     if (input.jumpPressed && this.alive) {
       this.jumpBuffer = BUFFER;
       this.lastJumpPress = this.clock;
     }
     if (input.slidePressed && this.alive) {
-      this.slideBuffer = BUFFER;
-      this.lastSlidePress = this.clock;
+      const age = Math.min(SWIPE_CREDIT, Math.max(0, input.swipeAge ?? 0));
+      this.lastSlidePress = this.clock - age;
+      this.slideAge = age;
+      this.slideBuffer = Math.max(BUFFER - age, 2 * SUB_STEP);
       // A swipe begins as a touch, which reads as a jump press: the slide overrides a jump still waiting.
       this.jumpBuffer = 0;
-      // A swipe down that started as a tap: slam back to the roof and slide there.
-      if (this.mode === 'air' && this.groundJump && this.clock - this.jumpStartedAt <= SLAM_WINDOW) {
-        this.vy = Math.min(this.vy, -SLAM_SPEED);
-        this.holding = false;
-      }
+      if (input.sameTouch) this.takeBackHop();
     }
+    // A touch that turned out to be a tap: a pipe met during its hop counts after all.
+    if (wasUndecided && !this.undecided) this.settlePipe();
     this.accumulator += Math.min(dt, 0.1);
     while (this.accumulator >= SUB_STEP - 1e-9) {
       this.accumulator -= SUB_STEP;
@@ -707,8 +802,9 @@ export class RunSim {
       }
       if (this.alive && this.y < this.lastTop - FALL_LIMIT) {
         this.status = 'fell';
+        this.fallReason = !this.flightJumped ? 'runoff' : this.overflew ? 'long' : 'short';
         this.setMode('fallen');
-        this.emit('fell');
+        this.emit('fell', { fall: this.fallReason });
       }
     }
     this.course.extend(this.x + AHEAD);
@@ -784,11 +880,11 @@ export class RunSim {
     return best;
   }
 
-  /** The next pipe ahead (front within maxDistance) that the standing runner would hit. */
-  private pipeAhead(maxDistance: number): Obstacle | null {
+  /** The next pipe ahead of a body at `from` (front within maxDistance) that the standing runner would hit. */
+  private pipeAhead(maxDistance: number, from = this.x): Obstacle | null {
     let best: Obstacle | null = null;
     for (const ob of this.course.obstacles) {
-      if (ob.kind !== 'pipe' || ob.hit || ob.x0 < this.x + HALF_WIDTH - 0.05 || ob.x0 > this.x + HALF_WIDTH + maxDistance) continue;
+      if (ob.kind !== 'pipe' || ob.hit || ob.x0 < from + HALF_WIDTH - 0.05 || ob.x0 > from + HALF_WIDTH + maxDistance) continue;
       if (this.y >= ob.y1 || this.y + STAND_HEIGHT <= ob.y0) continue;
       if (!best || ob.x0 < best.x0) best = ob;
     }
@@ -839,8 +935,8 @@ export class RunSim {
       if (!this.blocked) {
         const face = this.faceAhead(x, nx, Math.min(prevY, state.y), STAND_HEIGHT);
         if (face && !this.stepsOver(face, state.y, state.vy)) {
-          if ((face.obstacle && face.top - state.y <= 0.35) || this.cornerLands(face, state.y)) {
-            return { x: face.x0, y: face.top, time: t, impact: -state.vy, landed: true, bonk: false, hard: -state.vy >= HARD_SPEED, face: false };
+          if ((face.obstacle && face.top - state.y <= 0.35) || this.cornerLands(face, state.y) || this.risesOver(face, state.y, state.vy, state.holding)) {
+            return { x: face.x0, y: face.top, time: t, impact: Math.max(0, -state.vy), landed: true, bonk: false, hard: -state.vy >= HARD_SPEED, face: false };
           }
           const bonk = !!face.roof && !face.roof.wall && face.top - state.y > LEDGE;
           return { x: face.x0 - HALF_WIDTH, y: state.y, time: t, impact: 0, landed: false, bonk, hard: false, face: true };
@@ -869,6 +965,15 @@ export class RunSim {
     return vy > 0 && face.top - y <= Math.min(0.6, vy * 0.12) && !face.roof?.wall;
   }
 
+  /**
+   * A runner meeting a roof's face while still rising fast enough to clear its lip (a late jump across a narrow gap to
+   * a higher roof) steps off the face and over: the jump would have cleared it.
+   */
+  private risesOver(face: Face, y: number, vy: number, holding: boolean): boolean {
+    if (!face.roof || face.roof.wall || vy <= 0) return false;
+    return face.top - y <= (vy * vy) / (2 * (holding ? GRAVITY_HOLD : GRAVITY));
+  }
+
   /** Top of the highest surface whose top lies between prevY and y (falling) under a body at x, or null. */
   private landingTop(x: number, prevY: number, y: number): number | null {
     let best: number | null = null;
@@ -889,6 +994,11 @@ export class RunSim {
     const w = this.window;
     if (this.mode === 'cling' && this.clingRoof) {
       return { move: 'kick', x: this.clingRoof.x0, y: this.y + 2.4, tau: -this.modeTime, window: w, late: w };
+    }
+    // Just ran off an edge: a jump still counts (and is still perfect) until coyote time runs out.
+    if (this.mode === 'air' && this.coyote > 0) {
+      const edge = this.edgeAhead(this.leftRoof);
+      if (edge) return { move: 'edge', x: edge.x - HALF_WIDTH, y: edge.top + 1.3, tau: (edge.x - this.x) / this.speed, window: w, late: COYOTE };
     }
     if (this.mode === 'air') {
       const landing = this.predict();
@@ -977,6 +1087,8 @@ export class RunSim {
     this.vy = JUMP_SPEED;
     this.holding = true;
     this.groundJump = this.grounded;
+    this.takeoffTop = this.y;
+    this.startFlight(true, from);
     this.jumpStartedAt = this.clock;
     this.coyote = 0;
     this.setMode('air');
@@ -993,7 +1105,9 @@ export class RunSim {
 
   private startSlide(): void {
     this.slideBuffer = 0;
-    const pipe = this.pipeAhead(this.speed * this.window + 0.02);
+    // A swipe counts from when it began: the pipe had to be inside the window then.
+    const pipe = this.pipeAhead(this.speed * this.window + 0.02, this.x - this.speed * this.slideAge);
+    this.slideAge = 0;
     const wasSliding = this.mode === 'slide';
     this.setMode('slide');
     if (pipe && !pipe.scored) {
@@ -1015,6 +1129,7 @@ export class RunSim {
     const hard = impact >= HARD_SPEED;
     this.emit('land', { hard, impact });
     if (hard) {
+      this.hardAt = this.clock;
       const pressed = this.lastSlidePress > this.airSince && this.clock - this.lastSlidePress <= this.window + 1e-6;
       this.slideBuffer = 0;
       if (pressed) this.roll();
@@ -1079,6 +1194,17 @@ export class RunSim {
         this.land(roof.top, Math.max(0, -this.vy));
         return;
       }
+      if (airborne && this.risesOver(face, this.y, this.vy, this.holding)) {
+        // One quick step up the face and over the lip, at the speed the jump was rising.
+        this.lastTop = roof.top;
+        const up = (roof.top + 0.1 - this.y) / Math.max(this.vy, 4);
+        this.startScript('climb', [
+          { x: this.x, y: this.y, t: 0 },
+          { x: face.x0 - HALF_WIDTH + 0.1, y: roof.top + 0.1, t: up },
+          { x: face.x0 + HALF_WIDTH + 0.3, y: roof.top, t: up + 0.6 / Math.max(this.speed, 1) },
+        ]);
+        return;
+      }
       const rise = roof.top - this.y;
       if (!airborne && rise <= VAULT_MAX) {
         this.stumble('vault');
@@ -1110,6 +1236,11 @@ export class RunSim {
       if (ob.kind !== 'pipe' || ob.hit) continue;
       if (this.x + HALF_WIDTH <= ob.x0 || this.x - HALF_WIDTH >= ob.x1) continue;
       if (this.y >= ob.y1 || this.y + this.height <= ob.y0) continue;
+      // A touch that may still become a swipe: its hop may be taken back, so the hit waits for it.
+      if (this.mode === 'air' && this.undecided && this.groundJump && this.clock - this.jumpStartedAt <= SWIPE_CREDIT) {
+        this.deferredPipe ??= ob;
+        continue;
+      }
       ob.hit = true;
       this.stumble('pipe');
       if (this.grounded) {
@@ -1120,6 +1251,59 @@ export class RunSim {
         this.vy = Math.min(this.vy, -1);
         this.holding = false;
       }
+    }
+  }
+
+  private startFlight(jumped: boolean, from: Roof | null): void {
+    this.flightJumped = jumped;
+    this.flightFrom = from;
+    this.overflew = false;
+  }
+
+  /** Over a surface (other than the one the flight left) with the feet above it: a fall from here went too far. */
+  private aboveSurface(): boolean {
+    for (const roof of this.course.roofs) {
+      if (roof === this.flightFrom || this.x + HALF_WIDTH <= roof.x0 || this.x - HALF_WIDTH >= roof.x1) continue;
+      if (this.y > roof.top + 0.05) return true;
+    }
+    return false;
+  }
+
+  /**
+   * A touch swipe that began as the tap which started this hop: take the hop back and slide from the roof, as if the
+   * swipe had been read the moment the finger came down. Not over a gap or near the roof's edge, where the jump goes on.
+   */
+  private takeBackHop(): void {
+    if (this.mode !== 'air' || !this.groundJump || this.blocked) return;
+    if (this.jumpStartedAt < this.lastJumpPress - 1e-6 || this.clock - this.jumpStartedAt > SWIPE_CREDIT + 1e-6) return;
+    const top = this.takeoffTop;
+    const support = this.supportAt(this.x, top);
+    if (!support || Math.abs(support.top - top) > 1e-6) return;
+    const edge = this.edgeAhead(this.roofAt(this.x));
+    if (edge && edge.x - this.x < this.speed * 0.5 + 0.5) return;
+    const rise = this.y - top;
+    this.y = top;
+    this.vy = 0;
+    this.holding = false;
+    this.coyote = 0;
+    this.lastTop = top;
+    this.support = support;
+    this.deferredPipe = null;
+    this.setMode('run');
+    this.emit('tuck', { impact: rise });
+    this.startSlide();
+  }
+
+  /** The touch was a tap after all: a pipe its hop met is a stumble. */
+  private settlePipe(): void {
+    const ob = this.deferredPipe;
+    this.deferredPipe = null;
+    if (!ob || ob.hit || !this.alive) return;
+    ob.hit = true;
+    this.stumble('pipe');
+    if (!this.grounded) {
+      this.vy = Math.min(this.vy, -1);
+      this.holding = false;
     }
   }
 
@@ -1175,16 +1359,21 @@ export class RunSim {
   // --- Steps per mode ------------------------------------------------------------------------------------------
 
   private groundStep(dt: number, input: Input): void {
+    // A touch that may still become a swipe holds a hard landing's verdict (and its jump) until it is read.
+    let waitForSwipe = false;
     if (this.pendingHard > 0) {
-      if (this.slideBuffer > 0) {
+      const inTime = this.lastSlidePress >= this.hardAt - Math.max(this.window, BUFFER) - 1e-6 && this.lastSlidePress <= this.hardAt + ROLL_LATE + 1e-6;
+      if (this.slideBuffer > 0 && inTime) {
         this.slideBuffer = 0;
         this.roll();
+      } else if (this.undecided && this.clock - this.hardAt < ROLL_LATE + SWIPE_WAIT) {
+        waitForSwipe = true;
       } else {
         this.pendingHard -= dt;
         if (this.pendingHard <= 0) { this.pendingHard = 0; this.stumble('hard'); }
       }
     }
-    if (this.jumpBuffer > 0) {
+    if (this.jumpBuffer > 0 && !waitForSwipe) {
       this.tryJump();
       if (this.mode !== 'run' && this.mode !== 'slide' && this.mode !== 'roll') {
         if (this.mode === 'air') this.airMove(dt, input);
@@ -1212,6 +1401,7 @@ export class RunSim {
       this.leftRoof = this.support?.roof ?? this.roofAt(this.x - this.speed * dt);
       this.coyote = support === null && this.support ? COYOTE : 0;
       this.support = null;
+      this.startFlight(false, this.leftRoof);
       this.groundJump = false;
       this.holding = false;
       this.vy = 0;
@@ -1224,6 +1414,7 @@ export class RunSim {
       // Stepped down off a rooftop unit.
       this.leftRoof = null;
       this.support = null;
+      this.startFlight(false, this.roofAt(this.x));
       this.groundJump = false;
       this.vy = 0;
       this.peak = this.y;
@@ -1267,6 +1458,7 @@ export class RunSim {
     this.x = nx;
     this.y = ny;
     this.peak = Math.max(this.peak, ny);
+    if (!this.overflew) this.overflew = this.aboveSurface();
     this.checkPipes();
     if (this.vy <= 0) {
       const top = this.landingTop(this.x, prevY, ny);
@@ -1291,6 +1483,7 @@ export class RunSim {
         this.peak = this.y;
         this.airSince = this.clock;
         this.groundJump = false;
+        this.startFlight(false, this.roofAt(this.x));
         this.setMode('air');
       } else {
         this.y = support.top;
@@ -1341,6 +1534,7 @@ export class RunSim {
       this.lastTop = this.y;
       this.airSince = this.clock;
       this.groundJump = false;
+      this.startFlight(false, null);
       this.holding = false;
       this.setMode('air');
       this.emit('release');
