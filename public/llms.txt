@@ -1,6 +1,6 @@
 # Awesome Free Games 1000
 
-A collection of 511 source game pages across 6 directory categories. "1000" is the project name and goal, not a certification of 1000 unique completed games.
+A collection of 475 source game pages across 6 directory categories. "1000" is the project name and goal, not a certification of 1000 unique completed games.
 
 - [Homepage](https://stephen-taipei.github.io/awesome-free-games-1000/): original project introduction, featured games and FAQ
 - [Complete catalogue](https://stephen-taipei.github.io/awesome-free-games-1000/catalog.html): crawlable, no-JavaScript directory
