@@ -15,10 +15,12 @@ const FOV = 34;
 const TAN_HALF = Math.tan((FOV / 2) * Math.PI / 180);
 const OUTRO_WON = 2.4;
 const OUTRO_LOST = 2;
+/** Whole-body hit flashes start at most this often (seconds of real time), so they never strobe above 3 Hz. */
+const FLASH_GAP = 0.34;
 
 export type Status = 'idle' | 'running' | 'paused' | 'outro' | 'over';
 export type Action = 'attack' | 'parry' | 'dodge' | 'finisher';
-export type PopupKind = 'damage' | 'guarded' | 'crit' | 'finisher' | 'perfect' | 'block' | 'evade' | 'hurt' | 'stagger';
+export type PopupKind = 'damage' | 'guarded' | 'crit' | 'finisher' | 'perfect' | 'block' | 'evade' | 'hurt' | 'stagger' | 'focus';
 
 export interface Hud {
   hp: number;
@@ -107,6 +109,9 @@ export class BeastfallGame {
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
   private songPuff = 0;
+  private beastFlashAt = -1;
+  private heroFlashAt = -1;
+  private readonly partFlashAt = [-1, -1, -1];
   private readonly hemi = new THREE.HemisphereLight(0xffc6d8, 0x2a1830, 1.25);
 
   static create(host: HTMLElement): BeastfallGame | null {
@@ -316,6 +321,23 @@ export class BeastfallGame {
   // ------------------------------------------------------------------ feedback
 
   private stop(seconds: number): void { if (!this.reduced) this.hitStop = Math.max(this.hitStop, seconds); }
+  /** Flashes the whole beast, unless it flashed less than FLASH_GAP ago (sparks and popups still mark the hit). */
+  private flashBeast(color: number, seconds: number): void {
+    if (this.clock - this.beastFlashAt < FLASH_GAP) return;
+    this.beastFlashAt = this.clock;
+    this.view.flash(color, seconds);
+  }
+  private flashHero(color: number, seconds: number): void {
+    if (this.clock - this.heroFlashAt < FLASH_GAP) return;
+    this.heroFlashAt = this.clock;
+    this.heroView.flash(color, seconds);
+  }
+  private flashPart(part: number | undefined): void {
+    if (!(this.view instanceof HydraView) || part === undefined || part < 0 || part > 2) return;
+    if (this.clock - this.partFlashAt[part] < FLASH_GAP) return;
+    this.partFlashAt[part] = this.clock;
+    this.view.flashPart(part);
+  }
   private slow(scale: number, seconds: number): void {
     if (this.reduced) return;
     this.slowScale = scale;
@@ -341,6 +363,16 @@ export class BeastfallGame {
       case 'land': {
         const x = e.x ?? hx + 1;
         const y = e.y ?? 1;
+        if (e.sear) {
+          // Hacking at a Hydra stump: no damage, but the blade drinks Focus.
+          s.emit(x - 0.3, y, 0.3, 9, { color: EMBER, speed: 5, up: 0.5, life: 0.45, size: 0.2, gravity: 4 });
+          s.emit(x - 0.3, y, 0.3, 4, { color: GOLD, speed: 2, up: 0.9, life: 0.6, size: 0.22, gravity: -1 });
+          this.stop(0.03);
+          this.punch(1, 0, 0.06);
+          this.flashPart(e.part);
+          this.popup('focus', x - 0.3, y + 0.8, e.focus ?? 0);
+          break;
+        }
         if (e.finisher) {
           s.emit(x, y, 0.3, 46, { color: EMBER, speed: 9, up: 0.4, life: 0.9, size: 0.38, gravity: 4 });
           s.emit(x, y, 0.3, 20, { color: WHITE, speed: 13, life: 0.4, size: 0.24 });
@@ -348,13 +380,13 @@ export class BeastfallGame {
           this.slow(0.35, 0.45);
           this.punch(1, -0.4, 0.45);
           this.quake(0.3);
-          this.view.flash(0xffb060, 0.28);
+          this.flashBeast(0xffb060, 0.28);
           this.popup('finisher', x, y + 0.7, e.damage ?? 0);
         } else if (e.guarded) {
           s.emit(x, y, 0.3, 7, { color: STEEL, speed: 5, life: 0.35, size: 0.16 });
           this.stop(0.025);
           this.punch(1, 0, 0.06);
-          this.view.flash(0x8890a8, 0.08);
+          this.flashBeast(0x8890a8, 0.08);
           this.popup('guarded', x, y + 0.6, e.damage ?? 0);
         } else {
           const heavy = e.combo === 2;
@@ -362,17 +394,17 @@ export class BeastfallGame {
           if (e.staggered) s.emit(x, y, 0.3, 10, { color: GOLD, speed: 6, life: 0.5, size: 0.26 });
           this.stop(heavy ? 0.085 : 0.05);
           this.punch(1, -0.2, heavy ? 0.22 : 0.12);
-          this.view.flash(0xffffff, 0.12);
+          this.flashBeast(0xffffff, 0.12);
           this.popup(e.staggered ? 'crit' : 'damage', x, y + 0.6, e.damage ?? 0);
         }
-        if (this.view instanceof HydraView && e.part !== undefined && e.part >= 0 && e.part < 3) this.view.flashPart(e.part);
+        this.flashPart(e.part);
         break;
       }
       case 'perfect': {
         const x = e.x ?? hx + 0.6;
         s.emit(x, 1.25, 0.35, 34, { color: e.strike?.attack === 'sirenNote' ? SONG : GOLD, speed: 10, life: 0.6, size: 0.3, gravity: 3 });
         s.emit(x, 1.25, 0.35, 12, { color: WHITE, speed: 4, life: 0.3, size: 0.5, gravity: 0 });
-        this.heroView.flash(0xffd27a, 0.22);
+        this.flashHero(0xffd27a, 0.22);
         this.stop(0.12);
         this.slow(0.4, 0.35);
         this.punch(1, 0, 0.18);
@@ -390,7 +422,7 @@ export class BeastfallGame {
       case 'hurt': {
         s.emit(hx, 1.1, 0.3, 20, { color: CRIMSON, speed: 7, life: 0.5, size: 0.24, dirX: -0.5 });
         s.emit(hx, 1.1, 0.3, 8, { color: BLOOD, speed: 4, life: 0.7, size: 0.3, gravity: 9 });
-        this.heroView.flash(0xff3048, 0.24);
+        this.flashHero(0xff3048, 0.24);
         this.stop(0.07);
         this.quake(0.22);
         this.punch(-1, 0.3, 0.2);
@@ -459,13 +491,13 @@ export class BeastfallGame {
       case 'enrage': {
         const x = e.x !== undefined && Number.isFinite(e.x) ? e.x : EDGE_X;
         s.emit(x + 0.6, 1.6, 0, 40, { color: CRIMSON, speed: 6, up: 0.6, life: 0.9, size: 0.34, gravity: -1 });
-        this.view.flash(0xff2d4e, 0.5);
+        this.flashBeast(0xff2d4e, 0.5);
         this.quake(0.25);
         break;
       }
       case 'victory':
         this.slow(0.3, 1.1);
-        this.view.flash(0xffffff, 0.4);
+        this.flashBeast(0xffffff, 0.4);
         break;
       case 'defeat':
         this.slow(0.4, 0.8);
@@ -488,7 +520,7 @@ export class BeastfallGame {
     ctx.gloat = duel.state === 'lost';
     this.view.update(duel.beast, ctx);
     const outro = duel.state === 'won' ? 'won' : duel.state === 'lost' ? 'lost' : 'none';
-    this.heroView.update(dt, this.viewClock, duel.hero, outro, this.reduced);
+    this.heroView.update(dt, this.viewClock, duel.hero, outro, this.reduced, duel.perfectWindow);
 
     // The song: a cyan current drags past the hero toward the edge.
     if (duel.pull > 0 && dt > 0) {
@@ -510,13 +542,15 @@ export class BeastfallGame {
       if (!zone) continue;
       const phase = phaseOf(s);
       if (phase === 'recovery') continue;
-      z.show(s.x0, Math.min(s.x1, EDGE_X), 0, zone.depth, tellColor(s), clamp(s.t / s.windup, 0, 1), this.viewClock, zone.disc, phase === 'active');
+      // A tell that still follows the hero is drawn soft; once it locks, its rim hardens.
+      const locked = s.locked && Number.isFinite(s.spec.lockLead);
+      z.show(s.x0, Math.min(s.x1, EDGE_X), 0, zone.depth, tellColor(s), clamp(s.t / s.windup, 0, 1), this.viewClock, zone.disc, phase === 'active', locked);
     }
     // While the Siren sings, the lip of the cliff glows as a warning.
     const beast = duel.beast;
     if (beast instanceof Siren && beast.song >= 0 && duel.state === 'fight') {
       const k = clamp(beast.song / beast.songWindup, 0, 1);
-      z.show(EDGE_X - 0.7, EDGE_X, 0, 3, SONG, k, this.clock, false, false);
+      z.show(EDGE_X - 0.7, EDGE_X, 0, 3, SONG, k, this.clock, false, false, false);
     }
     z.end();
   }

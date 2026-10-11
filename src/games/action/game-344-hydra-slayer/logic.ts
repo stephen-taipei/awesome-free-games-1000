@@ -8,7 +8,11 @@
 
 export type Tier = 0 | 1;
 export type BeastId = 'hydra' | 'hound' | 'siren' | 'kraken';
-export const BEASTS: readonly BeastId[] = ['hydra', 'hound', 'siren', 'kraken'];
+/**
+ * The ladder, in order. The Hound teaches the parry rhythm, the Siren adds the edge, the Hydra makes the Focus
+ * finisher a requirement, and the Kraken mixes everything for the finale.
+ */
+export const BEASTS: readonly BeastId[] = ['hound', 'siren', 'hydra', 'kraken'];
 
 // ------------------------------------------------------------------ arena and hero
 
@@ -30,6 +34,8 @@ export const FOCUS_PERFECT = 25;
 export const FOCUS_HIT = 5;
 export const FOCUS_EVADE = 8;
 export const FOCUS_SEVER = 15;
+/** Hacking at a Hydra stump does no damage, but it charges the blade for the finisher that burns it. */
+export const FOCUS_STUMP = 4;
 /** A press is remembered this long, so a button tapped slightly early still comes out. */
 export const INPUT_BUFFER = 0.2;
 export const HURT_TIME = 0.32;
@@ -53,8 +59,10 @@ export const FINISHER: Swing = { startup: 0.3, active: 0.12, recovery: 0.46, dam
 /**
  * A parry catches one gold strike. Contact in the first `perfect` seconds (per tier) is a perfect parry: no damage,
  * Focus, and the beast staggers. Later in the guard it is a block: 30% damage and some stamina.
+ * A guard raised within `hasty` seconds of a whiffed one is hasty: it can only block, and if it whiffs too it
+ * recovers `hastyWhiff` slower. Mashing the button therefore never earns perfects.
  */
-export const PARRY = { guard: 0.38, whiff: 0.24, recover: 0.1, chip: 0.3, stamina: 16, push: 3.5 };
+export const PARRY = { guard: 0.38, whiff: 0.24, recover: 0.1, chip: 0.3, stamina: 16, push: 3.5, hasty: 0.5, hastyWhiff: 0.16 };
 /** Rolling costs stamina; the hero cannot be hit between iStart and iEnd, and the tail after iEnd can be cancelled. */
 export const DODGE = { duration: 0.46, iStart: 0.02, iEnd: 0.38, distance: 2.8, cost: 30 };
 
@@ -72,14 +80,18 @@ export interface TierRules {
   gap: number;
 }
 export const TIERS: readonly TierRules[] = [
-  { windup: 1, damage: 1, hp: 1, perfect: 0.16, regrow: 7, rest: [0.65, 1.2], pull: 1, gap: 1 },
-  { windup: 0.8, damage: 1.45, hp: 1.3, perfect: 0.13, regrow: 5, rest: [0.35, 0.75], pull: 1.3, gap: 0.86 },
+  { windup: 1, damage: 1, hp: 1, perfect: 0.16, regrow: 6.5, rest: [0.65, 1.2], pull: 1, gap: 1 },
+  { windup: 0.8, damage: 1.45, hp: 1.3, perfect: 0.13, regrow: 4.2, rest: [0.35, 0.75], pull: 1, gap: 0.86 },
 ];
 /** Rage (0..1) shortens windups by up to this fraction: below half health, or as the Hydra regrows. */
 export const RAGE_SPEEDUP = 0.12;
 /** No two beast strikes ever land closer together than this, so a hit or a parry can always be answered. */
 export const MIN_ACTIVE_GAP = 0.36;
 export const MIN_WINDUP = 0.3;
+/** Seconds before a beast's first attack. */
+export const FIRST_ATTACK = 2;
+/** Rest multiplier by rung: first value minus the second per rung climbed. */
+export const LADDER_REST = [1.15, 0.1] as const;
 
 export type AttackId =
   | 'hydraBite' | 'hydraSweep' | 'hydraSpit'
@@ -103,21 +115,21 @@ export const ATTACKS: Record<AttackId, AttackSpec> = {
   hydraBite: { windup: 0.74, active: 0.12, recovery: 0.95, damage: 13, parryable: true, lockLead: 0.28 },
   hydraSweep: { windup: 0.98, active: 0.26, recovery: 0.85, damage: 17, parryable: false, lockLead: Infinity },
   hydraSpit: { windup: 0.9, active: 0.22, recovery: 0.6, damage: 12, parryable: false, lockLead: Infinity },
-  houndBite: { windup: 0.6, active: 0.1, recovery: 0.45, damage: 8, parryable: true, lockLead: 0.24 },
-  houndSnap: { windup: 0.56, active: 0.1, recovery: 0.75, damage: 11, parryable: true, lockLead: 0.24 },
-  houndPounce: { windup: 0.9, active: 0.2, recovery: 1.1, damage: 16, parryable: false, lockLead: 0.34 },
-  sirenNote: { windup: 0.72, active: 0.1, recovery: 0.15, damage: 8, parryable: true, lockLead: 0 },
+  houndBite: { windup: 0.6, active: 0.1, recovery: 0.45, damage: 6, parryable: true, lockLead: 0.24 },
+  houndSnap: { windup: 0.56, active: 0.1, recovery: 0.75, damage: 9, parryable: true, lockLead: 0.24 },
+  houndPounce: { windup: 0.9, active: 0.2, recovery: 1.1, damage: 12, parryable: false, lockLead: 0.34 },
+  sirenNote: { windup: 0.72, active: 0.1, recovery: 0.15, damage: 10, parryable: true, lockLead: 0 },
   sirenShriek: { windup: 0.94, active: 0.28, recovery: 0.6, damage: 15, parryable: false, lockLead: Infinity },
-  sirenDive: { windup: 0.84, active: 0.14, recovery: 1.2, damage: 14, parryable: true, lockLead: 0.32 },
-  krakenBurst: { windup: 0.96, active: 0.22, recovery: 1.35, damage: 16, parryable: false, lockLead: Infinity },
-  krakenSlam: { windup: 0.84, active: 0.14, recovery: 1, damage: 15, parryable: true, lockLead: 0.32 },
-  krakenBeak: { windup: 0.64, active: 0.12, recovery: 0.8, damage: 14, parryable: true, lockLead: 0.26 },
+  sirenDive: { windup: 0.84, active: 0.14, recovery: 1.2, damage: 16, parryable: true, lockLead: 0.32 },
+  krakenBurst: { windup: 0.96, active: 0.22, recovery: 1.35, damage: 13, parryable: false, lockLead: 0.5 },
+  krakenSlam: { windup: 0.84, active: 0.14, recovery: 1, damage: 17, parryable: true, lockLead: 0.32 },
+  krakenBeak: { windup: 0.64, active: 0.12, recovery: 0.8, damage: 16, parryable: true, lockLead: 0.26 },
 };
 export const ATTACK_IDS = Object.keys(ATTACKS) as AttackId[];
 
 /** Seconds the beast (or the struck head) reels after a perfect parry of each gold attack. */
 export const STAGGER: Partial<Record<AttackId, number>> = {
-  hydraBite: 1.7, houndSnap: 1.5, sirenNote: 1.9, sirenDive: 1.7, krakenSlam: 2, krakenBeak: 1.6,
+  hydraBite: 1.7, houndSnap: 1.5, sirenNote: 1.9, sirenDive: 1.7, krakenSlam: 1.7, krakenBeak: 1.3,
 };
 
 export const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -166,7 +178,7 @@ export function phaseOf(s: Strike): StrikePhase {
 
 export type EventType =
   | 'telegraph' | 'strike' | 'swing' | 'land' | 'whiff' | 'high' | 'hurt' | 'perfect' | 'block' | 'evade'
-  | 'dodge' | 'tired' | 'parry' | 'finisher' | 'far' | 'ready' | 'sever' | 'burn' | 'regrow'
+  | 'dodge' | 'tired' | 'parry' | 'finisher' | 'far' | 'noTarget' | 'ready' | 'sever' | 'burn' | 'regrow'
   | 'song' | 'sing' | 'songBreak' | 'songEnd' | 'fall' | 'respawn' | 'enrage' | 'stagger' | 'surface'
   | 'victory' | 'defeat';
 
@@ -181,6 +193,9 @@ export interface DuelEvent {
   finisher?: boolean;
   staggered?: boolean;
   guarded?: boolean;
+  /** A swing that struck a Hydra stump: no damage, `focus` gained. */
+  sear?: boolean;
+  focus?: number;
 }
 
 export interface Hurtbox {
@@ -195,6 +210,8 @@ export interface Hurtbox {
   guarded: boolean;
   /** Higher wins when several boxes are in reach. */
   priority: number;
+  /** A Hydra stump: normal hits only charge Focus. */
+  sear?: boolean;
 }
 
 export interface Input { move: number; attack: boolean; parry: boolean; dodge: boolean; finisher: boolean; }
@@ -220,6 +237,10 @@ export class Hero {
   connected = false;
   parried = false;
   parryEnd = 0;
+  /** This guard went up right after a whiffed one: it can only block. */
+  hasty = false;
+  /** Duel time when the last whiffed guard ended. */
+  whiffAt = -Infinity;
   staminaWait = 0;
   readonly buffer = { attack: 0, parry: 0, dodge: 0, finisher: 0 };
 }
@@ -339,7 +360,11 @@ export class Duel {
         break;
       }
       case 'parry':
-        if (h.parried ? h.t >= h.parryEnd : h.t >= PARRY.guard + PARRY.whiff) this.toIdle();
+        if (h.parried) { if (h.t >= h.parryEnd) this.toIdle(); }
+        else if (h.t >= PARRY.guard + PARRY.whiff + (h.hasty ? PARRY.hastyWhiff : 0)) {
+          h.whiffAt = this.time;
+          this.toIdle();
+        }
         break;
       case 'dodge':
         // The roll's tail, after the i-frames, can be cancelled into anything (rolls chain).
@@ -419,6 +444,7 @@ export class Duel {
       h.t = 0;
       h.combo = 0;
       h.parried = false;
+      h.hasty = this.time - h.whiffAt < PARRY.hasty;
       this.emit('parry', { x: h.x });
       return true;
     }
@@ -442,7 +468,11 @@ export class Duel {
   private startFinisher(): boolean {
     const h = this.hero;
     if (h.focus < FOCUS_MAX) return false;
-    if (!this.finisherTarget()) { this.emit('far', { x: h.x }); return false; }
+    if (!this.finisherTarget()) {
+      // Out of reach, or nothing to strike at all (the Kraken below the edge with no tentacle out).
+      this.emit(this.beast.hurtboxes(true).length ? 'far' : 'noTarget', { x: h.x });
+      return false;
+    }
     h.focus = 0;
     h.action = 'finisher';
     h.t = 0;
@@ -492,7 +522,7 @@ export class Duel {
       if (h.action === 'parry' && !h.parried && s.spec.parryable && h.t <= PARRY.guard) {
         h.parried = true;
         h.parryEnd = h.t + PARRY.recover;
-        if (h.t <= this.perfectWindow) {
+        if (h.t <= this.perfectWindow && !h.hasty) {
           s.outcome = 'perfect';
           this.stats.perfects++;
           this.gainFocus(FOCUS_PERFECT);
@@ -551,6 +581,12 @@ export class Duel {
       return;
     }
     h.connected = true;
+    if (box.sear && !finisher) {
+      this.stats.landed++;
+      this.gainFocus(FOCUS_STUMP);
+      this.emit('land', { damage: 0, focus: FOCUS_STUMP, sear: true, x: (box.x0 + box.x1) / 2, y: box.y, part: box.part, combo: h.combo });
+      return;
+    }
     const guarded = box.guarded && !finisher;
     const damage = Math.max(1, Math.round(swing.damage * box.mult * (guarded ? GUARD_MULT : 1) * (box.staggered ? STAGGER_BONUS : 1)));
     this.stats.landed++;
@@ -585,8 +621,8 @@ export abstract class Beast {
   strikes: Strike[] = [];
   stagger = 0;
   staggerMax = 0;
-  /** The first attack waits for the beast's entrance roar. */
-  cooldown = 1.6;
+  /** The first attack waits for the beast's entrance roar (and the intro toast). */
+  cooldown = FIRST_ATTACK;
   rage = 0;
   enraged = false;
 
@@ -649,7 +685,10 @@ export abstract class Beast {
         this.duel.emit('strike', { strike: s, x: (s.x0 + s.x1) / 2 });
       }
     }
-    this.strikes = this.strikes.filter(s => s.outcome !== 'cancel' && s.t < s.windup + s.spec.active + s.spec.recovery);
+    // Drop finished strikes in place (this runs 120 times a second).
+    let kept = 0;
+    for (const s of this.strikes) if (s.outcome !== 'cancel' && s.t < s.windup + s.spec.active + s.spec.recovery) this.strikes[kept++] = s;
+    this.strikes.length = kept;
     if (this.stagger > 0) this.stagger = Math.max(0, this.stagger - dt);
     this.think(dt);
   }
@@ -678,7 +717,8 @@ export abstract class Beast {
 
   protected rest(): number {
     const [a, b] = TIERS[this.tier].rest;
-    const ladder = 1 - 0.05 * BEASTS.indexOf(this.id);
+    // Later rungs rest less between attacks.
+    const ladder = LADDER_REST[0] - LADDER_REST[1] * BEASTS.indexOf(this.id);
     return (a + (b - a) * this.rand()) * ladder * (1 - 0.25 * this.rage);
   }
 
@@ -692,7 +732,8 @@ export abstract class Beast {
 }
 
 // Hydra: heads lunge low to bite or sweep the floor, and only then are they in reach. A severed head regrows;
-// a Focus finisher burns a head (or its stump) away for good. Burn all three.
+// a Focus finisher burns a head (or its stump) away for good. Burn all three. Hacking at a stump charges Focus,
+// and while no head is left alive the stumps spit venom, so there is never nothing to do.
 
 export const HYDRA_REST = [3.3, 4.1, 4.9] as const;
 export const HYDRA_FRONT = 5.2;
@@ -700,9 +741,11 @@ export const BITE_MIN_X = -2.2;
 export const BITE_HALF = 0.7;
 export const SWEEP_FROM = -1.3;
 export const HYDRA_DOUBLE_GAP = 0.56;
-export const HYDRA_HEAD_HP = 40;
+export const HYDRA_HEAD_HP = 44;
 /** The Hydra spits venom at a hero who keeps out of biting range. */
 export const SPIT_HALF = 0.8;
+/** Extra rest after a stump spits (per tier), so there is time to hack at the stumps. */
+export const HYDRA_STUMP_REST = [0.5, 0] as const;
 
 export interface HydraHead {
   state: 'alive' | 'stump' | 'gone';
@@ -747,7 +790,8 @@ export class Hydra extends Beast {
     this.heads.forEach((head, part) => {
       if (head.state === 'gone') return;
       if (head.state === 'stump') {
-        if (finisher) boxes.push({ x0: head.restX - 0.6, x1: head.restX + 0.6, y: 0.5, part, mult: 1, staggered: false, guarded: false, priority: 2 });
+        // A finisher burns the stump first; a normal swing takes a live head over a stump.
+        boxes.push({ x0: head.restX - 0.6, x1: head.restX + 0.6, y: 0.5, part, mult: 1, staggered: false, guarded: false, priority: finisher ? 2 : -1, sear: !finisher });
         return;
       }
       const low = head.low > 0;
@@ -855,8 +899,15 @@ export class Hydra extends Beast {
     this.cooldown -= dt;
     if (this.cooldown > 0) return;
     const ready = this.heads.map((h, i) => (h.state === 'alive' && h.low <= 0 && h.age > 0.7 ? i : -1)).filter(i => i >= 0);
-    if (!ready.length) { this.cooldown = 0.25; return; }
     const pick = (list: number[]) => list[Math.floor(this.rand() * list.length) % list.length];
+    if (!ready.length) {
+      // No head left alive: a stump spits venom at the hero while it regrows.
+      const stumps = this.heads.some(h => h.state === 'alive') ? [] : this.heads.map((h, i) => (h.state === 'stump' && h.regrow > 1 ? i : -1)).filter(i => i >= 0);
+      if (!stumps.length) { this.cooldown = 0.25; return; }
+      this.strike('hydraSpit', pick(stumps));
+      this.cooldown = this.rest() + HYDRA_STUMP_REST[this.tier];
+      return;
+    }
     const sweepChance = this.sinceSweep >= 3 ? 0.65 : this.sinceSweep >= 1 ? 0.2 : 0;
     const far = this.hero.x < BITE_MIN_X + 0.4;
     if (this.rand() < (far ? 0.75 : 0.08)) {
@@ -872,7 +923,7 @@ export class Hydra extends Beast {
       const first = pick(ready);
       this.strike('hydraBite', first);
       const others = ready.filter(i => i !== first);
-      if (others.length && this.rand() < 0.3 + 0.4 * this.rage) this.strike('hydraBite', pick(others), HYDRA_DOUBLE_GAP * TIERS[this.tier].gap);
+      if (others.length && this.rand() < 0.4 + 0.4 * this.rage) this.strike('hydraBite', pick(others), HYDRA_DOUBLE_GAP * TIERS[this.tier].gap);
       this.sinceSweep++;
     }
     this.cooldown = this.rest();
@@ -885,9 +936,9 @@ export class Hydra extends Beast {
 export const HOUND_HOME = 3.7;
 export const HOUND_LENGTH = 2.5;
 export const HOUND_BITE_REACH = 2.1;
-export const HOUND_GAP = 0.5;
+export const HOUND_GAP = 0.54;
 export const HOUND_AIR = 0.3;
-export const HOUND_HP = 420;
+export const HOUND_HP = 480;
 
 export class Hound extends Beast {
   readonly id = 'hound' as const;
@@ -980,10 +1031,10 @@ export const HOVER_X = EDGE_X + 1.05;
 export const HOVER_Y = 1.7;
 export const SONG_WINDUP = 0.9;
 export const SONG_TIME = 5.6;
-export const SONG_PULL = 1.35;
-export const NOTE_GAP = 1.25;
-export const SHRIEK_FROM = EDGE_X - 3.4;
-export const SIREN_HP = 380;
+export const SONG_PULL = 1.5;
+export const NOTE_GAP = 1.05;
+export const SHRIEK_FROM = EDGE_X - 3.1;
+export const SIREN_HP = 440;
 
 export class Siren extends Beast {
   readonly id = 'siren' as const;
@@ -1129,15 +1180,20 @@ export class Siren extends Beast {
   }
 }
 
-// Deep Kraken: lurks below the edge. Tentacles burst from the floor where a crimson crack glows; a gold tentacle
-// slams down from the edge; now and then its head surfaces to snap. Tentacles in the open can be cut.
+// Deep Kraken, the finale: lurks below the edge. Tentacles burst from the floor where a crimson crack glows; a gold
+// tentacle slams down from the edge; it mixes the two, so you must switch between rolling and parrying; now and then
+// its head surfaces to snap (twice in a row once enraged) while tentacles hunt a hero who keeps away. Tentacles in the
+// open can be cut.
 
 export const KRAKEN_HEAD_X0 = EDGE_X + 0.05;
 export const KRAKEN_HEAD_X1 = EDGE_X + 1.5;
 export const BURST_HALF = 0.85;
 export const BURST_GAP = 0.55;
+/** Burst-then-slam and slam-then-burst mixes: delay of the second strike's tell. */
+export const MIX_GAP = 0.62;
+export const BEAK_GAP = 0.55;
 export const SURFACE_TIME = 3.2;
-export const KRAKEN_HP = 440;
+export const KRAKEN_HP = 380;
 
 export class Kraken extends Beast {
   readonly id = 'kraken' as const;
@@ -1188,7 +1244,7 @@ export class Kraken extends Beast {
 
   burstCount(): number {
     if (this.rage >= 1) return 2;
-    return this.tier === 1 && this.rand() < 0.4 ? 2 : 1;
+    return this.rand() < (this.tier === 1 ? 0.45 : 0.3) ? 2 : 1;
   }
 
   protected think(dt: number): void {
@@ -1197,11 +1253,20 @@ export class Kraken extends Beast {
     this.up = Math.max(0, this.up - dt);
     if (this.stagger > 0 || this.strikes.length) return;
     this.cooldown -= dt;
+    const gap = TIERS[this.tier].gap;
     if (this.up > 0) {
-      if (this.head >= 1 && this.cooldown <= 0 && this.beaks < 2 && this.hero.x > EDGE_X - 2.3) {
+      if (this.head < 1 || this.cooldown > 0) return;
+      if (this.hero.x > EDGE_X - 2.3) {
+        if (this.beaks >= 2) return;
         this.strike('krakenBeak', 0);
         this.beaks++;
+        // Enraged, the beak snaps twice.
+        if (this.rage >= 1) { this.strike('krakenBeak', 0, BEAK_GAP * gap); this.beaks++; }
         this.cooldown = 0.5;
+      } else {
+        // The hero keeps away from the head: a tentacle hunts them instead.
+        this.strike('krakenBurst', 0);
+        this.cooldown = 0.7;
       }
       return;
     }
@@ -1215,10 +1280,19 @@ export class Kraken extends Beast {
       return;
     }
     this.sinceSurface++;
-    if (this.rand() < 0.58) {
+    const r = this.rand();
+    if (r < 0.3) {
       const n = this.burstCount();
-      for (let i = 0; i < n; i++) this.strike('krakenBurst', i, i * BURST_GAP * TIERS[this.tier].gap);
-    } else this.strike('krakenSlam', 0);
+      for (let i = 0; i < n; i++) this.strike('krakenBurst', i, i * BURST_GAP * gap);
+    } else if (r < 0.44) this.strike('krakenSlam', 0);
+    else if (r < 0.72) {
+      // Crimson then gold: roll the burst, then turn and parry the slam.
+      this.strike('krakenBurst', 0);
+      this.strike('krakenSlam', 0, MIX_GAP * gap);
+    } else {
+      this.strike('krakenSlam', 0);
+      this.strike('krakenBurst', 1, MIX_GAP * gap);
+    }
     this.cooldown = this.rest();
   }
 }

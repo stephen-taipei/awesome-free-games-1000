@@ -50,18 +50,35 @@ const beastName = (index: number) => t(`beast.${BEASTS[index]}`);
 
 // ------------------------------------------------------------------ toasts and popups
 
+type ToastKind = '' | 'warn' | 'gold' | 'song';
+/** Toast ranks: a soft toast never cuts off a fresh one, and a tutorial hint is not cut off in its first second. */
+const SOFT = 0;
+const NORMAL = 1;
+const HINT = 2;
+const FINAL = 3;
 let toastUntil = 0;
-function showToast(text: string, kind: '' | 'warn' | 'gold' | 'song' = '', ms = 1500) {
+let toastShownAt = 0;
+let toastRank = NORMAL;
+/** Shows a toast unless a more important one is still fresh. Returns whether it is now on screen. */
+function showToast(text: string, kind: ToastKind = '', ms = 1500, rank = NORMAL): boolean {
+  const now = performance.now();
+  if (now < toastUntil) {
+    if (rank === SOFT && now < toastUntil - 700) return false;
+    if (rank < toastRank && toastRank >= HINT && now - toastShownAt < 1100) return false;
+  }
   toast.textContent = text;
   toast.className = `g3d-toast show ${kind}`.trim();
-  toastUntil = performance.now() + ms;
+  toastUntil = now + ms;
+  toastShownAt = now;
+  toastRank = rank;
   window.clearTimeout(Number(toast.dataset.timer));
   toast.dataset.timer = String(window.setTimeout(() => toast.classList.remove('show'), ms));
+  return true;
 }
-/** A lesser toast does not cut off a fresh one. */
-function softToast(text: string, kind: '' | 'warn' | 'gold' | 'song' = '', ms = 1200) {
-  if (performance.now() < toastUntil - 700) return;
-  showToast(text, kind, ms);
+const softToast = (text: string, kind: ToastKind = '', ms = 1200) => showToast(text, kind, ms, SOFT);
+/** A colour rule is taught once per session, the moment it first appears, and only counts as taught once shown. */
+function hintToast(key: string, text: string, kind: ToastKind) {
+  if (!hints.has(key) && showToast(text, kind, 1900, HINT)) hints.add(key);
 }
 
 function popup(kind: PopupKind, x: number, y: number, value: number) {
@@ -70,6 +87,7 @@ function popup(kind: PopupKind, x: number, y: number, value: number) {
   el.className = `pop pop-${kind}`;
   if (kind === 'perfect' || kind === 'block' || kind === 'evade' || kind === 'stagger') el.textContent = t(`pop.${kind}`);
   else if (kind === 'hurt') el.textContent = `-${value}`;
+  else if (kind === 'focus') el.textContent = `+${value} ${t('game.focus')}`;
   else el.textContent = kind === 'crit' || kind === 'finisher' ? `${value}!` : String(value);
   el.style.left = `${Math.round(clamp(x, 24, window.innerWidth - 24))}px`;
   el.style.top = `${Math.round(clamp(y, 24, window.innerHeight - 24))}px`;
@@ -94,9 +112,10 @@ function onEvent(e: DuelEvent) {
     case 'telegraph': {
       telegraphSound(e);
       const s = e.strike;
-      if (s && !hints.has('gold') && s.spec.parryable && s.attack !== 'sirenNote') { hints.add('gold'); softToast(t('toast.gold'), 'gold'); }
-      else if (s && !hints.has('crimson') && !s.spec.parryable) { hints.add('crimson'); softToast(t('toast.crimson'), 'warn'); }
-      else if (s && !hints.has('note') && s.attack === 'sirenNote') { hints.add('note'); softToast(t('toast.note'), 'song'); }
+      if (!s) break;
+      if (s.attack === 'sirenNote') hintToast('note', t('toast.note'), 'song');
+      else if (s.spec.parryable) hintToast('gold', t('toast.gold'), 'gold');
+      else hintToast('crimson', t('toast.crimson'), 'warn');
       break;
     }
     case 'strike':
@@ -104,7 +123,11 @@ function onEvent(e: DuelEvent) {
       break;
     case 'swing': sfx.noise(0.07, { frequency: 2600, type: 'highpass', gain: 0.1 }); sfx.tone(300 + (e.combo ?? 0) * 60, 0.08, { type: 'triangle', slideTo: 170, gain: 0.05 }); break;
     case 'land':
-      if (e.finisher) { sfx.tone(92, 0.6, { type: 'sawtooth', slideTo: 38, gain: 0.24 }); sfx.noise(0.45, { frequency: 760, gain: 0.34 }); }
+      if (e.sear) {
+        sfx.noise(0.12, { frequency: 3400, type: 'highpass', gain: 0.1 });
+        sfx.tone(560 + (e.combo ?? 0) * 70, 0.09, { type: 'triangle', gain: 0.05 });
+        hintToast('sear', t('toast.sear'), 'gold');
+      } else if (e.finisher) { sfx.tone(92, 0.6, { type: 'sawtooth', slideTo: 38, gain: 0.24 }); sfx.noise(0.45, { frequency: 760, gain: 0.34 }); }
       else if (e.guarded) sfx.tone(980, 0.06, { type: 'triangle', gain: 0.07 });
       else { sfx.tone(150 - (e.combo ?? 0) * 18, 0.12, { type: 'square', slideTo: 70, gain: 0.14 }); sfx.noise(0.08, { frequency: 1800, gain: 0.18 }); }
       break;
@@ -126,6 +149,7 @@ function onEvent(e: DuelEvent) {
     case 'tired': sfx.tone(160, 0.14, { type: 'square', gain: 0.06 }); softToast(t('toast.tired'), 'warn', 900); break;
     case 'finisher': sfx.tone(220, 0.35, { type: 'sawtooth', slideTo: 660, gain: 0.1 }); break;
     case 'far': sfx.tone(200, 0.1, { type: 'square', gain: 0.05 }); softToast(t('toast.far'), 'warn', 1000); break;
+    case 'noTarget': sfx.tone(200, 0.1, { type: 'square', gain: 0.05 }); softToast(t('toast.noTarget', { beast: beastName(current.beast) }), 'warn', 1400); break;
     case 'ready':
       [660, 880, 1320].forEach((f, i) => sfx.tone(f, 0.16, { type: 'triangle', gain: 0.08, delay: i * 0.07 }));
       showToast(t('toast.ready', { key: touch ? t('game.finisherTouch') : t('game.finisherKeys') }), 'gold', 1600);
@@ -133,7 +157,7 @@ function onEvent(e: DuelEvent) {
     case 'sever':
       sfx.noise(0.28, { frequency: 1500, gain: 0.3 });
       sfx.tone(210, 0.25, { type: 'sawtooth', slideTo: 80, gain: 0.12 });
-      if (!hints.has('sever')) { hints.add('sever'); showToast(t('toast.sever'), 'warn'); }
+      if (!hints.has('sever') && showToast(t('toast.sever'), 'warn', 2200)) hints.add('sever');
       break;
     case 'burn': {
       sfx.noise(0.6, { frequency: 700, gain: 0.32 });
@@ -158,15 +182,15 @@ function onEvent(e: DuelEvent) {
     case 'stagger': sfx.tone(320, 0.26, { type: 'triangle', slideTo: 150, gain: 0.1 }); break;
     case 'surface':
       sfx.noise(0.7, { frequency: 900, gain: 0.3 });
-      if (!hints.has('surface')) { hints.add('surface'); showToast(t('toast.surface'), 'gold'); }
+      if (!hints.has('surface') && showToast(t('toast.surface'), 'gold')) hints.add('surface');
       break;
     case 'victory':
       [523, 659, 784, 1046].forEach((f, i) => sfx.tone(f, 0.32, { type: 'triangle', gain: 0.1, delay: 0.25 + i * 0.12 }));
-      showToast(t('game.victory'), 'gold', 2000);
+      showToast(t('game.victory'), 'gold', 2000, FINAL);
       break;
     case 'defeat':
       [330, 262, 196].forEach((f, i) => sfx.tone(f, 0.45, { type: 'sine', gain: 0.1, delay: i * 0.22 }));
-      showToast(t('game.defeat'), 'warn', 1800);
+      showToast(t('game.defeat'), 'warn', 1800, FINAL);
       break;
     default: break;
   }
@@ -205,7 +229,8 @@ function renderHud(hud: Hud) {
   }
 }
 
-function renderBeastName() { $('beast-name').textContent = beastName(current.beast); }
+/** The HUD chip uses the short name, so it fits beside the bar on phones. */
+function renderBeastName() { $('beast-name').textContent = t(`short.${BEASTS[current.beast]}`); }
 
 // ------------------------------------------------------------------ menu, ladder and results
 
@@ -289,6 +314,8 @@ function renderOverlay() {
   const controls = $('controls');
   const kicker = $('overlay-kicker');
   $('overlay-note').hidden = mode !== 'menu';
+  // The colour legend stays up in the menu and the pause screen (landscape phones hide the lead).
+  $('legend').hidden = mode === 'over';
   const title = $('overlay-title');
   const tierName = (tier: Tier) => t(tier === 1 ? 'game.nightmare' : 'game.normal');
   if (mode === 'over' && outcome) {
@@ -429,7 +456,8 @@ function fight(beast: number, tier: Tier) {
   hints = new Set([...hints].filter(h => h === 'gold' || h === 'crimson' || h === 'note'));
   game.start(BEASTS[beast], tier);
   setMode('playing');
-  showToast(`${beastName(beast)} — ${t(`hint.${BEASTS[beast]}`)}`, '', 2600);
+  // Shown until the first attack; a colour hint for that attack takes over from it.
+  showToast(`${beastName(beast)} — ${t(`hint.${BEASTS[beast]}`)}`, '', 2300);
   sfx.tone(110, 0.7, { type: 'sawtooth', slideTo: 70, gain: 0.14 });
 }
 
@@ -499,7 +527,10 @@ if (!game) {
   languageSelect.addEventListener('focus', () => pause(false));
 
   // Touch: the left half is a drag pad, the right holds the action buttons.
+  /** Knob travel on screen, finger travel for full speed, and the dead zone (px). */
   const STICK = 44;
+  const FULL = 30;
+  const DEAD = 6;
   let anchor = 0;
   trackPointer(pad, {
     down: (x, y) => {
@@ -512,11 +543,12 @@ if (!game) {
     },
     drag: (_dx, _dy, x) => {
       let offset = x - anchor;
-      // The anchor trails a finger that slides far, so reversing is instant.
-      if (Math.abs(offset) > STICK * 1.3) { anchor = x - Math.sign(offset) * STICK * 1.3; offset = x - anchor; }
-      const k = clamp(offset / STICK, -1, 1);
-      game.setStick(Math.abs(k) < 0.18 ? 0 : k);
-      knob.style.transform = `translateX(${Math.round(clamp(offset, -STICK, STICK))}px)`;
+      // The anchor trails a finger that slides past full speed, so a reversal stops the hero after DEAD..FULL px
+      // and runs the other way at full speed after 2 x FULL px.
+      if (Math.abs(offset) > FULL) { anchor = x - Math.sign(offset) * FULL; offset = x - anchor; }
+      const k = Math.abs(offset) <= DEAD ? 0 : Math.sign(offset) * (Math.abs(offset) - DEAD) / (FULL - DEAD);
+      game.setStick(k);
+      knob.style.transform = `translateX(${Math.round((offset / FULL) * STICK)}px)`;
     },
     up: () => { game.setStick(0); stick.hidden = true; },
   });

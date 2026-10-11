@@ -268,10 +268,10 @@ export class Zones {
     geometry.rotateX(-Math.PI / 2);
     for (let i = 0; i < count; i++) {
       const material = new THREE.ShaderMaterial({
-        uniforms: { uColor: { value: new THREE.Color() }, uProgress: { value: 0 }, uTime: { value: 0 }, uShape: { value: 0 }, uActive: { value: 0 } },
+        uniforms: { uColor: { value: new THREE.Color() }, uProgress: { value: 0 }, uTime: { value: 0 }, uShape: { value: 0 }, uActive: { value: 0 }, uLocked: { value: 0 } },
         vertexShader: /* glsl */`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
         fragmentShader: /* glsl */`
-          uniform vec3 uColor; uniform float uProgress; uniform float uTime; uniform float uShape; uniform float uActive;
+          uniform vec3 uColor; uniform float uProgress; uniform float uTime; uniform float uShape; uniform float uActive; uniform float uLocked;
           varying vec2 vUv;
           void main() {
             vec2 p = vUv * 2.0 - 1.0;
@@ -283,7 +283,7 @@ export class Zones {
             float ring = uShape > 0.5 ? smoothstep(0.08, 0.0, abs(disc - (1.0 - uProgress))) : smoothstep(0.08, 0.0, abs(abs(p.x) - (1.0 - uProgress)));
             float stripes = 0.5 + 0.5 * sin((p.x * 5.0 + p.y * 2.0 - uTime * 2.4) * 3.14159);
             float fill = body * (0.12 + 0.42 * uProgress * uProgress) * (0.7 + 0.3 * stripes);
-            float a = (fill + (edge * body) * (0.35 + 0.5 * uProgress) + ring * body * 0.8) * inside;
+            float a = (fill + (edge * body) * (0.35 + 0.5 * uProgress + 0.45 * uLocked) + ring * body * 0.8) * inside;
             a = mix(a, body * inside * 0.9, uActive);
             gl_FragColor = vec4(uColor * (1.0 + uActive * 0.8), clamp(a, 0.0, 1.0));
           }`,
@@ -300,7 +300,8 @@ export class Zones {
     }
   }
   begin(): void { this.used = 0; }
-  show(x0: number, x1: number, z: number, depth: number, color: THREE.Color, progress: number, time: number, disc: boolean, active: boolean): void {
+  /** `locked`: a tell that tracked the hero has stopped moving (its rim brightens). */
+  show(x0: number, x1: number, z: number, depth: number, color: THREE.Color, progress: number, time: number, disc: boolean, active: boolean, locked = false): void {
     const mesh = this.meshes[this.used++];
     if (!mesh) return;
     mesh.visible = true;
@@ -312,6 +313,7 @@ export class Zones {
     u.uTime.value = time;
     u.uShape.value = disc ? 1 : 0;
     u.uActive.value = active ? 1 : 0;
+    u.uLocked.value = locked ? 1 : 0;
   }
   end(): void { for (let i = this.used; i < this.meshes.length; i++) this.meshes[i].visible = false; }
 }

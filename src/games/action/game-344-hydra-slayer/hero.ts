@@ -73,6 +73,9 @@ export class HeroView {
   private readonly trailMaterial: THREE.ShaderMaterial;
   private readonly tmpA = new THREE.Vector3();
   private readonly tmpB = new THREE.Vector3();
+  private wasSwinging = false;
+  private readonly trailIdle = new THREE.Color(0xfff2d0);
+  private readonly trailFinish = new THREE.Color(0xffb060);
 
   constructor(glow: THREE.Texture) {
     const armor = rimMaterial({ color: 0x66708a, metalness: 0.65, roughness: 0.42 }, 0xffc08a, 1.0);
@@ -228,7 +231,8 @@ export class HeroView {
     return this.blade.getWorldPosition(out);
   }
 
-  update(dt: number, t: number, hero: Hero, outro: 'none' | 'won' | 'lost', reduced: boolean): void {
+  /** `perfectWindow` is the tier's perfect-parry window: the guard glints brightly only while a perfect is possible. */
+  update(dt: number, t: number, hero: Hero, outro: 'none' | 'won' | 'lost', reduced: boolean, perfectWindow: number): void {
     const target = this.target;
     let rate = 16;
     const a = hero.action;
@@ -320,7 +324,7 @@ export class HeroView {
     tipMat.opacity = glowAmount * 0.8;
     const glint = this.guardGlint.material;
     if (a === 'parry' && !hero.parried && hero.t <= PARRY.guard) {
-      glint.opacity = hero.t <= 0.16 ? 0.75 : 0.25;
+      glint.opacity = hero.t <= perfectWindow && !hero.hasty ? 0.75 : 0.25;
       this.guardGlint.position.set(0.55, 1.35, 0.35);
     } else glint.opacity = Math.max(0, glint.opacity - dt * 4);
 
@@ -339,22 +343,35 @@ export class HeroView {
     const n = this.trailBase.length;
     for (let i = 0; i < n; i++) this.trailAge[i] = Math.min(1, this.trailAge[i] + dt * 5);
     if (swinging) {
-      // Shift samples and push the current blade base and tip.
-      for (let i = n - 1; i > 0; i--) { this.trailBase[i].copy(this.trailBase[i - 1]); this.trailTip[i].copy(this.trailTip[i - 1]); this.trailAge[i] = this.trailAge[i - 1]; }
       this.hand.localToWorld(this.tmpA.set(0, -0.3, 0));
       this.hand.localToWorld(this.tmpB.set(0, -1.22, 0));
+      if (!this.wasSwinging) {
+        // A new swing: forget where the last one ended (the hero may have rolled away since), so no ribbon
+        // stretches back to it.
+        for (let i = 0; i < n; i++) { this.trailBase[i].copy(this.tmpA); this.trailTip[i].copy(this.tmpB); this.trailAge[i] = 1; }
+      }
+      // Shift samples and push the current blade base and tip.
+      for (let i = n - 1; i > 0; i--) { this.trailBase[i].copy(this.trailBase[i - 1]); this.trailTip[i].copy(this.trailTip[i - 1]); this.trailAge[i] = this.trailAge[i - 1]; }
       this.trailBase[0].copy(this.tmpA);
       this.trailTip[0].copy(this.tmpB);
       this.trailAge[0] = 0;
     }
+    this.wasSwinging = swinging;
+    // A stale sample never anchors a visible quad: fold it onto its fresher neighbour.
+    for (let i = 1; i < n; i++) {
+      if (this.trailAge[i] >= 0.999 && this.trailTip[i].distanceToSquared(this.trailTip[i - 1]) > 0.36) {
+        this.trailBase[i].copy(this.trailBase[i - 1]);
+        this.trailTip[i].copy(this.trailTip[i - 1]);
+      }
+    }
     for (let i = 0; i < n; i++) {
-      this.trailPos.set([this.trailBase[i].x, this.trailBase[i].y, this.trailBase[i].z], i * 6);
-      this.trailPos.set([this.trailTip[i].x, this.trailTip[i].y, this.trailTip[i].z], i * 6 + 3);
+      this.trailBase[i].toArray(this.trailPos, i * 6);
+      this.trailTip[i].toArray(this.trailPos, i * 6 + 3);
       const alpha = (1 - this.trailAge[i]) * (1 - i / n) * 0.75;
       this.trailAlpha[i * 2] = alpha * 0.2;
       this.trailAlpha[i * 2 + 1] = alpha;
     }
-    this.trailMaterial.uniforms.uColor.value.set(finishing ? 0xffb060 : 0xfff2d0);
+    this.trailMaterial.uniforms.uColor.value.copy(finishing ? this.trailFinish : this.trailIdle);
     const g = this.trail.geometry;
     g.attributes.position.needsUpdate = true;
     g.attributes.aAlpha.needsUpdate = true;

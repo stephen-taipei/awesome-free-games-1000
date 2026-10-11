@@ -13,7 +13,8 @@ body[data-tier="1"] { --accent: #ff5a6e; --accent-ink: #2a0008; }
 
 /* ------------------------------------------------------------ HUD */
 .g3d-chip { min-width: 5.5rem; }
-.g3d-chip small { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.g3d-chip small { display: flex; align-items: center; gap: 6px; white-space: nowrap; min-width: 0; }
+#beast-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .g3d-chip .g3d-meter { width: 8.5rem; max-width: 100%; }
 .hp-meter > i { background: var(--hp); }
 .hero-chip.low .hp-meter > i { background: var(--crimson); }
@@ -51,6 +52,7 @@ body[data-tier="1"] { --accent: #ff5a6e; --accent-ink: #2a0008; }
 .pop-evade { color: var(--song); }
 .pop-hurt { color: #ff6a7e; font-size: 1.3rem; }
 .pop-stagger { color: var(--gold); font-size: 1.1rem; }
+.pop-focus { color: var(--gold); font-size: 0.9rem; opacity: 0.9; }
 @keyframes pop-rise {
   0% { opacity: 0; transform: translate(-50%, -30%) scale(0.8); }
   15% { opacity: 1; transform: translate(-50%, -60%) scale(1.08); }
@@ -62,7 +64,13 @@ body[data-tier="1"] { --accent: #ff5a6e; --accent-ink: #2a0008; }
 .g3d-toast.gold { color: var(--gold); }
 .g3d-toast.song { color: var(--song); }
 
-/* ------------------------------------------------------------ menu: ladder and results */
+/* ------------------------------------------------------------ menu: colour legend, ladder and results */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: -6px 0 16px; padding: 0; list-style: none; font-size: 0.82rem; font-weight: 700; }
+.legend li { display: flex; align-items: center; gap: 7px; }
+.legend li::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.lg-gold { color: var(--gold); }
+.lg-crimson { color: #ff7a8e; }
+.lg-song { color: var(--song); }
 .ladder { margin: 0 0 18px; }
 .tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
 .tier, .card {
@@ -189,9 +197,12 @@ body[data-tier="1"] { --accent: #ff5a6e; --accent-ink: #2a0008; }
   .card { min-height: 64px; padding: 7px 8px; }
   .card-name { font-size: 0.86rem; }
 }
+/* Short landscape screens (phones on their side): the panel sits top-left, clear of the language and sound buttons
+   (top right) and the collection navigation (bottom right), with the beast on show to its right. */
 @media (max-height: 520px) and (orientation: landscape) {
-  .g3d-overlay { padding: 60px 12px 64px; }
-  .g3d-panel { width: min(100%, 40rem); padding: 14px 20px; }
+  .g3d-overlay { padding: max(10px, env(safe-area-inset-top)) 12px 10px max(12px, env(safe-area-inset-left)); place-items: start start; }
+  .g3d-panel { width: min(calc(100% - 238px), 36rem); padding: 12px 18px; border-radius: 18px; }
+  .legend { margin: 6px 0 8px; font-size: 0.74rem; gap: 2px 12px; }
   .g3d-kicker { margin-bottom: 2px; }
   .g3d-title { font-size: 1.6rem; }
   .tiers { margin-bottom: 8px; }
@@ -202,10 +213,46 @@ body[data-tier="1"] { --accent: #ff5a6e; --accent-ink: #2a0008; }
   .ladder-hint { margin-top: 6px; font-size: 0.8rem; }
   #overlay-lead, .g3d-note { display: none; }
   .g3d-keys { display: none; }
-  .g3d-result { grid-template-columns: repeat(4, 1fr); margin-bottom: 12px; }
-  .g3d-result b { font-size: 1.15rem; }
-  .ladder { margin-bottom: 12px; }
-  .cards { grid-template-columns: repeat(4, 1fr); }
+  .g3d-result { grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+  .g3d-result div { padding: 6px 8px; }
+  .g3d-result small { font-size: 0.6rem; letter-spacing: 0.06em; }
+  .g3d-result b { font-size: 1.05rem; }
+  .result-note { margin: -4px 0 10px; font-size: 0.78rem; }
+  .ladder { margin-bottom: 10px; }
+  .cards { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .g3d-btn { min-height: 46px; }
+  .more-btns { margin-top: 8px; }
+  .g3d-btn.ghost { min-height: 42px; }
+}
+/* Narrow landscape panels: two cards per row, and the result buttons side by side. */
+@media (max-height: 520px) and (orientation: landscape) and (max-width: 700px) {
+  .cards { grid-template-columns: 1fr 1fr; }
+  .card-status { font-size: 0.66rem; }
+  .more-btns { grid-template-columns: 1fr 1fr; }
+}
+/* Very short landscape screens (320 px): drop the kicker and the per-beast hint (the fight's intro repeats it). */
+@media (max-height: 360px) and (orientation: landscape) {
+  .g3d-kicker { display: none; }
+  .ladder-hint:not(.warn) { display: none; }
+  .g3d-panel { padding: 10px 14px; }
+  .g3d-title { font-size: 1.2rem; }
+  .legend { margin: 4px 0 6px; }
+  .tier { min-height: 36px; }
+  .g3d-result { margin-bottom: 8px; }
+}
+/* Portrait phones: the main button comes before the controls list, so it is on screen without scrolling and clear
+   of the collection navigation. */
+@media (max-width: 640px) and (orientation: portrait) {
+  .g3d-panel { display: flex; flex-direction: column; }
+  #start-btn, .g3d-panel > .g3d-fallback { order: 1; }
+  #more-btns { order: 2; }
+  #controls { order: 3; margin: 18px 0 0; }
+  #overlay-note { order: 4; }
+}
+/* Short portrait phones: the colour legend stands in for the lead. */
+@media (max-height: 760px) and (orientation: portrait) {
+  #overlay-lead { display: none; }
+  .legend { margin-top: 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -216,11 +263,6 @@ body[data-tier="1"] { --accent: #ff5a6e; --accent-ink: #2a0008; }
 @media (min-width: 700px) and (hover: hover) {
   .g3d-panel { width: min(100%, 36rem); }
   .g3d-keys { grid-template-columns: 1fr 1fr; column-gap: 14px; }
-}
-/* Landscape phones: the menu panel sits left, clear of the collection navigation, with the beast on show to its right. */
-@media (max-height: 520px) and (orientation: landscape) and (min-width: 700px) {
-  .g3d-overlay { place-items: center start; }
-  .g3d-panel { width: min(calc(100% - 200px), 36rem); }
 }
 @media (max-width: 900px) and (min-width: 641px) {
   .g3d-chip .g3d-meter { width: 6.2rem; }

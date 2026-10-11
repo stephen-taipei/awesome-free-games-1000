@@ -9,7 +9,7 @@ const logic = await import('data:text/javascript;base64,' + Buffer.from(js).toSt
 const {
   BEASTS, ATTACKS, ATTACK_IDS, TIERS, PARRY, DODGE, COMBO, FINISHER, MIN_WINDUP, MIN_ACTIVE_GAP, HURT_TIME, RAGE_SPEEDUP,
   WALL_X, EDGE_X, EDGE_STOP, HERO_HALF, FOCUS_MAX, FALL_DAMAGE, FALL_TIME, RESPAWN_X, GUARD_MULT, STAGGER_BONUS, SONG_WINDUP,
-  HOUND_GAP, HYDRA_DOUBLE_GAP, BURST_GAP, NOTE_GAP, HYDRA_REST,
+  HOUND_GAP, HYDRA_DOUBLE_GAP, BURST_GAP, NOTE_GAP, HYDRA_REST, MIX_GAP, BEAK_GAP, FOCUS_STUMP, FIRST_ATTACK, WALK_SPEED,
   Duel, NO_INPUT, windupFor, phaseOf, botInput, createBot,
   LADDER, rungOf, isUnlocked, nightmareOpen, nextRung, rungAt, encodeTime, decodeTime, formatTime, timeKey, medalKey, PROGRESS_KEY,
 } = logic;
@@ -17,6 +17,76 @@ const {
 function seeded(seed) {
   let a = seed >>> 0;
   return () => { a = (a + 0x6d2b79f5) >>> 0; let t = Math.imul(a ^ (a >>> 15), a | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+function gauss(random) {
+  let u = 0;
+  let v = 0;
+  while (!u) u = random();
+  while (!v) v = random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+/**
+ * A human-like duellist: it answers each tell once, pressing parry (gold) or a backward roll (crimson) at
+ * impact - 0.07 s plus Gaussian timing noise `sigma`, never before a 0.22-0.32 s reaction time; it walks out of a
+ * pinned crimson zone when it clearly has time. Otherwise it moves and attacks like the reference bot.
+ */
+function human(sigma, random) {
+  const plan = new Map();
+  const bot = createBot(random);
+  return duel => {
+    const h = duel.hero;
+    const out = { move: 0, attack: false, parry: false, dodge: false, finisher: false };
+    if (duel.state !== 'fight' || h.action === 'fall' || h.action === 'down') return out;
+    let threat = null;
+    let eta = Infinity;
+    for (const s of duel.beast.strikes) {
+      if (s.outcome || s.t < 0) continue;
+      if (!plan.has(s.id)) plan.set(s.id, { at: s.windup - 0.07 + gauss(random) * sigma, done: false, walk: false, react: 0.22 + random() * 0.1 });
+      const left = s.windup - s.t;
+      if (left < -s.spec.active) continue;
+      if (h.x + HERO_HALF + 0.08 < s.x0 || h.x - HERO_HALF - 0.08 > s.x1) continue;
+      if (left < eta) { eta = left; threat = s; }
+    }
+    if (threat) {
+      const p = plan.get(threat.id);
+      if (!p.done && threat.t >= p.at && threat.t >= Math.min(p.react, p.at)) {
+        p.done = true;
+        if (threat.spec.parryable) out.parry = true;
+        else { out.dodge = true; out.move = -1; }
+        return out;
+      }
+      if (p.walk && h.action === 'idle') { out.move = -1; return out; }
+      if (p.done) return out;
+      if (!threat.spec.parryable && threat.t > p.react && threat.spec.lockLead === Infinity) {
+        const clearLeft = h.x + HERO_HALF - threat.x0 + 0.06;
+        if (clearLeft / WALK_SPEED < eta - 0.1 && h.x - clearLeft > WALL_X + HERO_HALF && h.action === 'idle') {
+          out.move = -1;
+          p.walk = p.done = true;
+        }
+      }
+      return out;
+    }
+    const b = botInput(duel, bot, random);
+    b.parry = false;
+    b.dodge = false;
+    return b;
+  };
+}
+
+/** Plays `n` seeded fights with the human-like duellist; returns the win rate and the average HP left (losses count 0). */
+function ladderStats(beast, tier, sigma, n) {
+  let wins = 0;
+  let hp = 0;
+  for (let seed = 1; seed <= n; seed++) {
+    const random = seeded(seed * 977 + tier * 13 + Math.round(sigma * 1e4));
+    const duel = new Duel(beast, tier, seeded(seed * 31 + 7));
+    const input = human(sigma, random);
+    while (duel.state === 'fight' && duel.time < 400) duel.step(DT, input(duel));
+    if (duel.state === 'won') { wins++; hp += duel.hero.hp; }
+  }
+  return { win: wins / n, hp: hp / n };
 }
 
 const DT = 1 / 120;
@@ -192,19 +262,69 @@ test('every beast is beatable by a scripted parry-and-roll bot, at both tiers', 
   }
 });
 
-test('a sloppy bot that mostly blocks still clears every Normal beast', () => {
-  for (const beast of BEASTS) {
-    for (let seed = 1; seed <= 6; seed++) {
-      const random = seeded(seed * 17 + 3);
-      const bot = createBot(random, { reaction: 0.3 });
-      const duel = new Duel(beast, 0, seeded(seed));
-      while (duel.state === 'fight' && duel.time < 600) {
-        bot.lead = 0.2 + random() * 1.9;
-        duel.step(1 / 60, botInput(duel, bot, random));
-      }
-      assert.equal(duel.state, 'won', `${beast} seed ${seed}`);
-    }
+test('a human-like duellist with timing noise clears Normal, and the ladder gets harder rung by rung', () => {
+  // sigma 0.11 s of timing noise: early, late and missed parries and rolls all happen.
+  const N = 60;
+  const normal = BEASTS.map(beast => ladderStats(beast, 0, 0.11, N));
+  const nightmare = BEASTS.map(beast => ladderStats(beast, 1, 0.11, N));
+  const show = rows => rows.map((r, i) => `${BEASTS[i]} ${Math.round(r.win * 100)}% ${r.hp.toFixed(1)} hp`).join(', ');
+  for (const [i, r] of normal.entries()) assert.ok(r.win >= 0.8, `Normal ${BEASTS[i]} is winnable with sloppy timing: ${show(normal)}`);
+  for (let i = 1; i < BEASTS.length; i++) {
+    // Average HP left (a loss counts as 0) falls from rung to rung on both tiers: the finale is the hardest fight.
+    assert.ok(normal[i].hp < normal[i - 1].hp, `Normal: ${BEASTS[i]} should be harder than ${BEASTS[i - 1]}: ${show(normal)}`);
+    assert.ok(nightmare[i].hp < nightmare[i - 1].hp, `Nightmare: ${BEASTS[i]} should be harder than ${BEASTS[i - 1]}: ${show(nightmare)}`);
+    assert.ok(nightmare[i].hp < normal[i].hp, `${BEASTS[i]} is harder on Nightmare`);
   }
+  assert.ok(normal[BEASTS.length - 1].hp < normal[0].hp - 15, `the ladder climbs: ${show(normal)}`);
+  assert.ok(nightmare[BEASTS.length - 1].win > 0.2, `the Nightmare finale stays beatable: ${show(nightmare)}`);
+});
+
+test('mashing parry earns blocks, never perfects: a guard right after a whiff is hasty', () => {
+  // Mash parry every 0.1 s while a gold tell targets the hero (otherwise play like the reference bot).
+  for (const beast of BEASTS) {
+    let perfects = 0;
+    let blocks = 0;
+    const fights = 6;
+    for (let seed = 1; seed <= fights; seed++) {
+      const random = seeded(seed * 3);
+      const bot = createBot(random);
+      const duel = new Duel(beast, 0, seeded(seed + 77));
+      let last = -1;
+      while (duel.state === 'fight' && duel.time < 120) {
+        const input = botInput(duel, bot, random);
+        const h = duel.hero;
+        const gold = duel.beast.strikes.some(s => !s.outcome && s.t >= 0 && s.spec.parryable && !(h.x + HERO_HALF + 0.08 < s.x0 || h.x - HERO_HALF - 0.08 > s.x1));
+        input.parry = gold && duel.time - last > 0.1;
+        if (input.parry) { last = duel.time; input.attack = false; }
+        duel.step(DT, input);
+      }
+      perfects += duel.stats.perfects;
+      blocks += duel.stats.blocks;
+    }
+    // Only a mash's first press can be a perfect, and only by luck; every hasty guard after a whiff merely blocks.
+    assert.ok(perfects / fights <= 1, `${beast}: ${(perfects / fights).toFixed(1)} perfects per fight from mashing`);
+    assert.ok(blocks > perfects, `${beast}: mashing blocks (${blocks}) more than it perfects (${perfects})`);
+  }
+  // Directly: parry far too early (a whiff), raise the guard again just in time: it only blocks.
+  const duel = quiet('kraken', 0);
+  placeFor('krakenSlam')(duel);
+  const s = duel.beast.strike('krakenSlam', 0);
+  duel.step(DT, NO_INPUT);
+  duel.step(DT, press({ parry: true }));
+  let again = false;
+  for (let i = 0; i < 400 && !s.outcome; i++) {
+    const due = !again && duel.heroReady() && s.windup - s.t <= duel.perfectWindow / 2;
+    if (due) again = true;
+    duel.step(DT, due ? press({ parry: true }) : NO_INPUT);
+  }
+  assert.ok(again);
+  assert.equal(s.outcome, 'block', 'a hasty guard only blocks');
+  assert.equal(duel.hero.hasty, true);
+  // After a pause it is a normal guard again.
+  for (let t = 0; t < PARRY.hasty + 0.2; t += DT) duel.step(DT, NO_INPUT);
+  const calm = stage(duel, 'krakenSlam', press({ parry: true }), duel.perfectWindow / 2);
+  assert.equal(calm.s.outcome, 'perfect');
+  assert.equal(duel.hero.hasty, false);
 });
 
 test('a hero who does nothing loses to every beast: there is no safe corner', () => {
@@ -228,7 +348,15 @@ test('Hydra heads regrow unless a Focus finisher burns them', () => {
   duel.hero.x = 0.5;
   for (let i = 0; i < 4000 && head.state === 'alive'; i++) duel.step(DT, press({ attack: i % 6 === 0 }));
   assert.equal(head.state, 'stump');
-  assert.ok(hydra.hurtboxes(false).every(b => b.part !== 0), 'normal swings cannot touch a stump');
+  assert.ok(hydra.hurtboxes(false).filter(b => b.part === 0).every(b => b.sear), 'normal swings only sear a stump');
+  // Hacking at the stump charges Focus but never hurts it or stops it regrowing.
+  duel.hero.x = HYDRA_REST[0] - 1.6;
+  const focus0 = duel.hero.focus;
+  let sears = 0;
+  for (let i = 0; i < 240; i++) for (const e of duel.step(DT, press({ attack: i % 6 === 0 }))) if (e.type === 'land' && e.sear) { sears++; assert.equal(e.damage, 0); assert.equal(e.focus, FOCUS_STUMP); }
+  assert.ok(sears >= 3 && duel.hero.focus >= Math.min(FOCUS_MAX, focus0 + 3 * FOCUS_STUMP), 'the stump charged the blade');
+  assert.equal(head.state, 'stump');
+  duel.hero.focus = 0;
   for (let t = 0; t < TIERS[0].regrow + 0.1; t += DT) duel.step(DT, NO_INPUT);
   assert.equal(head.state, 'alive', 'the severed head grew back');
   assert.equal(head.hp, head.max);
@@ -243,6 +371,44 @@ test('Hydra heads regrow unless a Focus finisher burns them', () => {
   for (let t = 0; t < 20; t += DT) duel.step(DT, NO_INPUT);
   assert.equal(head.state, 'gone', 'burned heads never return');
   assert.equal(duel.hero.focus, 0, 'the finisher spent the Focus');
+});
+
+test('the Hydra never leaves the hero idle: stumps take hits and spit venom while no head is alive', () => {
+  for (const tier of [0, 1]) for (let seed = 1; seed <= 8; seed++) {
+    const random = seeded(seed * 5 + 1);
+    const input = human(0.08, random);
+    const duel = new Duel('hydra', tier, seeded(seed + 40));
+    let headless = 0;
+    let longest = 0;
+    let lastTell = 0;
+    let idle = 0;
+    let longestIdle = 0;
+    while (duel.state === 'fight' && duel.time < 300) {
+      const events = duel.step(DT, input(duel));
+      if (events.some(e => e.type === 'telegraph')) lastTell = duel.time;
+      const hydra = duel.beast;
+      const alive = hydra.heads.some(h => h.state === 'alive');
+      // With no head alive the stumps keep spitting.
+      if (!alive && hydra.strikes.length === 0) headless += DT; else headless = 0;
+      if (!alive) longest = Math.max(longest, duel.time - lastTell);
+      // Nothing to hit, nothing incoming and no finisher ready.
+      const nothing = hydra.strikes.length === 0 && hydra.hurtboxes(false).length === 0 && duel.hero.focus < FOCUS_MAX;
+      idle = nothing ? idle + DT : 0;
+      longestIdle = Math.max(longestIdle, idle);
+    }
+    assert.equal(duel.state, 'won', `tier ${tier} seed ${seed}`);
+    assert.ok(longest < 3.6, `tier ${tier} seed ${seed}: ${longest.toFixed(2)} s between attacks while no head was alive`);
+    assert.ok(longestIdle < 2.5, `tier ${tier} seed ${seed}: idle for ${longestIdle.toFixed(2)} s`);
+  }
+  // Staged: sever every head; a stump spits within a few seconds.
+  const duel = quiet('hydra', 0);
+  duel.beast.cooldown = 0;
+  for (const head of duel.beast.heads) { head.state = 'stump'; head.regrow = 6; }
+  duel.hero.x = 0;
+  let spit = null;
+  for (let i = 0; i < 600 && !spit; i++) spit = duel.step(DT, NO_INPUT).find(e => e.type === 'telegraph');
+  assert.equal(spit?.strike.attack, 'hydraSpit');
+  assert.equal(duel.beast.heads[spit.strike.part].state, 'stump');
 });
 
 test('the Hydra cannot be beaten without finishers', () => {
@@ -294,31 +460,67 @@ test('the Siren song drags the hero over the edge, and parrying a note breaks it
   assert.ok(!parry.beast.strikes.some(s => s.attack === 'sirenNote' && !s.outcome && s.t < s.windup), 'remaining notes are cancelled');
 });
 
-test('Kraken bursts land exactly where their floor tell appeared', () => {
+test('Kraken bursts follow the hero, then lock in place before they erupt', () => {
+  const lockLead = ATTACKS.krakenBurst.lockLead;
+  assert.ok(lockLead >= 0.45 && lockLead < 1, 'there is always time to react to the lock');
   for (const tier of [0, 1]) {
     const duel = new Duel('kraken', tier, seeded(4));
-    const random = seeded(8);
-    const seen = new Map();
+    const locked = new Map();
     let bursts = 0;
     while (duel.state === 'fight' && duel.time < 90) {
-      const move = Math.sin(duel.time * 1.7); // keep wandering so pinned tells are tested against a moving hero
+      const move = Math.sin(duel.time * 1.7); // keep wandering so the tells are tested against a moving hero
       for (const event of duel.step(DT, press({ move }))) {
         if (event.type === 'telegraph' && event.strike.attack === 'krakenBurst') {
           const s = event.strike;
           assert.ok(Math.abs(s.target - Math.max(WALL_X + 1, Math.min(EDGE_X - 0.9, duel.hero.x))) < 0.06, 'the tell appears under the hero');
-          seen.set(s.id, [s.x0, s.x1]);
           assert.ok(s.windup >= MIN_WINDUP);
         }
         if (event.type === 'strike' && event.strike.attack === 'krakenBurst') {
           const s = event.strike;
-          assert.deepEqual([s.x0, s.x1], seen.get(s.id), 'the hitbox never moved after the tell');
+          assert.deepEqual([s.x0, s.x1], locked.get(s.id), 'the hitbox never moved after the tell locked');
           bursts++;
         }
       }
-      void random;
+      for (const s of duel.beast.strikes) {
+        if (s.attack !== 'krakenBurst' || s.t < 0 || !s.locked) continue;
+        if (!locked.has(s.id)) {
+          locked.set(s.id, [s.x0, s.x1]);
+          assert.ok(s.windup - s.t >= lockLead - DT - 1e-9, 'the tell locks at least lockLead before it erupts');
+        } else assert.deepEqual([s.x0, s.x1], locked.get(s.id));
+      }
     }
     assert.ok(bursts >= 3, `saw ${bursts} bursts`);
   }
+});
+
+test('the Kraken finale mixes crimson and gold, and the finisher explains when it has nothing to strike', () => {
+  const seen = new Set();
+  for (let seed = 1; seed <= 6; seed++) {
+    const duel = new Duel('kraken', 0, seeded(seed));
+    const random = seeded(seed + 9);
+    const bot = createBot(random);
+    while (duel.state === 'fight' && duel.time < 120) {
+      duel.step(DT, botInput(duel, bot, random));
+      const live = duel.beast.strikes.filter(s => !s.outcome);
+      if (live.some(s => s.attack === 'krakenBurst') && live.some(s => s.attack === 'krakenSlam')) seen.add('mix');
+    }
+  }
+  assert.ok(seen.has('mix'), 'bursts and slams come together');
+  assert.ok(MIX_GAP * TIERS[1].gap - (ATTACKS.krakenBurst.windup - ATTACKS.krakenSlam.windup) * TIERS[1].windup >= MIN_ACTIVE_GAP);
+  assert.ok(BEAK_GAP * TIERS[1].gap >= MIN_ACTIVE_GAP);
+  // Submerged with no tentacle out: the finisher is refused with its own reason, and Focus is kept.
+  const duel = quiet('kraken', 0);
+  duel.hero.x = EDGE_X - EDGE_STOP - 0.01;
+  duel.hero.focus = FOCUS_MAX;
+  const events = duel.step(DT, press({ finisher: true }));
+  assert.ok(events.some(e => e.type === 'noTarget') && !events.some(e => e.type === 'far'));
+  assert.equal(duel.hero.focus, FOCUS_MAX);
+  assert.equal(duel.hero.action, 'idle');
+  // Surfaced, the same press burns the Focus.
+  duel.beast.head = 1;
+  duel.beast.up = 5;
+  duel.step(DT, press({ finisher: true }));
+  assert.equal(duel.hero.action, 'finisher');
 });
 
 test('the Hound bites in a staggered rhythm, and parrying it staggers the Hound', () => {
@@ -446,5 +648,7 @@ test('best times are stored so that faster is larger, and keys are namespaced', 
   assert.equal(PROGRESS_KEY, 'afg-beastfall-best');
   assert.equal(timeKey('hydra', 1), 'afg-beastfall-best-time-hydra-1');
   assert.equal(medalKey('kraken', 0), 'afg-beastfall-best-nohit-kraken-0');
-  assert.deepEqual(Object.keys(BEAST_OF), [...BEASTS]);
+  assert.deepEqual(Object.keys(BEAST_OF).sort(), [...BEASTS].sort());
+  assert.deepEqual([...BEASTS], ['hound', 'siren', 'hydra', 'kraken'], 'the Hound teaches, the Kraken ends');
+  assert.ok(FIRST_ATTACK >= 1.6, 'the first attack waits for the entrance');
 });

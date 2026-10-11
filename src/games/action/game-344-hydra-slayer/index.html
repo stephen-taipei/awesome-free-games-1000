@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="description" content="斬獸試煉 Beastfall Trials：WebGL 2.5D 懸崖首領對決。看準巨獸發光的起手，格擋金光、翻滾閃過赤光，用專注終結技討伐九頭蛇、三首獄犬、海妖與深淵巨妖。" />
+  <meta name="description" content="斬獸試煉 Beastfall Trials：WebGL 2.5D 懸崖首領對決。看準巨獸發光的起手，格擋金光、翻滾閃過赤光，用專注終結技討伐三首獄犬、海妖、九頭蛇與深淵巨妖。" />
   <meta name="theme-color" content="#1a1030" />
   <link rel="icon" href="data:," />
   <title>斬獸試煉 Beastfall Trials - Awesome Free Games 1000</title>
@@ -60,6 +60,11 @@
         <p class="g3d-kicker" id="overlay-kicker" data-i18n="game.kicker">WebGL boss duels</p>
         <h1 class="g3d-title" id="overlay-title" data-i18n="game.title">Beastfall Trials</h1>
         <p class="g3d-lead" id="overlay-lead" data-i18n="game.lead"></p>
+        <ul class="legend" id="legend" data-i18n-aria="game.legend" aria-label="Attack colours">
+          <li class="lg-gold" data-i18n="legend.gold">Gold: parry</li>
+          <li class="lg-crimson" data-i18n="legend.crimson">Crimson: roll or step aside</li>
+          <li class="lg-song" data-i18n="legend.song">Cyan notes: parry</li>
+        </ul>
         <div id="ladder" class="ladder">
           <div class="tiers" role="group" data-i18n-aria="game.tierLabel" aria-label="Difficulty">
             <button id="tier-0" class="tier" type="button" aria-pressed="true" data-i18n="game.normal">Normal</button>
@@ -79,8 +84,8 @@
           <li><kbd>A D / ← →</kbd><span data-i18n="game.keyMove"></span></li>
           <li><kbd>J / Space</kbd><span data-i18n="game.keyAttack"></span></li>
           <li><kbd>K / Shift</kbd><span data-i18n="game.keyParry"></span></li>
-          <li><kbd>L / ↓</kbd><span data-i18n="game.keyDodge"></span></li>
-          <li><kbd>I / ↑</kbd><span data-i18n="game.keyFinisher"></span></li>
+          <li><kbd>L / ↓ / S</kbd><span data-i18n="game.keyDodge"></span></li>
+          <li><kbd>I / ↑ / W</kbd><span data-i18n="game.keyFinisher"></span></li>
           <li><kbd>P / Esc</kbd><span data-i18n="game.keyPause"></span></li>
           <li class="touch-only"><kbd data-i18n="game.touchPad"></kbd><span data-i18n="game.touchPadDesc"></span></li>
           <li class="touch-only"><kbd data-i18n="game.touchButtons"></kbd><span data-i18n="game.touchButtonsDesc"></span></li>

@@ -2,7 +2,7 @@
 import { THREE, damp, clamp, lerp } from '../../../shared/three/kit';
 import {
   EDGE_X, HYDRA_REST, HYDRA_FRONT, SWEEP_FROM, HOUND_LENGTH, HOUND_AIR, HOVER_X, HOVER_Y, KRAKEN_HEAD_X0,
-  phaseOf, type Beast, type Strike, type Hydra, type Hound, type Siren, type Kraken,
+  phaseOf, type AttackId, type Beast, type Strike, type Hydra, type Hound, type Siren, type Kraken,
 } from './logic';
 import { LiveTube, rimMaterial, rimOf, mergeGeometries, GOLD, CRIMSON, SONG, EMBER, type Sparks } from './art';
 
@@ -22,6 +22,16 @@ export interface Frame { left: number; right: number; top: number; }
 
 const ease = (k: number) => k * k * (3 - 2 * k);
 const sat = (k: number) => clamp(k, 0, 1);
+
+/** The strike of this attack that matters for posing: one winding up or landing beats one recovering. */
+function liveStrike(strikes: readonly Strike[], attack: AttackId): Strike | null {
+  let found: Strike | null = null;
+  for (const s of strikes) {
+    if (s.attack !== attack || s.outcome === 'cancel' || phaseOf(s) === 'queued') continue;
+    if (!found || phaseOf(found) === 'recovery') found = s;
+  }
+  return found;
+}
 export const tellColor = (s: Strike) => (s.spec.parryable ? (s.attack === 'sirenNote' ? SONG : GOLD) : CRIMSON);
 
 /** Glow strength for a strike: grows through the windup (squared, so the last instant is brightest), flares on the hit. */
@@ -43,23 +53,37 @@ function eyeMaterial(color: THREE.ColorRepresentation): THREE.MeshBasicMaterial 
   return new THREE.MeshBasicMaterial({ color });
 }
 
-/** Sets an eye/glow pair to a telegraph colour (or back to its resting colour). */
-function setTell(eye: THREE.MeshBasicMaterial, glow: THREE.Sprite, rest: THREE.Color, s: Strike | null, scale: number, pulse = 0): void {
+/** Shows a telegraph halo for a strike (or fades it out). Returns the tell strength, 0 when there is none. */
+function setGlow(glow: THREE.Sprite, s: Strike | null, scale: number): number {
   // Telegraph halos draw over everything: they are the most important thing on screen.
   glow.material.depthTest = false;
   glow.renderOrder = 5;
   if (s && phaseOf(s) !== 'queued') {
     const k = tellAmount(s);
-    eye.color.copy(tellColor(s)).multiplyScalar(0.6 + 0.6 * Math.min(1, k));
     glow.material.color.copy(tellColor(s));
     glow.material.opacity = Math.min(1, k * 0.95);
     const size = scale * (0.8 + 1.2 * Math.min(1.2, k));
     glow.scale.set(size, size, 1);
-  } else {
-    eye.color.copy(rest);
-    glow.material.opacity = Math.max(0, glow.material.opacity - 0.08) * (1 - pulse) + pulse * 0.25;
+    return k;
   }
+  glow.material.opacity = Math.max(0, glow.material.opacity - 0.08);
+  return 0;
 }
+
+/** Sets an eye/glow pair to a telegraph colour (or back to its resting colour). */
+function setTell(eye: THREE.MeshBasicMaterial, glow: THREE.Sprite, rest: THREE.Color, s: Strike | null, scale: number): void {
+  const k = setGlow(glow, s, scale);
+  if (s && phaseOf(s) !== 'queued') eye.color.copy(tellColor(s)).multiplyScalar(0.6 + 0.6 * Math.min(1, k));
+  else eye.color.copy(rest);
+}
+
+/** Eye colours of a reeling beast. */
+const DAZED = new THREE.Color(0x555555);
+const DAZED_DARK = new THREE.Color(0x444444);
+const DAZED_SEA = new THREE.Color(0x446666);
+const PEBBLE = new THREE.Color(0x8a6a5a);
+const ROCK = new THREE.Color(0xb08a7a);
+const FOAM = new THREE.Color(0xbfe8ff);
 
 export abstract class BeastView {
   readonly root = new THREE.Group();
@@ -89,11 +113,11 @@ export abstract class BeastView {
 
   private readonly tintColor = new THREE.Color();
   /** The body takes on the colour of its most advanced telegraph as it winds up. */
-  protected tellTint(strikes: readonly Strike[], strength = 0.26): THREE.Color | null {
+  protected tellTint(strikes: readonly Strike[], strength = 0.26, skip: AttackId | null = null): THREE.Color | null {
     let best: Strike | null = null;
     let amount = 0;
     for (const s of strikes) {
-      if (s.outcome === 'cancel' || phaseOf(s) === 'queued' || phaseOf(s) === 'recovery') continue;
+      if (s.attack === skip || s.outcome === 'cancel' || phaseOf(s) === 'queued' || phaseOf(s) === 'recovery') continue;
       const k = Math.min(1, tellAmount(s));
       if (k > amount) { amount = k; best = s; }
     }
@@ -118,6 +142,8 @@ interface HeadRig {
   neck: LiveTube;
   neckMesh: THREE.Mesh;
   stump: THREE.Mesh;
+  /** Crimson halo while the stump spits venom. */
+  stumpGlow: THREE.Sprite;
   material: THREE.MeshStandardMaterial;
   base: THREE.Vector3;
   pos: THREE.Vector3;
@@ -214,11 +240,13 @@ export class HydraView extends BeastView {
       stump.visible = false;
       const spit = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: 0xc6ff4a }));
       spit.visible = false;
-      this.root.add(group, neckMesh, stump, spit);
+      const stumpGlow = sprite(glow, CRIMSON, 1.2);
+      stumpGlow.visible = false;
+      this.root.add(group, neckMesh, stump, spit, stumpGlow);
       const base = new THREE.Vector3(EDGE_X + 0.95, 0.9 + i * 0.25, zs[i]);
       const pos = new THREE.Vector3(restX + 0.2, restY[i], zs[i]);
       this.heads.push({
-        group, jaw, eyes, glow: glowSprite, neck, neckMesh, stump, material, base, pos, z: zs[i], restY: restY[i], scale: 1, flash: 0, spit, tint: new THREE.Color(),
+        group, jaw, eyes, glow: glowSprite, neck, neckMesh, stump, stumpGlow, material, base, pos, z: zs[i], restY: restY[i], scale: 1, flash: 0, spit, tint: new THREE.Color(),
         points: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()],
       });
     });
@@ -315,7 +343,7 @@ export class HydraView extends BeastView {
       rig.group.scale.setScalar(Math.max(0.01, rig.scale));
       rig.group.rotation.z = clamp((g.y - rig.pos.y) * 0.4, -0.5, 0.5) - (rig.pos.y < 1 ? 0.25 : 0);
       rig.jaw.rotation.z = jawOpen * 0.75;
-      setTell(rig.eyes, rig.glow, state.stagger > 0 ? new THREE.Color(0x555555) : this.eyeRest, strike, 1.2);
+      setTell(rig.eyes, rig.glow, state.stagger > 0 ? DAZED : this.eyeRest, state.state === 'alive' ? strike : null, 1.2);
 
       // Neck: from the body, up and over, down into the back of the head.
       const [p0, p1, p2, p3] = rig.points;
@@ -328,10 +356,25 @@ export class HydraView extends BeastView {
       rig.neck.update(rig.points, u => (state.state === 'gone' ? 0.3 - 0.1 * u : 0.36 - 0.16 * u));
       rig.stump.visible = state.state !== 'alive';
       rig.stump.position.copy(p3);
+      // A stump that spits: a crimson halo swells on the wound and the glob arcs from it to the floor tell.
+      const stumpSpit = state.state === 'stump' && strike && strike.attack === 'hydraSpit' ? strike : null;
+      rig.stumpGlow.visible = !!stumpSpit || rig.stumpGlow.material.opacity > 0.01;
+      rig.stumpGlow.position.set(p3.x - 0.15, p3.y + 0.1, p3.z + 0.3);
+      setGlow(rig.stumpGlow, stumpSpit && phaseOf(stumpSpit) !== 'recovery' ? stumpSpit : null, 1.1);
+      if (stumpSpit) {
+        const flight = 0.45;
+        const ft = stumpSpit.t - (stumpSpit.windup - flight);
+        rig.spit.visible = ft > 0 && ft < flight;
+        if (rig.spit.visible) {
+          const u = ft / flight;
+          rig.spit.position.set(lerp(p3.x - 0.2, stumpSpit.target, u), lerp(p3.y + 0.2, 0.2, u) + Math.sin(u * Math.PI) * 1.6, lerp(p3.z, 0, u));
+        }
+      }
       if (state.state === 'stump') {
         const near = state.regrow < 1.6 ? 1 - state.regrow / 1.6 : 0;
-        rig.stump.scale.setScalar(0.9 + near * 0.35 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2 * 1.2)));
-        rimOf(rig.stump.material as THREE.MeshStandardMaterial).uFlash.value.setRGB(0.5 + near * 0.6, 0.12, 0.05);
+        const f = Math.min(1, rig.flash * (ctx.reduced ? 2 : 7)) * 0.7;
+        rig.stump.scale.setScalar(0.9 + near * 0.35 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2 * 1.2)) + f * 0.12);
+        rimOf(rig.stump.material as THREE.MeshStandardMaterial).uFlash.value.setRGB(0.5 + near * 0.6 + f, 0.12 + f * 0.7, 0.05 + f * 0.3);
       } else if (state.state === 'gone') {
         rig.stump.scale.setScalar(0.8);
         rimOf(rig.stump.material as THREE.MeshStandardMaterial).uFlash.value.setRGB(0.25 + 0.12 * Math.sin(t * 1.5 + i), 0.08, 0.02);
@@ -357,7 +400,16 @@ export class HydraView extends BeastView {
 
 // ------------------------------------------------------------------ Three-Headed Hound
 
-interface HoundHead { pivot: THREE.Group; jaw: THREE.Group; eyes: THREE.MeshBasicMaterial; glow: THREE.Sprite; rest: THREE.Vector3; }
+interface HoundHead {
+  pivot: THREE.Group;
+  jaw: THREE.Group;
+  eyes: THREE.MeshBasicMaterial;
+  glow: THREE.Sprite;
+  rest: THREE.Vector3;
+  neck: LiveTube;
+  neckPoints: THREE.Vector3[];
+  anchor: THREE.Vector3;
+}
 
 export class HoundView extends BeastView {
   private readonly body = new THREE.Group();
@@ -408,9 +460,9 @@ export class HoundView extends BeastView {
       this.body.add(hip);
       this.legs.push({ hip, knee, front, side: z });
     }
-    // Three heads on short necks.
-    const restSpots = [new THREE.Vector3(-1.25, 1.75, 0.5), new THREE.Vector3(-1.4, 2.08, 0), new THREE.Vector3(-1.25, 1.75, -0.5)];
-    const neckGeometry = new THREE.CapsuleGeometry(0.2, 0.45, 3, 8).rotateZ(-0.9).translate(0.32, -0.22, 0);
+    // Three heads fanned out on their own necks (high and back, forward, low), so each has its own silhouette
+    // from the side-on camera and the biting one reads at a glance.
+    const restSpots = [new THREE.Vector3(-1.08, 2.5, -0.3), new THREE.Vector3(-1.52, 1.98, 0), new THREE.Vector3(-1.3, 1.42, 0.32)];
     restSpots.forEach(rest => {
       const pivot = new THREE.Group();
       pivot.position.copy(rest);
@@ -420,7 +472,9 @@ export class HoundView extends BeastView {
         new THREE.ConeGeometry(0.08, 0.26, 4).rotateZ(-0.3).translate(0.12, 0.27, 0.12),
         new THREE.ConeGeometry(0.08, 0.26, 4).rotateZ(-0.3).translate(0.12, 0.27, -0.12),
       ]);
-      pivot.add(new THREE.Mesh(skull, fur), new THREE.Mesh(neckGeometry, fur));
+      pivot.add(new THREE.Mesh(skull, fur));
+      const neck = new LiveTube(8, 7);
+      this.body.add(neck.mesh(fur));
       const jaw = new THREE.Group();
       jaw.position.set(-0.1, -0.1, 0);
       jaw.add(new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.2).translate(-0.22, -0.04, 0), bone));
@@ -431,16 +485,21 @@ export class HoundView extends BeastView {
       glowSprite.position.set(-0.45, -0.05, 0.1);
       pivot.add(glowSprite);
       this.body.add(pivot);
-      this.heads.push({ pivot, jaw, eyes, glow: glowSprite, rest });
+      this.heads.push({
+        pivot, jaw, eyes, glow: glowSprite, rest, neck,
+        neckPoints: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()],
+        anchor: new THREE.Vector3(-0.72, 1.55, rest.z * 0.55),
+      });
     });
-    this.root.add(this.tail.mesh(fur));
+    // The tail hangs off the body, so it follows the crouch and the leap.
+    this.body.add(this.tail.mesh(fur));
     this.tailFlame = sprite(glow, EMBER, 0.7);
-    this.root.add(this.tailFlame);
+    this.body.add(this.tailFlame);
   }
 
   frame(beast: Beast): Frame {
     const front = (beast as Hound).front;
-    return { left: front - 0.3, right: front + HOUND_LENGTH + 0.3, top: 2.8 };
+    return { left: front - 0.3, right: front + HOUND_LENGTH + 0.3, top: 3.2 };
   }
 
   update(beast: Beast, ctx: ViewContext): void {
@@ -482,13 +541,21 @@ export class HoundView extends BeastView {
       leg.knee.rotation.z = knee;
     }
 
-    // Heads: rear back on the windup, lunge on the bite.
+    // Heads: rear back on the windup, lunge on the bite. While one bites, the others pull back out of its way.
+    let biting = -1;
+    for (const st of hound.strikes) if (st.attack !== 'houndPounce' && st.outcome !== 'cancel' && phaseOf(st) === 'active') biting = st.part;
     this.heads.forEach((head, i) => {
-      const s = hound.strikes.find(st => st.part === i && st.attack !== 'houndPounce') ?? null;
+      let s: Strike | null = null;
+      for (const st of hound.strikes) {
+        if (st.part !== i || st.attack === 'houndPounce' || st.outcome === 'cancel' || phaseOf(st) === 'queued') continue;
+        // The newest live strike of this head (a recovering bite gives way to the next windup).
+        if (!s || phaseOf(s) === 'recovery') s = st;
+      }
       let dx = Math.sin(t * 1.3 + i * 2) * 0.04;
       let dy = Math.sin(t * 1.7 + i) * 0.05;
       let jaw = 0.1;
       let rot = 0;
+      if (biting >= 0 && biting !== i && (!s || phaseOf(s) === 'recovery')) { dx += 0.16; dy += i === 0 ? 0.08 : -0.04; }
       if (s) {
         const phase = phaseOf(s);
         const k = sat(s.t / s.windup);
@@ -502,22 +569,32 @@ export class HoundView extends BeastView {
       head.pivot.position.set(head.rest.x + dx, head.rest.y + dy, head.rest.z);
       head.pivot.rotation.z = rot;
       head.jaw.rotation.z = jaw * 0.6;
-      const tell = s ?? (pounce && phaseOf(pounce) !== 'recovery' ? pounce : null);
-      setTell(head.eyes, head.glow, staggered ? new THREE.Color(0x444444) : this.eyeRest, tell, 1);
+      // Only the biting head glows for a bite; the pounce lights all three.
+      const tell = s && phaseOf(s) !== 'recovery' ? s : pounce && phaseOf(pounce) !== 'recovery' ? pounce : null;
+      setTell(head.eyes, head.glow, staggered ? DAZED_DARK : this.eyeRest, tell, 1);
+      // Neck: from the chest, arching up into the back of the skull.
+      const [n0, n1, n2, n3] = head.neckPoints;
+      const p = head.pivot.position;
+      n0.copy(head.anchor);
+      n3.set(p.x + 0.2, p.y - 0.06, p.z);
+      n1.set(lerp(n0.x, n3.x, 0.35) + 0.08, lerp(n0.y, n3.y, 0.35) + 0.1, lerp(n0.z, n3.z, 0.4));
+      n2.set(lerp(n0.x, n3.x, 0.72) + 0.06, lerp(n0.y, n3.y, 0.72) + 0.12, lerp(n0.z, n3.z, 0.8));
+      head.neck.update(head.neckPoints, u => 0.24 - 0.09 * u);
     });
 
-    // Tail with an ember tip.
+    // Tail with an ember tip (body space).
     const base = this.root.position;
     const wag = Math.sin(t * 1.6) * 0.25;
-    this.tailPoints[0].set(base.x + 1.15, base.y + this.body.position.y + 1.35, base.z);
-    this.tailPoints[1].set(base.x + 1.55, base.y + this.body.position.y + 1.6, base.z);
-    this.tailPoints[2].set(base.x + 1.85, base.y + this.body.position.y + 2.05 + wag * 0.3, base.z + wag * 0.3);
-    this.tailPoints[3].set(base.x + 1.75 + wag * 0.4, base.y + this.body.position.y + 2.45, base.z + wag);
+    this.tailPoints[0].set(1.15, 1.35, 0);
+    this.tailPoints[1].set(1.55, 1.6, 0);
+    this.tailPoints[2].set(1.85, 2.05 + wag * 0.3, wag * 0.3);
+    this.tailPoints[3].set(1.75 + wag * 0.4, 2.45, wag);
     this.tail.update(this.tailPoints, u => 0.12 - 0.08 * u);
     this.tailFlame.position.copy(this.tailPoints[3]);
     this.tailFlame.material.opacity = 0.75 + 0.15 * Math.sin(t * 2.2);
     if (ctx.dying > 0 && Math.random() < 0.5) ctx.sparks.emit(base.x + (Math.random() - 0.5) * 2.5, 1 + Math.random(), -0.5, 1, { color: EMBER, speed: 1.2, up: 1.5, life: 1, size: 0.25, gravity: -0.5 });
-    this.applyFlash(dt, ctx.reduced, this.tellTint(beast.strikes, 0.08));
+    // Bites glow on their own head only; the snap and the pounce tint the whole body.
+    this.applyFlash(dt, ctx.reduced, this.tellTint(beast.strikes, 0.08, 'houndBite'));
   }
 }
 
@@ -703,7 +780,7 @@ export class SirenView extends BeastView {
 
     // Telegraph glows: gold dive, crimson shriek, cyan song.
     const tell = dive ?? shriek ?? null;
-    setTell(this.eyes, this.faceGlow, staggered ? new THREE.Color(0x446666) : this.eyeRest, tell, 0.9);
+    setTell(this.eyes, this.faceGlow, staggered ? DAZED_SEA : this.eyeRest, tell, 0.9);
     const gemK = songing ? 0.6 + 0.4 * sat(siren.song / siren.songWindup) : 0.25;
     this.gem.color.copy(SONG).multiplyScalar(0.5 + gemK);
     this.gemGlow.material.opacity = gemK * 0.9;
@@ -810,7 +887,7 @@ export class KrakenView extends BeastView {
     const kraken = beast as Kraken;
     const { t, dt } = ctx;
     const staggered = kraken.stagger > 0;
-    const beak = kraken.strikes.find(s => s.attack === 'krakenBeak') ?? null;
+    const beak = liveStrike(kraken.strikes, 'krakenBeak');
     const goalY = lerp(-5.2, 0.15, ease(kraken.head)) - ctx.dying * 6 + Math.sin(t * 1.1) * 0.08;
     this.headY += (goalY - this.headY) * damp(6, dt);
     let lunge = 0;
@@ -829,7 +906,7 @@ export class KrakenView extends BeastView {
     if (!beak) this.eye.color.copy(this.eyeRest).multiplyScalar(staggered ? 0.5 : 1);
 
     // Edge tentacles: idle waving beyond the lip; one of them carries the slam.
-    const slam = kraken.strikes.find(s => s.attack === 'krakenSlam') ?? null;
+    const slam = liveStrike(kraken.strikes, 'krakenSlam');
     this.edge.forEach((tent, i) => {
       const pts = tent.points;
       const baseX = EDGE_X + 0.55 + i * 0.55;
@@ -878,7 +955,7 @@ export class KrakenView extends BeastView {
         tent.glow.material.opacity = 0.3 + 0.6 * k * k;
         tent.glow.position.set(x, 0.15, 0);
         tent.glow.scale.setScalar(1 + k * 1.2);
-        if (k > 0.45 && Math.random() < dt * 40) ctx.sparks.emit(x + (Math.random() - 0.5) * 1.4, 0.05, (Math.random() - 0.5) * 1.2, 1, { color: new THREE.Color(0x8a6a5a), speed: 1.5, up: 1.5, spread: 0.3, life: 0.5, size: 0.14, gravity: 5 });
+        if (k > 0.45 && Math.random() < dt * 40) ctx.sparks.emit(x + (Math.random() - 0.5) * 1.4, 0.05, (Math.random() - 0.5) * 1.2, 1, { color: PEBBLE, speed: 1.5, up: 1.5, spread: 0.3, life: 0.5, size: 0.14, gravity: 5 });
         continue;
       }
       tent.mesh.visible = true;
@@ -896,10 +973,10 @@ export class KrakenView extends BeastView {
       tent.tube.update(pts, u => 0.3 * (1 - u * 0.8) * (0.4 + 0.6 * rise));
       tent.glow.material.opacity = phase === 'active' ? 1 : Math.max(0, 0.6 - since);
       tent.glow.position.set(x, 0.3, 0.2);
-      if (phase === 'active' && since < 0.05) ctx.sparks.emit(x, 0.1, 0, 14, { color: new THREE.Color(0xb08a7a), speed: 4, up: 1.2, life: 0.6, size: 0.2, gravity: 9 });
+      if (phase === 'active' && since < 0.05) ctx.sparks.emit(x, 0.1, 0, 14, { color: ROCK, speed: 4, up: 1.2, life: 0.6, size: 0.2, gravity: 9 });
     }
     for (; n < this.bursts.length; n++) { this.bursts[n].mesh.visible = false; this.bursts[n].glow.material.opacity = 0; }
-    if (ctx.dying > 0 && Math.random() < 0.5) ctx.sparks.emit(EDGE_X + 1 + Math.random(), -0.5 + Math.random() * 2, -1, 1, { color: new THREE.Color(0xbfe8ff), speed: 0.8, up: 2, life: 1, size: 0.25, gravity: -2 });
+    if (ctx.dying > 0 && Math.random() < 0.5) ctx.sparks.emit(EDGE_X + 1 + Math.random(), -0.5 + Math.random() * 2, -1, 1, { color: FOAM, speed: 0.8, up: 2, life: 1, size: 0.25, gravity: -2 });
     this.applyFlash(dt, ctx.reduced, this.tellTint(beast.strikes, 0.08));
   }
 
