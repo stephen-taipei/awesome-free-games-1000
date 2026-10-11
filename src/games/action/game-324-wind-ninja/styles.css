@@ -29,6 +29,10 @@
 .focus-meter { height: 4px; margin-top: 4px; }
 .focus-meter > i { background: var(--focus); transition: transform 0.1s linear; }
 
+/* The stats give way before the buttons do: language, sound and pause always stay on screen. */
+.g3d-stats { min-width: 0; flex: 0 1 auto; }
+.g3d-actions { flex: none; }
+
 .hearts, .dashes { display: flex; gap: 5px; align-items: center; height: 1.45rem; }
 .hearts i {
   position: relative;
@@ -111,6 +115,23 @@
 .pop.bonus { color: var(--gold); font-size: 1.35rem; text-shadow: 0 0 14px rgba(255, 211, 106, 0.7), 0 2px 6px rgba(0, 0, 0, 0.8); }
 .pop.hurt { color: var(--danger); }
 .pop.multi { color: var(--gold); }
+/* Arrows at the screen edge pointing at foes the follow camera leaves out of view (phones). */
+.marks { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.mark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  margin: -10px 0 0 -17px;
+  border-left: 17px solid #f2fbff;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  transform-origin: 17px 10px;
+  filter: drop-shadow(0 0 1px #050a18) drop-shadow(0 0 3px rgba(5, 10, 24, 0.85));
+}
+.mark.danger { border-left-color: #ff6a4a; }
+.mark.spawn { opacity: 0.55; }
 @keyframes pop-rise {
   0% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
   20% { transform: translate(-50%, -80%) scale(1); }
@@ -140,6 +161,10 @@
 /* Phones up to 414px wide: the language select sits above the sound and pause buttons. */
 @media (max-width: 420px) {
   .g3d-hud { gap: 8px; }
+  /* The multiplier badge rides on the label row, so a long score and a ×30 badge never widen the chip. */
+  .score-chip { position: relative; min-width: 6.4rem; }
+  .score-chip b { font-size: 0.98rem; }
+  .score-chip .combo { position: absolute; top: 4px; right: 6px; font-size: 0.68rem; line-height: 1.3; padding: 0 5px; }
   .g3d-stats { grid-template-columns: repeat(2, max-content); }
   .g3d-actions { display: grid; grid-template-columns: repeat(2, auto); }
   .g3d-actions .g3d-select { grid-column: 1 / -1; width: 100%; max-width: none; }
@@ -156,11 +181,14 @@
   .focus-meter { width: 4.4rem; margin-top: 3px; }
   .g3d-actions { display: flex; flex-direction: column; align-items: stretch; }
   .g3d-select { max-width: 6.2rem; }
-  .g3d-overlay { padding: 10px max(116px, 15vw) 10px; }
-  .g3d-panel { padding: 16px 20px; }
-  .g3d-title { font-size: 1.9rem; }
-  .g3d-lead { margin: 6px 0 10px; font-size: 0.9rem; }
-  .g3d-keys { gap: 4px; margin-bottom: 12px; }
+  /* The bottom padding keeps the panel clear of the site navigation bar. */
+  .g3d-overlay { padding: 10px max(116px, 15vw) max(10px, var(--nav-clear, 10px)); }
+  .g3d-panel { padding: 12px 18px; }
+  .g3d-kicker { margin-bottom: 2px; font-size: 0.68rem; }
+  .g3d-title { font-size: 1.6rem; }
+  .g3d-lead { margin: 4px 0 8px; font-size: 0.84rem; line-height: 1.42; }
+  .g3d-keys { gap: 3px; margin-bottom: 10px; font-size: 0.84rem; }
+  .g3d-btn { min-height: 44px; }
   .g3d-result { margin-bottom: 12px; gap: 6px; grid-template-columns: repeat(3, 1fr); }
   .g3d-result div { padding: 6px 10px; }
   .g3d-result b { font-size: 1.15rem; }

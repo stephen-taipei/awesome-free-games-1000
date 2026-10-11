@@ -8,8 +8,9 @@ const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarg
 const logic = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
 const {
   TAU, HEX, EDGE_MARGIN, MAX_DASH, MIN_DASH, CUT_R, PLAYER_R, MAX_CHARGES, CHARGE_TIME, SLOW, FOCUS_MAX, MAX_HEARTS, COMBO_TIME,
-  MAX_COMBO, SHIELD_HALF_ARC, BLAST_R, STATS, KINDS, CAMPAIGN_WAVES, AIM_LOCK, SPAWN_TIME, INTRODUCED, ARCHER_COOLDOWN,
-  ARENAS, hexAt, hexCenter, hexKey, walkable, clipDash, hitAlong, segmentDistance, shieldBlocks, wavePlan, arenaForWave, Sim,
+  COMBO_MIN_TIME, MAX_COMBO, SHIELD_HALF_ARC, BLAST_R, STATS, KINDS, CAMPAIGN_WAVES, AIM_LOCK, SPAWN_TIME, INTRODUCED, ARCHER_COOLDOWN,
+  STAGGER_TIME, LUNGE_OVERREACH, REPOSITION_TIME, MAX_SPEED, ARENAS, hexAt, hexCenter, hexKey, walkable, clipDash, hitAlong,
+  segmentDistance, shieldBlocks, wavePlan, arenaForWave, healsAfter, comboWindow, lungeLength, keyboardTarget, Sim,
 } = logic;
 
 function seeded(seed) {
@@ -463,7 +464,7 @@ test('twelve campaign waves over three islands, then an endless storm that cycle
       previousArena = plan.arena;
       for (const g of plan.groups) assert.ok(INTRODUCED[g.kind] <= w, `wave ${w}: ${g.kind} only after its introduction`);
     }
-    assert.ok(plan.speed >= 1 && plan.speed <= 1.6);
+    assert.ok(plan.speed >= 1 && plan.speed <= MAX_SPEED);
     assert.ok(plan.tempo <= 1 && plan.tempo >= 0.65);
   }
   assert.ok(wavePlan(12).groups.length > wavePlan(1).groups.length);
@@ -551,4 +552,170 @@ test('kinds, stats and arenas are consistent', () => {
   assert.ok(CUT_R > 0 && PLAYER_R > 0);
   const keys = new Set(ARENAS[0].tiles.map(t => hexKey(t.q, t.r)));
   assert.equal(keys.size, ARENAS[0].tiles.length);
+});
+
+// ---------------------------------------------------------------- review fixes
+
+test('no pocket of the rim is safe: an idle player anywhere on any island is reached by grunts and shield-bearers', () => {
+  // Pockets the review found, where lunges used to stop short at the edge forever, then a grid over every island.
+  const spots = [[0, 4.36, -3.67], [0, 5.7, -1.74], [0, -1.5, 5.46], [1, 4.35, 4.09], [2, -1.5, -2.34], [2, -1.8, -2.04]];
+  for (const arena of ARENAS) {
+    for (let x = arena.bounds.minX; x <= arena.bounds.maxX; x += 0.45) {
+      for (let z = arena.bounds.minZ; z <= arena.bounds.maxZ; z += 0.45) spots.push([arena.index, x, z]);
+    }
+  }
+  let tested = 0;
+  let slowest = 0;
+  for (const kind of ['grunt', 'shield']) {
+    for (const [index, x, z] of spots) {
+      const arena = ARENAS[index];
+      if (!walkable(arena, x, z)) continue;
+      const sim = new Sim(7, { startWave: index * 4 + 1 });
+      sim.queue = [];
+      sim.holdWave = true;
+      run(sim, 1.7);
+      sim.player.x = x; sim.player.z = z;
+      let placed = 0;
+      for (let k = 0; k < 24 && placed < 2; k++) {
+        const a = (k * Math.PI) / 12;
+        const fx = x + Math.cos(a) * 3, fz = z + Math.sin(a) * 3;
+        if (walkable(arena, fx, fz)) { place(sim, kind, fx, fz); placed++; k += 5; }
+      }
+      if (!placed) continue;
+      tested++;
+      let hurtAt = -1;
+      for (let t = 0; t < 8 && hurtAt < 0; t += DT) if (sim.step(DT, IDLE).some(e => e.type === 'hurt')) hurtAt = t;
+      assert.ok(hurtAt >= 0, `island ${index}: a ${kind} never reaches an idle player at (${x.toFixed(2)}, ${z.toFixed(2)})`);
+      slowest = Math.max(slowest, hurtAt);
+      for (const e of sim.enemies) assert.ok(walkable(arena, e.x, e.z, EDGE_MARGIN - 0.02), 'the foe stays on the island');
+    }
+  }
+  assert.ok(tested > 2000, `scanned ${tested} spots`);
+  assert.ok(slowest < REPOSITION_TIME + 2, `slowest hit after ${slowest.toFixed(2)} s`);
+});
+
+test('a lunge cut short by the edge still reaches a little past where the body stops, never across a gap', () => {
+  const ring = ARENAS[2];
+  // From the south side of the ring towards the chasm: the body stops at the edge, the blow reaches only a bit further.
+  const { body, front } = lungeLength(ring, 0, 3.1, 0, -1, STATS.grunt.reach);
+  assert.ok(body < 1.5, `the body stops at the chasm (${body})`);
+  assert.ok(Math.abs(front - (body + LUNGE_OVERREACH)) < 1e-9);
+  // On open ground the blow is exactly the reach.
+  assert.equal(lungeLength(ARENAS[0], 0, 0, 1, 0, 1.5).front, 1.5);
+  // Anywhere, any way: the body stays on the island and the blow ends at most a hair past the edge, so it can never
+  // reach across the chasm or the void to someone standing beyond.
+  const random = seeded(17);
+  const over = LUNGE_OVERREACH - EDGE_MARGIN;
+  for (const a of ARENAS) {
+    for (let i = 0; i < 1500; i++) {
+      const tile = a.tiles[Math.floor(random() * a.tiles.length)];
+      const x = tile.x + (random() - 0.5) * HEX, z = tile.z + (random() - 0.5) * HEX;
+      if (!walkable(a, x, z)) continue;
+      const angle = random() * TAU, dx = Math.cos(angle), dz = Math.sin(angle);
+      const reach = random() < 0.5 ? STATS.grunt.reach : STATS.shield.reach;
+      const length = lungeLength(a, x, z, dx, dz, reach);
+      assert.ok(length.body <= length.front && length.front <= reach + 1e-9);
+      assert.ok(walkable(a, x + dx * length.body, z + dz * length.body, EDGE_MARGIN - 1e-6));
+      for (let s = length.body; s <= length.front - over - 0.01; s += 0.02) {
+        assert.ok(walkable(a, x + dx * s, z + dz * s, 0), `island ${a.index}: the blow crosses the void at ${s.toFixed(2)}`);
+      }
+    }
+  }
+});
+
+test('a blocked cut rocks a shield-bearer back and breaks its wind-up, so it cannot bash the player at the shield', () => {
+  const sim = arena();
+  sim.player.x = 0; sim.player.z = 0;
+  const shield = place(sim, 'shield', 1.8, 0, Math.PI); // faces the player, in bash range
+  run(sim, 0.05);
+  assert.equal(shield.state, 'windup');
+  const events = dash(sim, 3, 0);
+  const clang = events.find(e => e.type === 'clang');
+  assert.ok(clang && clang.interrupted, 'the block interrupts the wind-up');
+  assert.equal(shield.state, 'move');
+  assert.ok(shield.stagger > 0);
+  // Standing still in front of it: safe while it staggers and winds up again; a fresh bash comes later.
+  const windup = STATS.shield.windup * sim.plan.tempo;
+  run(sim, STAGGER_TIME + windup - 0.1);
+  assert.equal(sim.hearts, MAX_HEARTS, 'the player has the stagger plus a whole wind-up to get out');
+  run(sim, 1);
+  assert.equal(sim.hearts, MAX_HEARTS - 1, 'then the shield-bearer bashes again');
+});
+
+test('keyboard aim never starts on a dash that would be cancelled while a valid one exists', () => {
+  const random = seeded(9);
+  let pockets = 0;
+  for (const a of ARENAS) {
+    for (let i = 0; i < 400; i++) {
+      const sim = new Sim(i, { startWave: a.index * 4 + 1 });
+      sim.queue = [];
+      sim.holdWave = true;
+      run(sim, 1.7);
+      // Stand somewhere at the very edge of the walkable ground (where clipped dashes end).
+      const tile = a.tiles[Math.floor(random() * a.tiles.length)];
+      const angle = random() * TAU;
+      const len = clipDash(a, tile.x, tile.z, Math.cos(angle), Math.sin(angle), 30);
+      if (!walkable(a, tile.x, tile.z)) continue;
+      sim.player.x = tile.x + Math.cos(angle) * len;
+      sim.player.z = tile.z + Math.sin(angle) * len;
+      for (let k = 0; k < 3; k++) {
+        const b = random() * TAU, r = 1 + random() * 4;
+        const fx = sim.player.x + Math.cos(b) * r, fz = sim.player.z + Math.sin(b) * r;
+        if (walkable(a, fx, fz)) place(sim, KINDS[k % 4], fx, fz);
+      }
+      const target = keyboardTarget(sim);
+      const anyValid = Array.from({ length: 72 }, (_, k) => sim.planDash(sim.player.x + Math.cos((k / 72) * TAU) * MAX_DASH, sim.player.z + Math.sin((k / 72) * TAU) * MAX_DASH).valid).some(Boolean);
+      if (!anyValid) continue;
+      assert.ok(target, 'a target exists');
+      assert.ok(sim.planDash(target.x, target.z).valid, `island ${a.index}: keyboard target from (${sim.player.x.toFixed(2)}, ${sim.player.z.toFixed(2)}) is a valid dash`);
+      if (sim.enemies.some(e => !sim.planDash(e.x, e.z).valid)) pockets++;
+    }
+  }
+  assert.ok(pockets > 20, `exercised spots where some foe is out of line (${pockets})`);
+  // With a foe in a clear line, it still picks the cut.
+  const sim = arena();
+  sim.player.x = 0; sim.player.z = 0;
+  const grunt = place(sim, 'grunt', 2.5, 0);
+  const target = keyboardTarget(sim);
+  assert.deepEqual(sim.planDash(target.x, target.z).cuts.map(e => e.id), [grunt.id]);
+});
+
+test('the focus meter running dry while aiming is announced once', () => {
+  const sim = arena();
+  let events = run(sim, FOCUS_MAX - 0.2, { aiming: true });
+  assert.equal(events.filter(e => e.type === 'focusOut').length, 0);
+  events = run(sim, 2, { aiming: true });
+  assert.equal(events.filter(e => e.type === 'focusOut').length, 1);
+  run(sim, 1);
+  events = run(sim, 0.5, { aiming: true });
+  assert.equal(events.filter(e => e.type === 'focusOut').length, 0, 'a partly refilled meter is not empty yet');
+});
+
+test('endless keeps escalating well past the campaign, and long runs heal and hold multipliers less easily', () => {
+  // Speed and the shield turn rate keep rising for about twenty endless waves; waves grow longer too.
+  const at = w => wavePlan(w, seeded(w));
+  assert.ok(at(30).speed > at(22).speed && at(22).speed > at(16).speed);
+  assert.ok(at(26).turn > at(18).turn);
+  assert.ok(at(30).groups.length > at(22).groups.length);
+  assert.ok(at(40).speed <= MAX_SPEED && at(40).maxAlive <= 12);
+  // Every campaign wave heals; in endless, every other wave.
+  for (let w = 1; w <= CAMPAIGN_WAVES; w++) assert.ok(healsAfter(w));
+  assert.deepEqual([13, 14, 15, 16].map(healsAfter), [false, true, false, true]);
+  const sim = new Sim(3, { startWave: 13 });
+  sim.hearts = 1;
+  sim.queue = [];
+  const clear = run(sim, 1.8).find(e => e.type === 'clear');
+  assert.ok(clear && !clear.healed);
+  assert.equal(sim.hearts, 1);
+  // A high multiplier must be fed: its window narrows from 5 s to 2.5 s.
+  assert.equal(comboWindow(2), COMBO_TIME);
+  assert.equal(comboWindow(5), COMBO_TIME);
+  assert.ok(comboWindow(15) < comboWindow(10) && comboWindow(10) < COMBO_TIME);
+  assert.equal(comboWindow(MAX_COMBO), COMBO_MIN_TIME);
+  const hot = arena();
+  hot.combo = 20;
+  hot.comboTimer = comboWindow(20);
+  const events = run(hot, comboWindow(20) + 0.1);
+  assert.ok(events.some(e => e.type === 'comboDrop'), '×20 drops after its shorter window');
+  assert.ok(MAX_COMBO > 20);
 });

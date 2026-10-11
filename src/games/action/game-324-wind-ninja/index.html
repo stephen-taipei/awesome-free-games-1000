@@ -16,6 +16,7 @@
     <div id="vignette" class="vignette" aria-hidden="true"></div>
     <div id="hurt" class="hurt" aria-hidden="true"></div>
     <div id="popups" class="popups" aria-hidden="true"></div>
+    <div id="marks" class="marks" aria-hidden="true"></div>
 
     <div class="g3d-hud" id="hud">
       <div class="g3d-stats" id="stats">
@@ -29,7 +30,7 @@
         <div class="g3d-chip dash-chip">
           <small data-i18n="game.dash">Dash</small>
           <b class="dashes" id="charges"></b>
-          <span class="g3d-meter focus-meter"><i id="focus-bar"></i></span>
+          <span class="g3d-meter focus-meter" id="focus-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" data-i18n-aria="game.focus" aria-label="Focus"><i id="focus-bar"></i></span>
         </div>
       </div>
       <div class="g3d-actions" id="actions">

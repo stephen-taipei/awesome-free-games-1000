@@ -1,7 +1,7 @@
 import { THREE, createStage, createLoop, Keys, trackPointer, clamp, damp, lerp, prefersReducedMotion, type Stage } from '../../../shared/three/kit';
 import {
-  Sim, ARENAS, STATS, HEX, MAX_DASH, FOCUS_MAX, SPAWN_TIME, AIM_LOCK, BLAST_R, SHIELD_HALF_ARC, SLOW,
-  TRAVEL_TIME, HIT_STOP_SCALE, TAU, CAMPAIGN_WAVES, COMBO_TIME, clipDash, wrap,
+  Sim, ARENAS, STATS, HEX, MAX_DASH, FOCUS_MAX, SPAWN_TIME, AIM_LOCK, BLAST_R, SHIELD_HALF_ARC, SLOW, STAGGER_TIME,
+  TRAVEL_TIME, HIT_STOP_SCALE, TAU, CAMPAIGN_WAVES, lungeLength, keyboardTarget, wrap,
   type Enemy, type Kind, type SimEvent, type DashPlan, type HurtSource,
 } from './logic';
 
@@ -22,7 +22,8 @@ export interface Hud {
 export interface Result { score: number; wave: number; kills: number; maxCombo: number; bestCut: number; }
 export type GameEvent =
   | 'aim' | 'dash' | 'cut' | 'multi' | 'deflect' | 'clang' | 'explode' | 'windup' | 'strike' | 'shoot' | 'spawn' | 'land'
-  | 'hurt' | 'charge' | 'denied' | 'cancel' | 'wave' | 'fight' | 'clear' | 'travel' | 'combo' | 'comboDrop' | 'dead' | 'edge';
+  | 'hurt' | 'charge' | 'denied' | 'cancel' | 'wave' | 'fight' | 'clear' | 'travel' | 'combo' | 'comboDrop' | 'dead' | 'edge'
+  | 'focusOut';
 export interface EventDetail {
   kind?: Kind;
   order?: number;
@@ -41,18 +42,37 @@ export interface EventDetail {
   depth?: number;
   harmful?: boolean;
   first?: boolean;
+  interrupted?: boolean;
 }
 export type PopupTone = 'cut' | 'multi' | 'deflect' | 'hurt' | 'bonus';
+/** An edge marker for a foe outside the view (follow camera only): screen position, outward angle, threat. */
+export interface EdgeMark { x: number; y: number; angle: number; tone: 'foe' | 'danger' | 'spawn'; }
 
 /** World positions of the three floating islands. The run climbs from one to the next. */
 const ISLANDS = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(26, 11, -46), new THREE.Vector3(-22, 22, -92)];
 /** Camera elevation: steeper on portrait screens, where the island is framed by its width. */
 const PITCH = 0.98;
 const PITCH_PORTRAIT = 1.12;
-/** World units of aim per world unit of finger drag. */
-const TOUCH_GAIN = 1.7;
+/**
+ * Finger travel (CSS px) for a full-length dash: a share of the screen's short side, the same wherever the finger
+ * lands and whichever way it drags.
+ */
+const TOUCH_FULL_SHARE = 0.25;
+const TOUCH_FULL_MIN = 80;
+const TOUCH_FULL_MAX = 150;
 /** A finger that moved less than this (CSS px) since it went down cancels instead of dashing. */
 const TOUCH_DEADZONE = 14;
+/**
+ * Below this many CSS px per world unit (a portrait phone shows the whole island at about 27), the camera closes in
+ * up to MAX_ZOOM and follows the player instead, kept over the island; foes out of view get edge markers.
+ */
+const FOLLOW_PX = 38;
+const MAX_ZOOM = 1.5;
+/** Sky kept in view beyond the island's outer tiles when the follow camera reaches an edge. */
+const FOLLOW_MARGIN = 0.6;
+/** While a touch or keyboard aim is held, the follow camera leans this share of the aim ahead. */
+const AIM_LEAD = 0.35;
+const MAX_MARKS = 12;
 const KEY_AIM_SPEED = 8;
 const DASH_ANIM = 0.09;
 /** Characters are drawn a little larger than their hit circles so they read at whole-island zoom. */
@@ -219,6 +239,16 @@ function ninjaGeometry(): THREE.BufferGeometry {
   ]);
 }
 
+/** A slightly larger copy of the ninja's main volumes, drawn inside out as a pale outline. */
+function ninjaHullGeometry(): THREE.BufferGeometry {
+  return merge([
+    [new THREE.CapsuleGeometry(0.265, 0.36, 4, 10), 0xffffff, m4(0, 0.5, 0)],
+    [new THREE.SphereGeometry(0.285, 12, 10), 0xffffff, m4(0, 1.0, 0)],
+    [new THREE.BoxGeometry(0.17, 0.15, 0.23), 0xffffff, m4(0.12, 0.06, 0.04)],
+    [new THREE.BoxGeometry(0.17, 0.15, 0.23), 0xffffff, m4(-0.12, 0.06, 0.04)],
+  ]);
+}
+
 function ninjaGlowGeometry(): THREE.BufferGeometry {
   return merge([
     [new THREE.BoxGeometry(0.32, 0.075, 0.08), 0xc4f8ff, m4(0, 1.02, 0.2)],
@@ -339,7 +369,8 @@ class Telegraphs {
   private readonly size: THREE.InstancedBufferAttribute;
   private n = 0;
 
-  constructor(time: { value: number }, pulse: { value: number }) {
+  /** `crowd` (0..1) thins the area fills when many warnings pile up around the player; outlines stay. */
+  constructor(time: { value: number }, pulse: { value: number }, crowd: { value: number }) {
     const geometry = new THREE.PlaneGeometry(2, 2);
     geometry.rotateX(-Math.PI / 2);
     this.style = new THREE.InstancedBufferAttribute(new Float32Array(this.cap), 1);
@@ -354,7 +385,7 @@ class Telegraphs {
     geometry.setAttribute('aAlpha', this.alpha);
     geometry.setAttribute('aSize', this.size);
     this.material = new THREE.ShaderMaterial({
-      uniforms: { uTime: time, uPulse: pulse },
+      uniforms: { uTime: time, uPulse: pulse, uCrowd: crowd },
       transparent: true,
       depthWrite: false,
       vertexShader: /* glsl */`
@@ -365,7 +396,7 @@ class Telegraphs {
           gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
         }`,
       fragmentShader: /* glsl */`
-        uniform float uTime; uniform float uPulse;
+        uniform float uTime; uniform float uPulse; uniform float uCrowd;
         varying vec2 vUv; varying float vStyle; varying float vProgress; varying vec3 vColor; varying float vAlpha; varying vec2 vSize;
         float band(float x, float a, float b, float s) { return smoothstep(a - s, a, x) * (1.0 - smoothstep(b, b + s, x)); }
         void main() {
@@ -381,11 +412,11 @@ class Telegraphs {
           if (style == 0) {
             float outline = band(r, 0.8, 0.95, 0.03);
             float fill = outline * step(sweep, vProgress);
-            float inner = (1.0 - smoothstep(0.72, 0.8, r)) * 0.22 * vProgress;
+            float inner = (1.0 - smoothstep(0.72, 0.8, r)) * 0.22 * vProgress * (1.0 - 0.65 * uCrowd);
             a = outline * 0.35 + fill * 0.65 + inner;
           } else if (style == 1) {
             float pulse = 1.0 - uPulse * 0.35 * (0.5 + 0.5 * sin(uTime * 6.2831853 * (0.8 + 1.4 * vProgress)));
-            float disc = (1.0 - smoothstep(0.96, 1.0, r)) * (0.1 + 0.22 * vProgress) * pulse;
+            float disc = (1.0 - smoothstep(0.96, 1.0, r)) * (0.1 + 0.22 * vProgress) * pulse * (1.0 - 0.6 * uCrowd);
             float edge = band(r, 0.9, 0.99, 0.02) * 0.85;
             float timer = band(r, vProgress - 0.05, vProgress, 0.02) * 0.6;
             a = disc + edge + timer;
@@ -523,6 +554,8 @@ export class GaleCutter {
   onOver: (result: Result) => void = () => {};
   onEvent: (event: GameEvent, detail?: EventDetail) => void = () => {};
   onPopup: (text: string, x: number, y: number, tone: PopupTone) => void = () => {};
+  /** Edge markers for foes out of view, every frame while the follow camera is on; `count` of `marks` are live. */
+  onMarks: (marks: readonly EdgeMark[], count: number) => void = () => {};
 
   private stage: Stage;
   private keys = new Keys();
@@ -534,6 +567,7 @@ export class GaleCutter {
 
   private time = { value: 0 };
   private pulse = { value: 1 };
+  private crowd = { value: 0 };
   private grassUniforms = {
     uTime: { value: 0 },
     uPlayer: { value: new THREE.Vector3(0, 0, 0) },
@@ -558,7 +592,7 @@ export class GaleCutter {
   private colorA = new THREE.Color();
   private colorB = new THREE.Color();
 
-  private telegraphs = new Telegraphs(this.time, this.pulse);
+  private telegraphs = new Telegraphs(this.time, this.pulse, this.crowd);
   private sparks = new Sparks();
   private enemyMeshes = {} as Record<Kind, THREE.InstancedMesh>;
   private shadows!: THREE.InstancedMesh;
@@ -571,6 +605,8 @@ export class GaleCutter {
   private player = new THREE.Group();
   private playerBody!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>;
   private playerGlow!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  /** Above the ninja's head, drawn over everything, so the player is easy to find in a crowd. */
+  private marker = new THREE.Group();
   private scarf!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>;
   private scarfPoints: THREE.Vector3[] = [];
   private ring!: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
@@ -620,6 +656,11 @@ export class GaleCutter {
   private camYaw = 0;
   private cameraSnap = true;
   private fits = [24, 24, 24];
+  /** Follow-camera zoom per island (1: the whole island fits at a readable scale) and its view window in world units. */
+  private zooms = [1, 1, 1];
+  private windows = [{ hx: 99, near: 99, far: 99 }, { hx: 99, near: 99, far: 99 }, { hx: 99, near: 99, far: 99 }];
+  private marks: EdgeMark[] = Array.from({ length: MAX_MARKS }, () => ({ x: 0, y: 0, angle: 0, tone: 'foe' as const }));
+  private markCount = 0;
   private fitPoints: THREE.Vector3[][] = [];
   private fitCamera = new THREE.PerspectiveCamera();
   private insets = { top: 72, right: 12, bottom: 64, left: 12 };
@@ -644,7 +685,15 @@ export class GaleCutter {
       if (event.pointerType === 'mouse' && event.button === 2) this.cancelAim();
     }, { capture: true });
     host.addEventListener('pointercancel', () => { this.pointerCancelled = true; }, { capture: true });
-    host.addEventListener('contextmenu', event => event.preventDefault());
+    // Right-click cancels an aim. Pressed while the left button is already down, it is a chorded press: browsers
+    // report it as a pointermove with button 2 (and a mousedown), never a pointerdown. Once cancelled, the aim is
+    // gone, so the left release that follows dashes nowhere.
+    host.addEventListener('pointermove', event => {
+      if (event.pointerType === 'mouse' && event.button === 2 && (event.buttons & 2)) this.cancelAim();
+    }, { capture: true });
+    host.addEventListener('mousedown', event => { if (event.button === 2) this.cancelAim(); }, { capture: true });
+    // A long press on a phone can raise contextmenu too: only a mouse aim is cancelled by it.
+    host.addEventListener('contextmenu', event => { event.preventDefault(); if (this.aim?.source === 'mouse') this.cancelAim(); });
     trackPointer(host, {
       down: (x, y) => this.pointerDown(x, y),
       drag: (_dx, _dy, x, y) => this.pointerMove(x, y),
@@ -966,8 +1015,37 @@ export class GaleCutter {
   private buildPlayer(): void {
     this.playerBody = new THREE.Mesh(ninjaGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x000000 }));
     this.playerGlow = new THREE.Mesh(ninjaGlowGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true }));
+    // A pale outline, so the dark ninja stands out on every island's tiles.
+    const hull = new THREE.Mesh(ninjaHullGeometry(), new THREE.MeshBasicMaterial({ color: 0xd9fbff, side: THREE.BackSide }));
+    // Where a foe or a pillar stands in front of the ninja, a cyan silhouette shows through it: one capsule round
+    // the whole ninja (convex, so it can never hide itself), drawn only where the depth buffer holds something
+    // nearer. It is pulled 0.35 units towards the camera, so grass round the feet does not light it up. The blade
+    // and the scarf are drawn after it (in the transparent pass), so they never count as something in front.
+    const xrayMaterial = new THREE.MeshBasicMaterial({ color: 0x7ff0ff, transparent: true, opacity: 0.8, depthWrite: false, depthFunc: THREE.GreaterDepth, fog: false });
+    xrayMaterial.onBeforeCompile = shader => {
+      shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+        mvPosition.xyz += normalize(-mvPosition.xyz) * 0.35;
+        gl_Position = projectionMatrix * mvPosition;`);
+    };
+    const xray = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.72, 4, 12).translate(0, 0.66, 0), xrayMaterial);
+    xray.renderOrder = 9;
+    this.playerGlow.material.transparent = true;
+    this.playerGlow.renderOrder = 10;
+    this.playerBody.add(hull, xray);
     this.player.add(this.playerBody, this.playerGlow);
     this.stage.scene.add(this.player);
+
+    // A small downward arrow over the head, dark-edged and drawn over everything.
+    const arrow = new THREE.ConeGeometry(0.15, 0.28, 4).rotateX(Math.PI).rotateY(Math.PI / 4);
+    const edge = new THREE.Mesh(arrow, new THREE.MeshBasicMaterial({ color: 0x0a1226, transparent: true, depthTest: false, depthWrite: false, fog: false }));
+    edge.scale.setScalar(1.35);
+    edge.position.y = 0.02;
+    edge.renderOrder = 10;
+    const core = new THREE.Mesh(arrow, new THREE.MeshBasicMaterial({ color: 0xfff6c8, transparent: true, depthTest: false, depthWrite: false, fog: false }));
+    core.renderOrder = 11;
+    this.marker.add(edge, core);
+    this.marker.visible = false;
+    this.stage.scene.add(this.marker);
 
     const segments = 9;
     const scarfGeometry = new THREE.BufferGeometry();
@@ -975,7 +1053,8 @@ export class GaleCutter {
     const index: number[] = [];
     for (let i = 0; i < segments; i++) index.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
     scarfGeometry.setIndex(index);
-    this.scarf = new THREE.Mesh(scarfGeometry, new THREE.MeshLambertMaterial({ color: 0xff5468, side: THREE.DoubleSide, emissive: 0x501018 }));
+    this.scarf = new THREE.Mesh(scarfGeometry, new THREE.MeshLambertMaterial({ color: 0xff5468, side: THREE.DoubleSide, emissive: 0x501018, transparent: true }));
+    this.scarf.renderOrder = 10;
     this.scarf.frustumCulled = false;
     this.stage.scene.add(this.scarf);
     for (let i = 0; i <= segments; i++) this.scarfPoints.push(new THREE.Vector3(0, 1, i * 0.12));
@@ -1139,11 +1218,11 @@ export class GaleCutter {
 
   private pointerDown(x: number, y: number): void {
     if (!this.canAim() || this.aim) return;
-    const g = this.groundAt(x, y);
-    if (!g) return;
     const touch = this.pointerType !== 'mouse';
     const p = this.sim!.player;
-    this.aim = { source: touch ? 'touch' : 'mouse', x: touch ? p.x : g.x, z: touch ? p.z : g.z, startX: g.x, startZ: g.z, screenX: x, screenY: y, dead: touch };
+    const g = touch ? { x: p.x, z: p.z } : this.groundAt(x, y);
+    if (!g) return;
+    this.aim = { source: touch ? 'touch' : 'mouse', x: g.x, z: g.z, startX: g.x, startZ: g.z, screenX: x, screenY: y, dead: touch };
     this.planTimer = 0;
     this.onEvent('aim');
   }
@@ -1151,16 +1230,47 @@ export class GaleCutter {
   private pointerMove(x: number, y: number): void {
     const aim = this.aim;
     if (!aim || aim.source === 'keys') return;
-    const g = this.groundAt(x, y);
-    if (!g) return;
-    if (aim.source === 'mouse') { aim.x = g.x; aim.z = g.z; return; }
+    if (aim.source === 'mouse') {
+      // The ground under the cursor is found again every frame, since the camera may glide while you aim.
+      aim.screenX = x;
+      aim.screenY = y;
+      const g = this.groundAt(x, y);
+      if (g) { aim.x = g.x; aim.z = g.z; }
+      return;
+    }
+    const dx = x - aim.screenX, dy = y - aim.screenY;
+    const travel = Math.hypot(dx, dy);
+    aim.dead = travel < TOUCH_DEADZONE;
+    const dir = this.screenToGround(dx, dy);
     const p = this.sim!.player;
-    aim.dead = Math.hypot(x - aim.screenX, y - aim.screenY) < TOUCH_DEADZONE;
-    let vx = (g.x - aim.startX) * TOUCH_GAIN, vz = (g.z - aim.startZ) * TOUCH_GAIN;
-    const len = Math.hypot(vx, vz);
-    if (len > MAX_DASH) { vx *= MAX_DASH / len; vz *= MAX_DASH / len; }
-    aim.x = p.x + vx;
-    aim.z = p.z + vz;
+    const len = Math.min(MAX_DASH, (travel / this.touchFull()) * MAX_DASH);
+    aim.x = p.x + dir.x * len;
+    aim.z = p.z + dir.z * len;
+  }
+
+  /** Finger travel in CSS px for a full-length dash. */
+  private touchFull(): number {
+    return clamp(Math.min(this.width, this.height) * TOUCH_FULL_SHARE, TOUCH_FULL_MIN, TOUCH_FULL_MAX);
+  }
+
+  /**
+   * The ground direction that looks like the screen direction (dx, dy) where the ninja stands: the aim line then
+   * points along the finger. Solves the 2x2 map from ground x/z to screen px around the ninja.
+   */
+  private screenToGround(dx: number, dy: number): { x: number; z: number } {
+    const camera = this.stage.camera;
+    const p = this.sim!.player;
+    const o = this.local(p.x, p.z, 0).clone().project(camera);
+    const ex = this.local(p.x + 1, p.z, 0).clone().project(camera);
+    const ez = this.local(p.x, p.z + 1, 0).project(camera);
+    const sx = this.width / 2, sy = -this.height / 2;
+    const a = (ex.x - o.x) * sx, c = (ex.y - o.y) * sy; // screen px per unit of ground x
+    const b = (ez.x - o.x) * sx, d = (ez.y - o.y) * sy; // screen px per unit of ground z
+    const det = a * d - b * c;
+    let gx = dx, gz = dy;
+    if (Math.abs(det) > 1e-6) { gx = (d * dx - b * dy) / det; gz = (-c * dx + a * dy) / det; }
+    const l = Math.hypot(gx, gz) || 1;
+    return { x: gx / l, z: gz / l };
   }
 
   private pointerUp(): void {
@@ -1186,7 +1296,7 @@ export class GaleCutter {
     const az = (k.isDown('ArrowDown', 'KeyS') ? 1 : 0) - (k.isDown('ArrowUp', 'KeyW') ? 1 : 0);
     if (!this.aim && k.consume('Space') && this.canAim()) {
       const p = sim.player;
-      let target = ax || az ? { x: p.x + (ax / Math.hypot(ax, az)) * MAX_DASH, z: p.z + (az / Math.hypot(ax, az)) * MAX_DASH } : this.autoTarget();
+      let target = ax || az ? { x: p.x + (ax / Math.hypot(ax, az)) * MAX_DASH, z: p.z + (az / Math.hypot(ax, az)) * MAX_DASH } : keyboardTarget(sim);
       if (!target) target = { x: p.x + Math.cos(p.facing) * MAX_DASH, z: p.z + Math.sin(p.facing) * MAX_DASH };
       this.aim = { source: 'keys', x: target.x, z: target.z, startX: 0, startZ: 0, screenX: 0, screenY: 0, dead: false };
       this.planTimer = 0;
@@ -1210,30 +1320,17 @@ export class GaleCutter {
     if (len > MAX_DASH) { vx *= MAX_DASH / len; vz *= MAX_DASH / len; aim.x = p.x + vx; aim.z = p.z + vz; }
   }
 
-  /** The aim point that cuts the most, for a keyboard aim's starting point. */
-  private autoTarget(): { x: number; z: number } | null {
-    const sim = this.sim!;
-    const p = sim.player;
-    let best: { x: number; z: number; value: number } | null = null;
-    for (const e of sim.enemies) {
-      if (e.state === 'spawn') continue;
-      const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1;
-      if (d > MAX_DASH * 1.6) continue;
-      const reach = Math.min(MAX_DASH, d + 0.8);
-      const tx = p.x + (dx / d) * reach, tz = p.z + (dz / d) * reach;
-      const plan = sim.planDash(tx, tz);
-      const value = (plan.cuts.length + plan.chain.length) * 10 - (plan.blocked ? 25 : 0) - d * 0.5;
-      if (!best || value > best.value) best = { x: tx, z: tz, value };
-    }
-    return best;
-  }
-
   // ---------------------------------------------------------------- frame
 
   private frame(dt: number, t: number): void {
     const sim = this.sim;
     let worldDt = dt;
     if (this.state === 'running' && sim) {
+      const aim = this.aim;
+      if (aim && aim.source === 'mouse') {
+        const g = this.groundAt(aim.screenX, aim.screenY);
+        if (g) { aim.x = g.x; aim.z = g.z; }
+      }
       this.keyboard(dt);
       const dash = this.pendingDash;
       this.pendingDash = null;
@@ -1267,6 +1364,7 @@ export class GaleCutter {
     this.updateWorld(t, worldDt);
     this.updateCamera(dt, t);
     this.stage.render();
+    this.updateMarks();
 
     this.hudTimer -= dt;
     if (this.state === 'running' && this.hudTimer <= 0) { this.hudTimer = 0.08; this.emitHud(); }
@@ -1376,7 +1474,7 @@ export class GaleCutter {
         this.addShake(0.25);
         const view = this.views.get(event.id);
         if (view) view.flash = 1;
-        this.onEvent('clang', { first: this.firstClang });
+        this.onEvent('clang', { first: this.firstClang, interrupted: event.interrupted });
         this.firstClang = false;
         break;
       }
@@ -1406,6 +1504,10 @@ export class GaleCutter {
       case 'charge':
         this.chargePulse = 1;
         this.onEvent('charge');
+        break;
+      case 'focusOut':
+        this.deniedFlash = Math.max(this.deniedFlash, 0.6);
+        this.onEvent('focusOut');
         break;
       case 'combo':
         this.onEvent('combo', { combo: event.combo, kills: event.kills });
@@ -1554,6 +1656,12 @@ export class GaleCutter {
       ring.uPulse.value = this.chargePulse;
       ring.uGrace.value = sim.grace > 0.25 ? 1 : 0;
     }
+    this.marker.visible = showRing;
+    if (showRing) {
+      const still = this.reducedMotion;
+      this.marker.position.set(worldX, worldY + 1.95 * MODEL_SCALE + (still ? 0 : Math.sin(this.visualTime * 2.4) * 0.06), worldZ);
+      this.marker.rotation.y = still ? 0 : this.visualTime * 1.2;
+    }
   }
 
   private resetScarf(): void {
@@ -1646,7 +1754,6 @@ export class GaleCutter {
         case 'move':
           y = Math.abs(Math.sin(phase)) * 0.07;
           rz = Math.sin(phase) * 0.06;
-          if (view.stagger > 0) { rx = -0.35 * view.stagger / 0.6; rz += Math.sin(this.visualTime * 30) * 0.05 * (this.reducedMotion ? 0 : 1); }
           break;
         case 'windup': {
           const k = clamp(view.t / windup, 0, 1);
@@ -1674,6 +1781,12 @@ export class GaleCutter {
           tmpColor.setRGB(1 + 0.9 * k * beat + 0.3 * k, 1 - 0.2 * k, 1 - 0.4 * k);
           break;
         }
+      }
+      // Rocked back by a blocked cut, whatever it was doing.
+      if (view.stagger > 0 && view.state !== 'spawn') {
+        const k = view.stagger / STAGGER_TIME;
+        rx = -0.38 * k;
+        rz += Math.sin(this.visualTime * 30) * 0.05 * k * (this.reducedMotion ? 0 : 1);
       }
       if (view.mark === 1 || view.mark === 2) tmpColor.multiplyScalar(1.45);
       if (view.flash > 0) { tmpColor.lerp(this.colorB.setRGB(2, 2, 2), view.flash); view.flash = Math.max(0, view.flash - worldDt * 4); }
@@ -1836,6 +1949,14 @@ export class GaleCutter {
       }
     }
     const tempo = sim ? sim.plan.tempo : 1;
+    // Crowding: with many warnings near the ninja, area fills and unlocked lanes fade; outlines and locked lanes stay.
+    let warnings = 0;
+    const px = this.playerPos.x, pz = this.playerPos.z;
+    for (const view of views) {
+      if ((view.state === 'windup' || view.state === 'strike' || view.state === 'fuse') && Math.hypot(view.x - px, view.z - pz) < 4) warnings++;
+    }
+    this.crowd.value = lerp(this.crowd.value, clamp((warnings - 2) / 4, 0, 1), damp(6, dt));
+    const laneAlpha = 0.7 * (1 - 0.5 * this.crowd.value);
     for (const view of views) {
       const s = STATS[view.kind];
       const x = ox + view.x, z = oz + view.z;
@@ -1851,8 +1972,8 @@ export class GaleCutter {
         const k = clamp(view.t / windup, 0, 1);
         tg.ring(S.windup, x, oy + 0.05, z, s.r * 1.9, k, orange, 1);
         const locked = view.t >= windup * AIM_LOCK || view.kind === 'shield';
-        const reach = sim ? clipDash(sim.arena, view.x, view.z, view.dirX, view.dirZ, s.reach) : s.reach;
-        tg.lane(S.lane, x, oy + 0.06, z, Math.atan2(view.dirZ, view.dirX), reach + s.r, s.r * 2, k, locked ? this.colorB.set(0xff4a2a) : orange, locked ? 1 : 0.7);
+        const reach = sim ? lungeLength(sim.arena, view.x, view.z, view.dirX, view.dirZ, s.reach).front : s.reach;
+        tg.lane(S.lane, x, oy + 0.06, z, Math.atan2(view.dirZ, view.dirX), reach + s.r, s.r * 2, k, locked ? this.colorB.set(0xff4a2a) : orange, locked ? 1 : laneAlpha);
       } else if (view.state === 'strike' && (view.kind === 'grunt' || view.kind === 'shield')) {
         tg.ring(S.windup, x, oy + 0.05, z, s.r * 1.9, 1, this.colorB.set(0xff4a2a), 1);
       } else if (view.state === 'windup' && view.kind === 'archer') {
@@ -1954,7 +2075,58 @@ export class GaleCutter {
     const vHalf = THREE.MathUtils.degToRad(camera.fov / 2);
     this.sparks.material.uniforms.uScale.value = (height * this.stage.renderer.getPixelRatio()) / (2 * Math.tan(vHalf));
     this.fits = ARENAS.map((_, i) => this.fitDistance(i));
+    // Follow camera: how much closer than the whole-island view, and the patch of ground it then shows around its
+    // target (half-width in x, and how far it reaches towards and away from the camera along z).
+    const tanV = Math.tan(vHalf);
+    const { top, right, bottom, left } = this.insets;
+    const usableW = Math.max(1, width - left - right), usableH = Math.max(1, height - top - bottom);
+    const spread = Math.atan((tanV * usableH) / height);
+    const p = this.pitch;
+    this.zooms = this.fits.map(fit => clamp(FOLLOW_PX / (height / (2 * fit * tanV)), 1, MAX_ZOOM));
+    this.windows = this.fits.map((fit, i) => {
+      const d = fit / this.zooms[i];
+      return {
+        hx: (d * tanV * usableW) / height,
+        near: d * (Math.cos(p) - Math.sin(p) / Math.tan(p + spread)),
+        far: p - spread > 0.05 ? d * (Math.sin(p) / Math.tan(p - spread) - Math.cos(p)) : 999,
+      };
+    });
     this.appliedOffset = '';
+  }
+
+  /** True when the camera follows the player on the current island instead of showing all of it. */
+  get following(): boolean { return this.zooms[this.sim ? this.sim.arenaIndex : 0] > 1.001; }
+
+  /**
+   * Camera target and distance on island `index`, looking at the island-local point (fx, fz): the whole island
+   * when it fits at a readable scale, else a closer window centred on the point but kept over the island.
+   */
+  private framing(index: number, fx: number, fz: number, out: THREE.Vector3): number {
+    this.frameTarget(index, out);
+    const zoom = this.zooms[index];
+    const dist = this.fits[index] / zoom;
+    if (zoom <= 1.001) return dist;
+    const { hx, near, far } = this.windows[index];
+    const b = ARENAS[index].bounds;
+    const o = ISLANDS[index];
+    const minX = b.minX - FOLLOW_MARGIN, maxX = b.maxX + FOLLOW_MARGIN;
+    if (2 * hx < maxX - minX) out.x = o.x + clamp(fx, minX + hx, maxX - hx);
+    // Heads stand up into the far (top) edge of the view: keep some room there.
+    const minZ = b.minZ - FOLLOW_MARGIN, maxZ = b.maxZ + FOLLOW_MARGIN, farRoom = Math.max(0, far - 0.9);
+    if (farRoom + near < maxZ - minZ) out.z = o.z + clamp(fz, minZ + farRoom, maxZ - near);
+    return dist;
+  }
+
+  /** Where the follow camera looks: the ninja, leaning ahead along a held touch or keyboard aim. */
+  private focus(): { x: number; z: number } {
+    const sim = this.sim!;
+    let x = this.playerPos.x, z = this.playerPos.z;
+    const aim = this.aim;
+    if (aim && aim.source !== 'mouse' && !(aim.source === 'touch' && aim.dead)) {
+      x += (aim.x - sim.player.x) * AIM_LEAD;
+      z += (aim.z - sim.player.z) * AIM_LEAD;
+    }
+    return { x, z };
   }
 
   /** Camera distance that frames island `index` inside the screen minus the HUD insets. */
@@ -2012,14 +2184,16 @@ export class GaleCutter {
     } else if (this.travel && sim.phase === 'travel') {
       const k = clamp(sim.phaseTime / TRAVEL_TIME, 0, 1);
       const e = k * k * (3 - 2 * k);
-      const a = this.frameTarget(this.travel.from, new THREE.Vector3());
-      const b = this.frameTarget(this.travel.to, new THREE.Vector3());
+      const { from, to, fromPos } = this.travel;
+      const a = new THREE.Vector3(), b = new THREE.Vector3();
+      const distA = this.framing(from, fromPos.x - ISLANDS[from].x, fromPos.z - ISLANDS[from].z, a);
+      const distB = this.framing(to, ARENAS[to].start.x, ARENAS[to].start.z, b);
       target.lerpVectors(a, b, e);
       target.y += Math.sin(Math.PI * k) * 4;
-      dist = lerp(this.fits[this.travel.from], this.fits[this.travel.to], e) * (1 + Math.sin(Math.PI * k) * 0.35);
+      dist = lerp(distA, distB, e) * (1 + Math.sin(Math.PI * k) * 0.35);
     } else {
-      this.frameTarget(sim.arenaIndex, target);
-      dist = this.fits[sim.arenaIndex];
+      const focus = this.focus();
+      dist = this.framing(sim.arenaIndex, focus.x, focus.z, target);
       // Slow motion leans in a little towards the player.
       const lean = this.tint * 0.08;
       target.lerp(this.player.position, lean);
@@ -2031,7 +2205,7 @@ export class GaleCutter {
         if (this.state === 'over') shift = this.wide ? 0.22 : 0;
       }
     }
-    const k = this.cameraSnap ? 1 : damp(sim && sim.phase === 'travel' ? 6 : 3, dt);
+    const k = this.cameraSnap ? 1 : damp(sim && sim.phase === 'travel' ? 6 : this.following ? 3.5 : 3, dt);
     this.cameraSnap = false;
     this.camTarget.lerp(target, k);
     this.camDist = lerp(this.camDist, dist, k);
@@ -2061,6 +2235,34 @@ export class GaleCutter {
   private camShift = 0;
   private pitch = PITCH;
 
+  /** Edge markers for foes the follow camera leaves out of view, inside the part of the screen the HUD leaves free. */
+  private updateMarks(): void {
+    const sim = this.sim;
+    let n = 0;
+    if (sim && this.following && (this.state === 'running' || this.state === 'paused') && sim.phase !== 'travel') {
+      const { top, right, bottom, left } = this.insets;
+      const x0 = left, x1 = this.width - right, y0 = top, y1 = this.height - bottom;
+      const inset = 16;
+      const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+      const hw = Math.max(1, (x1 - x0) / 2 - inset), hh = Math.max(1, (y1 - y0) / 2 - inset);
+      for (const view of this.views.values()) {
+        if (n >= MAX_MARKS) break;
+        const p = this.local(view.x, view.z, 0.6).project(this.stage.camera);
+        const sx = (p.x * 0.5 + 0.5) * this.width, sy = (-p.y * 0.5 + 0.5) * this.height;
+        if (p.z < 1 && sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1) continue;
+        const dx = sx - cx, dy = sy - cy;
+        const t = 1 / Math.max(Math.abs(dx) / hw, Math.abs(dy) / hh, 1e-6);
+        const mark = this.marks[n++];
+        mark.x = cx + dx * t;
+        mark.y = cy + dy * t;
+        mark.angle = Math.atan2(dy, dx);
+        mark.tone = view.state === 'spawn' ? 'spawn' : view.state === 'windup' || view.state === 'strike' || view.state === 'fuse' ? 'danger' : 'foe';
+      }
+    }
+    if (n || this.markCount) this.onMarks(this.marks, n);
+    this.markCount = n;
+  }
+
   private emitHud(): void {
     const sim = this.sim;
     if (!sim) return;
@@ -2072,7 +2274,7 @@ export class GaleCutter {
       charges: sim.charges,
       chargeProgress: sim.chargeProgress,
       combo: sim.combo,
-      comboLeft: sim.combo > 1 ? clamp(sim.comboTimer / COMBO_TIME, 0, 1) : 0,
+      comboLeft: sim.combo > 1 ? clamp(sim.comboTimer / sim.comboWindow, 0, 1) : 0,
       focus: sim.focus / FOCUS_MAX,
       slow: this.tint,
     });

@@ -33,13 +33,21 @@ export const MAX_HEARTS = 3;
 /** Invulnerability after a hit, and after every dash (the dash itself is instant). */
 export const HURT_GRACE = 1.2;
 export const DASH_GRACE = 0.2;
-/** Seconds without a kill before the combo multiplier drops a step. */
+/** Seconds without a kill before the combo multiplier drops a step; above ×5 the window narrows to COMBO_MIN_TIME. */
 export const COMBO_TIME = 5;
-export const MAX_COMBO = 20;
+export const COMBO_MIN_TIME = 2.5;
+export const MAX_COMBO = 30;
 /** A shield-bearer blocks any cut that meets it within this angle of straight on (a 120 degree front). */
 export const SHIELD_HALF_ARC = Math.PI / 3;
-/** A shield-bearer that blocked a cut is rocked back and cannot turn for this long. */
+/** A shield-bearer that blocked a cut is rocked back (any wind-up broken) and cannot turn or strike for this long. */
 export const STAGGER_TIME = 0.6;
+/**
+ * A lunge or bash reaches this much further than the island edge lets the body travel (the body leans over the
+ * edge; the weapon goes on), so standing in a pocket of the rim is never out of reach.
+ */
+export const LUNGE_OVERREACH = 0.45;
+/** Seconds a foe in range keeps repositioning for a clear line before it strikes anyway. */
+export const REPOSITION_TIME = 2.5;
 export const BLAST_R = 2.2;
 export const ARROW_R = 0.16;
 export const ARROW_SPEED = 7.2;
@@ -358,7 +366,8 @@ export function wavePlan(wave: number, random: () => number = Math.random): Wave
     maxAlive = CAMPAIGN_ALIVE[w - 1];
   } else {
     const n = w - CAMPAIGN_WAVES;
-    const count = Math.min(18, 11 + Math.floor(n * 0.8));
+    // Endless keeps growing for about twenty waves: longer waves, a crowd of up to 12, faster feet and shields.
+    const count = Math.min(26, 11 + Math.floor(n * 0.8));
     groups = [];
     for (let i = 0; i < count; i++) {
       const roll = random();
@@ -366,7 +375,7 @@ export function wavePlan(wave: number, random: () => number = Math.random): Wave
       const size = kind === 'grunt' || kind === 'bomber' ? 2 + (random() < 0.5 ? 1 : 0) : kind === 'shield' && random() < 0.3 ? 2 : 1;
       groups.push({ kind, count: size });
     }
-    maxAlive = Math.min(11, 9 + Math.floor(n / 3));
+    maxAlive = Math.min(12, 9 + Math.floor(n / 3));
   }
   return {
     wave: w,
@@ -375,13 +384,32 @@ export function wavePlan(wave: number, random: () => number = Math.random): Wave
     groups,
     maxAlive,
     interval: Math.max(1.2, 2.6 - (w - 1) * 0.1),
-    speed: endless ? Math.min(1.6, 1.3 + (w - CAMPAIGN_WAVES) * 0.03) : 1 + (w - 1) * 0.025,
+    speed: endless ? Math.min(MAX_SPEED, 1.3 + (w - CAMPAIGN_WAVES) * 0.03) : 1 + (w - 1) * 0.025,
     tempo: endless ? Math.max(0.65, 0.82 - (w - CAMPAIGN_WAVES) * 0.02) : 1 - (w - 1) * 0.015,
-    turn: Math.min(1.6, 1 + (w - 1) * 0.04),
+    turn: Math.min(1.9, 1 + (w - 1) * 0.04),
   };
 }
 
+/** Top walking-speed scale (endless wave 30 and on). Arrows stop speeding up at ARROW_SPEED_CAP. */
+export const MAX_SPEED = 1.84;
+export const ARROW_SPEED_CAP = 1.6;
+
 export const waveBonus = (wave: number, flawless: boolean) => 250 * wave * (flawless ? 2 : 1);
+
+/** Clearing a campaign wave heals a heart; in endless, only every other wave does. */
+export const healsAfter = (wave: number) => wave <= CAMPAIGN_WAVES || (wave - CAMPAIGN_WAVES) % 2 === 0;
+
+/** Seconds a multiplier lasts without a kill: 5 s up to ×5, then 0.15 s less per step down to 2.5 s. */
+export const comboWindow = (combo: number) => Math.max(COMBO_MIN_TIME, COMBO_TIME - 0.15 * Math.max(0, combo - 5));
+
+/**
+ * How far a lunge or bash from (x, z) along (dx, dz) moves the body (stopped by the island edge) and how far
+ * its blow reaches (a little further, see LUNGE_OVERREACH). The ground telegraph shows the blow.
+ */
+export function lungeLength(arena: Arena, x: number, z: number, dx: number, dz: number, reach: number): { body: number; front: number } {
+  const body = clipDash(arena, x, z, dx, dz, reach);
+  return { body, front: Math.min(reach, body + LUNGE_OVERREACH) };
+}
 
 // ------------------------------------------------------------------ simulation
 
@@ -401,8 +429,10 @@ export interface Enemy {
   /** Strike or shot direction (unit vector), locked late in the wind-up. */
   dirX: number;
   dirZ: number;
-  /** Length of the current lunge, already clipped to the island. */
+  /** Length of the current lunge, already clipped to the island, and how far its blow reaches (see LUNGE_OVERREACH). */
   reach: number;
+  front: number;
+  /** How far the blow has gone so far. */
   travelled: number;
   struck: boolean;
   cooldown: number;
@@ -410,6 +440,8 @@ export interface Enemy {
   strafeTimer: number;
   steer: number;
   stagger: number;
+  /** Seconds spent in range without a clear line for a strike. */
+  reposition: number;
 }
 export interface Arrow { id: number; x: number; z: number; dx: number; dz: number; travelled: number; }
 
@@ -452,11 +484,13 @@ export type SimEvent =
   | { type: 'kill'; id: number; kind: Kind; x: number; z: number; points: number; cause: 'cut' | 'blast'; dirX: number; dirZ: number; order: number }
   | { type: 'deflect'; arrow: number; x: number; z: number; points: number }
   | { type: 'arrowGone'; arrow: number }
-  | { type: 'clang'; id: number; x: number; z: number }
+  | { type: 'clang'; id: number; x: number; z: number; interrupted: boolean }
   | { type: 'dash'; fromX: number; fromZ: number; toX: number; toZ: number; kills: number; blocked: boolean; arrows: number; points: number }
   | { type: 'cancel' }
   | { type: 'denied' }
   | { type: 'charge'; charges: number }
+  /** The focus meter ran dry while aiming: time is back to full speed until the player lets go. */
+  | { type: 'focusOut' }
   | { type: 'combo'; combo: number; kills: number }
   | { type: 'comboDrop'; combo: number }
   | { type: 'hurt'; hearts: number; source: HurtSource }
@@ -535,8 +569,13 @@ export class Sim {
     const rdt = clampNum(realDt, 0, 0.1);
     const active = this.phase !== 'travel';
     this.aiming = active && !!input.aiming;
-    if (this.aiming) this.focus = Math.max(0, this.focus - rdt);
-    else this.focus = Math.min(FOCUS_MAX, this.focus + FOCUS_REGEN * rdt);
+    if (this.aiming) {
+      const had = this.focus;
+      this.focus = Math.max(0, this.focus - rdt);
+      if (had > 0 && this.focus === 0) events.push({ type: 'focusOut' });
+    } else {
+      this.focus = Math.min(FOCUS_MAX, this.focus + FOCUS_REGEN * rdt);
+    }
     const target = this.aiming && this.focus > 0 ? SLOW : 1;
     this.timeScale = approach(this.timeScale, target, rdt * (target < this.timeScale ? 10 : 6));
     if (active && input.dash) this.dash(input.dash.x, input.dash.z);
@@ -549,6 +588,8 @@ export class Sim {
     return events;
   }
 
+  /** Seconds the current multiplier lasts without a kill. */
+  get comboWindow(): number { return comboWindow(this.combo); }
   /** Charge regrowth progress towards the next charge, 0..1. */
   get chargeProgress(): number { return this.charges >= MAX_CHARGES ? 1 : clampNum(this.chargeTimer / CHARGE_TIME, 0, 1); }
   get alive(): number { return this.enemies.length; }
@@ -628,12 +669,15 @@ export class Sim {
       this.events.push({ type: 'deflect', arrow: arrow.id, x: arrow.x, z: arrow.z, points });
     }
     if (plan.blocked && plan.blocked.state !== 'dead') {
-      plan.blocked.stagger = STAGGER_TIME;
-      this.events.push({ type: 'clang', id: plan.blocked.id, x: plan.blocked.x, z: plan.blocked.z });
+      const shield = plan.blocked;
+      shield.stagger = STAGGER_TIME;
+      // Rocked back: a wind-up in progress is broken, so the block never leaves the player inside a bash.
+      const interrupted = shield.state === 'windup';
+      if (interrupted) this.setState(shield, 'move');
+      this.events.push({ type: 'clang', id: shield.id, x: shield.x, z: shield.z, interrupted });
     }
     if (kills > 0) {
       this.charges = Math.min(MAX_CHARGES, this.charges + 1);
-      this.comboTimer = COMBO_TIME;
       this.focus = Math.min(FOCUS_MAX, this.focus + FOCUS_PER_KILL * kills);
       if (this.hitStops) this.hitStop = HIT_STOP * Math.min(3, kills);
       this.bestCut = Math.max(this.bestCut, kills);
@@ -643,6 +687,7 @@ export class Sim {
       this.maxCombo = Math.max(this.maxCombo, this.combo);
       this.events.push({ type: 'combo', combo: this.combo, kills });
     }
+    if (kills > 0) this.comboTimer = comboWindow(this.combo);
     this.events.push({
       type: 'dash', fromX: plan.fromX, fromZ: plan.fromZ, toX: plan.toX, toZ: plan.toZ,
       kills, blocked: !!plan.blocked, arrows: plan.arrows.length, points: this.score - scoreBefore,
@@ -735,8 +780,8 @@ export class Sim {
     const flawless = !this.hurtThisWave;
     const bonus = waveBonus(this.wave, flawless);
     this.score += bonus;
-    const healed = this.hearts < MAX_HEARTS;
-    this.hearts = Math.min(MAX_HEARTS, this.hearts + 1);
+    const healed = healsAfter(this.wave) && this.hearts < MAX_HEARTS;
+    if (healed) this.hearts += 1;
     this.arrows.length = 0;
     this.phase = 'clear';
     this.phaseTime = 0;
@@ -796,7 +841,7 @@ export class Sim {
       this.comboTimer -= dt;
       if (this.comboTimer <= 0) {
         this.combo -= 1;
-        this.comboTimer = this.combo > 1 ? COMBO_TIME : 0;
+        this.comboTimer = this.combo > 1 ? comboWindow(this.combo) : 0;
         this.events.push({ type: 'comboDrop', combo: this.combo });
       }
     }
@@ -874,9 +919,9 @@ export class Sim {
     const e: Enemy = {
       id: this.nextId++, kind, x, z,
       facing: Math.atan2(this.player.z - z, this.player.x - x),
-      state: landed ? 'move' : 'spawn', t: 0, dirX: 1, dirZ: 0, reach: 0, travelled: 0, struck: false,
+      state: landed ? 'move' : 'spawn', t: 0, dirX: 1, dirZ: 0, reach: 0, front: 0, travelled: 0, struck: false,
       cooldown: kind === 'archer' ? 1 + this.random() * 1.2 : 0,
-      strafe: this.random() < 0.5 ? -1 : 1, strafeTimer: 1.5 + this.random() * 1.5, steer: this.random() < 0.5 ? -1 : 1, stagger: 0,
+      strafe: this.random() < 0.5 ? -1 : 1, strafeTimer: 1.5 + this.random() * 1.5, steer: this.random() < 0.5 ? -1 : 1, stagger: 0, reposition: 0,
     };
     this.enemies.push(e);
     this.events.push({ type: 'spawn', id: e.id, kind, x, z });
@@ -914,8 +959,9 @@ export class Sim {
       case 'grunt':
         if (e.state === 'move') {
           e.facing = turnToward(e.facing, toAngle, 8 * dt);
-          if (dist > s.trigger) this.walk(e, toX, toZ, step);
-          else this.windup(e, toX, toZ);
+          if (dist > s.trigger) { e.reposition = 0; this.walk(e, toX, toZ, step); }
+          else if (this.clearLine(e, toX, toZ, dt)) this.windup(e, toX, toZ);
+          else this.walk(e, toX, toZ, step);
         } else if (e.state === 'windup') {
           if (e.t < windup * AIM_LOCK) { e.dirX = toX; e.dirZ = toZ; e.facing = toAngle; }
           if (e.t >= windup) this.strike(e, s.reach);
@@ -932,7 +978,9 @@ export class Sim {
         if (e.state === 'move') {
           if (e.stagger > 0) break;
           const misaligned = Math.abs(wrap(toAngle - e.facing));
-          if (dist > s.trigger) this.walk(e, toX, toZ, step * (0.35 + 0.65 * Math.max(0, Math.cos(misaligned))));
+          const pace = step * (0.35 + 0.65 * Math.max(0, Math.cos(misaligned)));
+          if (dist > s.trigger) { e.reposition = 0; this.walk(e, toX, toZ, pace); }
+          else if (!this.clearLine(e, toX, toZ, dt)) this.walk(e, toX, toZ, pace);
           else if (misaligned < 0.5) this.windup(e, Math.cos(e.facing), Math.sin(e.facing));
         } else if (e.state === 'windup') {
           if (e.t >= windup) this.strike(e, s.reach);
@@ -982,6 +1030,21 @@ export class Sim {
     }
   }
 
+  /**
+   * True when a lunge or bash towards the player from where the foe stands would reach them: the island edge does
+   * not cut it short. Otherwise the foe walks round for a clear line, and strikes anyway after REPOSITION_TIME.
+   */
+  private clearLine(e: Enemy, dirX: number, dirZ: number, dt: number): boolean {
+    const s = STATS[e.kind];
+    const { front } = lungeLength(this.arena, e.x, e.z, dirX, dirZ, s.reach);
+    const reaches = segmentDistance(e.x, e.z, e.x + dirX * front, e.z + dirZ * front, this.player.x, this.player.z) <= PLAYER_R + s.r * 0.85;
+    if (reaches) { e.reposition = 0; return true; }
+    e.reposition += dt;
+    if (e.reposition < REPOSITION_TIME) return false;
+    e.reposition = 0;
+    return true;
+  }
+
   private windup(e: Enemy, dirX: number, dirZ: number): void {
     this.setState(e, 'windup');
     e.dirX = dirX;
@@ -991,25 +1054,31 @@ export class Sim {
 
   private strike(e: Enemy, reach: number): void {
     this.setState(e, 'strike');
-    e.reach = clipDash(this.arena, e.x, e.z, e.dirX, e.dirZ, reach);
+    const length = lungeLength(this.arena, e.x, e.z, e.dirX, e.dirZ, reach);
+    e.reach = length.body;
+    e.front = length.front;
     e.travelled = 0;
     e.struck = false;
     e.facing = Math.atan2(e.dirZ, e.dirX);
     this.events.push({ type: 'strike', id: e.id, kind: e.kind });
   }
 
+  /** The blow sweeps forward at full speed; the body follows it until the island edge stops the body. */
   private lunge(e: Enemy, dt: number): void {
     const s = STATS[e.kind];
-    const len = Math.max(0, Math.min((s.reach / s.strike) * dt, e.reach - e.travelled));
-    const ox = e.x, oz = e.z;
-    e.x += e.dirX * len;
-    e.z += e.dirZ * len;
-    e.travelled += len;
-    if (!e.struck && segmentDistance(ox, oz, e.x, e.z, this.player.x, this.player.z) <= PLAYER_R + s.r * 0.85) {
+    const before = e.travelled;
+    const after = Math.min(e.front, before + (s.reach / s.strike) * dt);
+    const moved = Math.min(e.reach, after) - Math.min(e.reach, before);
+    e.x += e.dirX * moved;
+    e.z += e.dirZ * moved;
+    e.travelled = after;
+    // Where the lunge started, then the blow's sweep this step.
+    const sx = e.x - e.dirX * Math.min(e.reach, after), sz = e.z - e.dirZ * Math.min(e.reach, after);
+    if (!e.struck && segmentDistance(sx + e.dirX * before, sz + e.dirZ * before, sx + e.dirX * after, sz + e.dirZ * after, this.player.x, this.player.z) <= PLAYER_R + s.r * 0.85) {
       e.struck = true;
       this.hurt(e.kind);
     }
-    if (e.travelled >= e.reach - 1e-9) this.setState(e, 'recover');
+    if (e.travelled >= e.front - 1e-9) this.setState(e, 'recover');
   }
 
   /** Walks a foe along (dirX, dirZ), steering around the void and pillars. Returns false when it could not move. */
@@ -1052,7 +1121,7 @@ export class Sim {
   }
 
   private updateArrows(dt: number): void {
-    const len = ARROW_SPEED * this.plan.speed * dt;
+    const len = ARROW_SPEED * Math.min(ARROW_SPEED_CAP, this.plan.speed) * dt;
     for (let i = this.arrows.length - 1; i >= 0; i--) {
       const arrow = this.arrows[i];
       const ox = arrow.x, oz = arrow.z;
@@ -1097,4 +1166,36 @@ export function blastChain(enemies: readonly Enemy[], bombs: readonly Enemy[], s
     frontier = next;
   }
   return result;
+}
+
+/**
+ * Where a keyboard aim starts: the valid dash towards a foe that cuts the most (a blocked shield costs, distance
+ * costs a little). When no line towards a foe is a valid dash (say, from a pocket of the rim), the longest valid
+ * dash, leaning towards the island's starting tile. Null only when no direction at all is a valid dash.
+ */
+export function keyboardTarget(sim: Sim): { x: number; z: number } | null {
+  const p = sim.player;
+  let best: { x: number; z: number; value: number } | null = null;
+  for (const e of sim.enemies) {
+    if (e.state === 'spawn' || e.state === 'dead') continue;
+    const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1;
+    if (d > MAX_DASH * 1.6) continue;
+    const reach = Math.min(MAX_DASH, d + 0.8);
+    const tx = p.x + (dx / d) * reach, tz = p.z + (dz / d) * reach;
+    const plan = sim.planDash(tx, tz);
+    if (!plan.valid) continue;
+    const value = (plan.cuts.length + plan.chain.length) * 10 - (plan.blocked ? 25 : 0) - d * 0.5;
+    if (!best || value > best.value) best = { x: tx, z: tz, value };
+  }
+  if (best) return { x: best.x, z: best.z };
+  const home = sim.arena.start;
+  for (let k = 0; k < 24; k++) {
+    const a = (k / 24) * TAU;
+    const tx = p.x + Math.cos(a) * MAX_DASH, tz = p.z + Math.sin(a) * MAX_DASH;
+    const plan = sim.planDash(tx, tz);
+    if (!plan.valid) continue;
+    const value = plan.length - 0.2 * Math.hypot(plan.toX - home.x, plan.toZ - home.z);
+    if (!best || value > best.value) best = { x: tx, z: tz, value };
+  }
+  return best && { x: best.x, z: best.z };
 }

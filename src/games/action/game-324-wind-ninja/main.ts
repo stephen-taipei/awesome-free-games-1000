@@ -1,5 +1,5 @@
 import { Sfx, best, setupI18n, focusIfActive, onFocusLost, bindSoundButton, prefersReducedMotion, prefersTouch } from '../../../shared/three/kit';
-import { GaleCutter, type Hud, type GameEvent, type EventDetail, type PopupTone } from './game';
+import { GaleCutter, type Hud, type GameEvent, type EventDetail, type PopupTone, type EdgeMark } from './game';
 import { MAX_HEARTS, MAX_CHARGES, CAMPAIGN_WAVES, type Kind } from './logic';
 import { translations } from './i18n';
 
@@ -25,6 +25,8 @@ const vignette = $('vignette');
 const hurtEl = $('hurt');
 const statsEl = $('stats');
 const actionsEl = $('actions');
+const marksEl = $('marks');
+const focusMeter = $('focus-meter');
 const sfx = new Sfx();
 const reducedMotion = prefersReducedMotion();
 let mode: 'menu' | 'playing' | 'paused' | 'over' = 'menu';
@@ -34,6 +36,8 @@ let lastResult: {
   best: number; isNew: boolean; bestCombo: number; isNewCombo: boolean;
 } | null = null;
 const timers: number[] = [];
+/** Messages whose moment came while the game was paused: they show after the player resumes. */
+const deferred: Array<() => void> = [];
 const throttle = new Map<string, number>();
 
 const t = setupI18n(translations, languageSelect, () => { renderOverlay(); renderHud(lastHud, true); });
@@ -57,12 +61,21 @@ function showHint(text: string, ms = 3200) {
   hint.dataset.timer = String(window.setTimeout(() => hint.classList.remove('show'), ms));
 }
 
-/** Runs `fn` later, unless the run ends or is restarted first. */
+/** Runs `fn` later, unless the run ends or is restarted first. If the game is paused by then, it waits for resume. */
 function later(ms: number, fn: () => void) {
-  timers.push(window.setTimeout(() => { if (mode === 'playing') fn(); }, ms));
+  timers.push(window.setTimeout(() => {
+    if (mode === 'playing') fn();
+    else if (mode === 'paused') deferred.push(fn);
+  }, ms));
+}
+
+/** After a resume, the messages held back by the pause, one at a time. */
+function flushDeferred() {
+  deferred.splice(0).forEach((fn, i) => later(700 + i * 4600, fn));
 }
 
 function clearMessages() {
+  deferred.length = 0;
   while (timers.length) window.clearTimeout(timers.pop());
   toast.classList.remove('show');
   hint.classList.remove('show');
@@ -112,7 +125,8 @@ function renderHud(hud: Hud, force = false) {
     combo.classList.toggle('hot', hud.combo >= 5);
   }
   $('combo-bar').style.transform = `scaleX(${hud.comboLeft.toFixed(3)})`;
-  const wave = hud.endless ? t('game.endlessWave', { n: hud.wave - CAMPAIGN_WAVES }) : `${hud.wave}/${CAMPAIGN_WAVES}`;
+  // The chip keeps the endless count short, so the HUD fits narrow phones at any score.
+  const wave = hud.endless ? t('game.endlessShort', { n: hud.wave - CAMPAIGN_WAVES }) : `${hud.wave}/${CAMPAIGN_WAVES}`;
   if (force || wave !== shown.wave) { shown.wave = wave; $('wave').textContent = wave; }
   if (force || hud.hearts !== shown.hearts) {
     shown.hearts = hud.hearts;
@@ -133,7 +147,10 @@ function renderHud(hud: Hud, force = false) {
     }).join('');
     charges.setAttribute('aria-label', `${hud.charges}/${MAX_CHARGES}`);
   }
-  $('focus-bar').style.transform = `scaleX(${Math.max(0, Math.min(1, hud.focus)).toFixed(3)})`;
+  const focus = Math.max(0, Math.min(1, hud.focus));
+  $('focus-bar').style.transform = `scaleX(${focus.toFixed(3)})`;
+  const focusNow = String(Math.round(focus * 10) * 10);
+  if (focusMeter.getAttribute('aria-valuenow') !== focusNow) focusMeter.setAttribute('aria-valuenow', focusNow);
   vignette.style.opacity = (mode === 'playing' ? hud.slow : 0).toFixed(2);
 }
 
@@ -168,11 +185,26 @@ function renderOverlay() {
   }
 }
 
+/** Edge markers: a pool of arrows at the screen edge, pointing at foes the follow camera leaves out of view. */
+const markEls: HTMLElement[] = [];
+function renderMarks(marks: readonly EdgeMark[], count: number) {
+  for (let i = 0; i < Math.max(count, markEls.length); i++) {
+    let el = markEls[i];
+    if (i >= count) { if (el) el.hidden = true; continue; }
+    if (!el) { el = document.createElement('i'); marksEl.append(el); markEls.push(el); }
+    const mark = marks[i];
+    el.hidden = mode !== 'playing';
+    el.className = `mark ${mark.tone}`;
+    el.style.transform = `translate(${mark.x.toFixed(1)}px, ${mark.y.toFixed(1)}px) rotate(${mark.angle.toFixed(3)}rad)`;
+  }
+}
+
 function setMode(next: typeof mode, focusStart = true) {
   mode = next;
   overlay.hidden = next === 'playing';
   pauseBtn.disabled = next !== 'playing';
   document.body.classList.toggle('is-playing', next === 'playing');
+  marksEl.hidden = next !== 'playing';
   if (next !== 'playing') vignette.style.opacity = '0';
   renderOverlay();
   if (overlay.hidden) (document.activeElement as HTMLElement | null)?.blur();
@@ -244,6 +276,11 @@ function playSound(event: GameEvent, detail: EventDetail = {}) {
     case 'charge':
       sfx.tone(880, 0.07, { type: 'triangle', gain: 0.05 });
       sfx.tone(1320, 0.1, { type: 'triangle', gain: 0.05, delay: 0.06 });
+      break;
+    case 'focusOut':
+      // Time comes back up to speed: a soft rising sigh.
+      sfx.tone(140, 0.45, { type: 'sine', slideTo: 330, gain: 0.08 });
+      sfx.noise(0.3, { gain: 0.035, frequency: 2600, type: 'highpass' });
       break;
     case 'denied':
       sfx.tone(140, 0.16, { type: 'square', gain: 0.07 });
@@ -322,6 +359,9 @@ function onGameEvent(event: GameEvent, detail: EventDetail = {}) {
     case 'denied':
       if (every('denied', 1200)) showToast(t('game.noCharge'), 'warn', 900);
       break;
+    case 'focusOut':
+      if (every('focusOut', 60000)) showHint(t('game.focusOut'), 4200);
+      break;
     case 'edge':
       if (every('edge', 1500)) showToast(t('game.edge'), 'warn', 1000);
       break;
@@ -348,6 +388,8 @@ function fitInsets() {
   const nav = navEl ? navEl.getBoundingClientRect() : null;
   const hasNav = !!nav && nav.width > 0 && nav.height > 0;
   root.style.setProperty('--hud-bottom', `${Math.round(Math.max(stats.bottom, actions.bottom))}px`);
+  // Room the menu leaves at the bottom for the site navigation bar.
+  root.style.setProperty('--nav-clear', `${hasNav ? Math.max(10, Math.round(height - nav!.top + 8)) : 10}px`);
   if (!game) return;
   game.setInsets(column.matches ? {
     top: 10,
@@ -388,6 +430,7 @@ if (!game) {
 } else {
   game.onHud = hud => renderHud(hud);
   game.onPopup = popup;
+  game.onMarks = renderMarks;
   game.onEvent = onGameEvent;
   game.onOver = result => {
     const record = best.submit(BEST_KEY, result.score);
@@ -408,6 +451,7 @@ if (!game) {
     if (mode === 'paused') {
       game.resume();
       setMode('playing');
+      flushDeferred();
     } else {
       // Playing first, so the first wave's announcement from start() is shown.
       clearMessages();
@@ -421,7 +465,7 @@ if (!game) {
   window.addEventListener('keydown', event => {
     if ((event.code === 'KeyP' || event.code === 'Escape') && mode === 'playing') pause();
     // Escape in an open language picker only closes the picker.
-    else if (event.code === 'Escape' && mode === 'paused' && !(event.target instanceof HTMLSelectElement)) { game.resume(); setMode('playing'); }
+    else if (event.code === 'Escape' && mode === 'paused' && !(event.target instanceof HTMLSelectElement)) { game.resume(); setMode('playing'); flushDeferred(); }
   });
   onFocusLost(() => pause());
   // Keys ignores every key while the language select has focus, so a held aim would never be released.
