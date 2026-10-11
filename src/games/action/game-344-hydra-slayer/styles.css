@@ -190,6 +190,11 @@ body[data-tier="1"] { --accent: #ff5a6e; --accent-ink: #2a0008; }
   .g3d-chip .g3d-meter { width: 100%; }
   .time-chip { flex: 0 0 auto; }
   .time-chip b { font-size: 0.92rem; }
+  /* The beast chip carries the name and, for the Hydra, three head pips, so it gets the extra width. */
+  .beast-chip { flex-grow: 1.6; }
+  .beast-chip small { gap: 4px; letter-spacing: 0.04em; }
+  .heads { gap: 2px; }
+  .heads i { width: 6px; height: 6px; }
   .cards { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 380px) {

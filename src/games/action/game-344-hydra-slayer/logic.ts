@@ -1391,7 +1391,7 @@ export function botInput(duel: Duel, bot: BotMemory, random: () => number = Math
 
 // ------------------------------------------------------------------ ladder records
 
-/** Rungs: Hydra..Kraken on Normal are 1..4, then the same four on Nightmare are 5..8. */
+/** Rungs: Hound, Siren, Hydra, Kraken on Normal are 1..4, then the same four on Nightmare are 5..8. */
 export const LADDER = BEASTS.length * 2;
 export const PROGRESS_KEY = 'afg-beastfall-best';
 export const rungOf = (beast: number, tier: Tier) => tier * BEASTS.length + beast + 1;
