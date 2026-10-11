@@ -1,9 +1,9 @@
 import { THREE, createStage, createLoop, Keys, trackPointer, clamp, damp, lerp, rng, prefersReducedMotion, type Stage } from '../../../shared/three/kit';
 import {
   ROW, ROWS_PER_CHUNK, CHUNK_LENGTH, OFFSETS, GRACE_TIME, MAX_CHARGES, BURST_TIME, V_MAX,
-  createCourse, createRun, stepRun, triggerBurst, ensureCourse, autopilot, escapeClearance, multiplier, gateBasis,
-  chunkLattice, surfaceHeight, centerX, floorY, halfWidthAt, lineX, lineY, windAt, segmentIndex,
-  type Course, type Run, type RunEvent, type Gate, type Controls,
+  createCourse, createRun, stepRun, triggerBurst, ensureCourse, autopilot, multiplier, gateBasis, createWarning, updateWarning,
+  chunkLattice, surfaceHeight, centerX, floorY, halfWidthAt, lineX, lineY, windAt, segmentIndex, segmentStart,
+  type Course, type Run, type RunEvent, type Gate, type Controls, type CrashCause, type Warning, type WarningState,
 } from './logic';
 
 export interface Hud {
@@ -19,10 +19,10 @@ export interface Hud {
   wind: number;
   grace: number;
   thermalAhead: number;
-  warning: 'pull' | 'stall' | null;
+  warning: Warning;
   skimming: boolean;
 }
-export interface Result { score: number; distance: number; gates: number; gatesTotal: number; bestChain: number; segment: number; cause: 'ground' | 'wall' | 'ridge'; }
+export interface Result { score: number; distance: number; gates: number; gatesTotal: number; bestChain: number; segment: number; cause: CrashCause; }
 export interface Marker { x: number; y: number; onScreen: boolean; angle: number; visible: boolean; }
 export interface Stick { active: boolean; x: number; y: number; dx: number; dy: number; }
 
@@ -37,6 +37,15 @@ const DUST = 120;
 const STREAKS = 70;
 const TRAIL = 46;
 const STICK_RADIUS = 64;
+/** A second finger counts as a burst only as a quick, still tap; a resting palm or a re-placed thumb does not. */
+const TAP_MS = 280;
+const TAP_SLOP = 12;
+/** How often the HUD warning's look-ahead runs, s. */
+const WARN_EVERY = 0.05;
+const TRAIL_TINT = new THREE.Color('#ff9a5c');
+const TRAIL_BURST_TINT = new THREE.Color('#7ee8ff');
+const FORWARD = new THREE.Vector3(0, 0, -1);
+const SNOW = new THREE.Color('#f1f5fa');
 
 /** Time-of-day palettes, one per segment: sky top, horizon (and fog), sun colour. */
 const SKIES = [
@@ -48,6 +57,23 @@ const SKIES = [
   { top: '#3c3f7c', horizon: '#e7a07f', sun: '#ff9550', light: 1.7 },
   { top: '#2c2f63', horizon: '#c98a80', sun: '#ff8a4a', light: 1.5 },
 ];
+
+/**
+ * Ground palettes, three segments each: green meadows, autumn larches, bare alpine slopes with a lower snow
+ * line, then red dusk granite. Each new one blends in over the first 220 m of its segment.
+ */
+interface Biome { grassA: THREE.Color; grassB: THREE.Color; forest: THREE.Color; rockA: THREE.Color; rockB: THREE.Color; scree: THREE.Color; snow: number; }
+const biome = (grassA: string, grassB: string, forest: string, rockA: string, rockB: string, scree: string, snow: number): Biome => ({
+  grassA: new THREE.Color(grassA), grassB: new THREE.Color(grassB), forest: new THREE.Color(forest),
+  rockA: new THREE.Color(rockA), rockB: new THREE.Color(rockB), scree: new THREE.Color(scree), snow,
+});
+const BIOMES = [
+  biome('#5f8d3b', '#86a24a', '#2e5a2e', '#80776d', '#5a544f', '#a08f73', 190),
+  biome('#8d8a3a', '#b89a44', '#8c4a20', '#85796b', '#5d554c', '#a88f6a', 175),
+  biome('#6c7d55', '#93946a', '#34483a', '#7f7c7a', '#545458', '#9c958a', 135),
+  biome('#7c7350', '#9a845a', '#4a4432', '#a2735f', '#6c4c42', '#b58a6b', 150),
+];
+const biomeOf = (segment: number) => Math.min(BIOMES.length - 1, Math.floor(segment / 3));
 
 /** Low-poly wingsuit pilot: arm wings, leg wing, torso, helmet and feet, in one flat-shaded mesh. */
 function wingsuitGeometry(): THREE.BufferGeometry {
@@ -134,6 +160,8 @@ export class RidgeGlider {
   private loop = createLoop((dt, t) => { if (!this.manual) this.frame(dt, t); });
   /** Test hook: when set, only debugAdvance moves the clock. */
   private manual = false;
+  /** Test hook: the racing-line autopilot flies the run (for screenshots deep into the course). */
+  private auto = false;
   private reducedMotion = prefersReducedMotion();
   private state: 'idle' | 'running' | 'paused' | 'dying' | 'over' = 'idle';
   private course!: Course;
@@ -172,7 +200,10 @@ export class RidgeGlider {
   private suit!: THREE.Mesh;
   private shadow!: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   private trail!: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
-  private trailPoints: THREE.Vector3[][] = [[], []];
+  /** Recent foot positions of each smoke ribbon, a ring buffer: `trailHead` is the newest sample. */
+  private trailPoints = [0, 1].map(() => Array.from({ length: TRAIL }, () => new THREE.Vector3()));
+  private trailHead = 0;
+  private trailCount = 0;
   private trailTimer = 0;
   private streaks!: THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial>;
   private streakSeeds = new Float32Array(STREAKS * 3);
@@ -195,13 +226,29 @@ export class RidgeGlider {
   private crashCam = new THREE.Vector3();
   private cause: Result['cause'] = 'ground';
   private hudTimer = 0;
-  private warnTimer = 0;
-  private warning: Hud['warning'] = null;
+  private warnClock = 0;
+  private warnState: WarningState = createWarning();
+  private warning: Warning = null;
   private attractAngle = 0;
+  private terrainFirst = NaN;
+  private terrainDone = false;
+
+  // Scratch objects, reused every frame so the hot paths allocate nothing.
+  private m4 = new THREE.Matrix4();
+  private quat = new THREE.Quaternion();
+  private v1 = new THREE.Vector3();
+  private v2 = new THREE.Vector3();
+  private v3 = new THREE.Vector3();
+  private v4 = new THREE.Vector3();
+  private c1 = new THREE.Color();
+  private c2 = new THREE.Color();
+  private palette = { grassA: new THREE.Color(), grassB: new THREE.Color(), forest: new THREE.Color(), rockA: new THREE.Color(), rockB: new THREE.Color(), scree: new THREE.Color() };
+  private visibleThermals: Course['thermals'] = [];
 
   // Input.
   private stick: Stick = { active: false, x: 0, y: 0, dx: 0, dy: 0 };
-  private pointers = new Set<number>();
+  /** Extra fingers that came down while steering: a burst if lifted again quickly without moving. */
+  private taps = new Map<number, { time: number; x: number; y: number }>();
   private burstQueued = false;
   private lastControls: Controls = { pitch: 0, roll: 0 };
 
@@ -214,14 +261,22 @@ export class RidgeGlider {
     this.stage = stage;
     stage.renderer.toneMappingExposure = 1.05;
     this.buildScene();
-    // A second finger (or a second mouse button press) while steering fires the burst. Registered before
-    // trackPointer so it sees the pointers that were already down.
+    // A quick tap with a second finger while steering fires the burst. Registered before trackPointer, so a
+    // finger that is about to become the stick (none is active yet) is never taken for a tap.
     host.addEventListener('pointerdown', event => {
-      if (this.pointers.size > 0 && this.state === 'running') this.burstQueued = true;
-      this.pointers.add(event.pointerId);
+      if (this.stick.active && this.state === 'running') this.taps.set(event.pointerId, { time: performance.now(), x: event.clientX, y: event.clientY });
+    });
+    host.addEventListener('pointermove', event => {
+      const tap = this.taps.get(event.pointerId);
+      if (tap && Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > TAP_SLOP) this.taps.delete(event.pointerId);
     });
     // A finger can lift over the overlay (the run ended meanwhile), so listen on the window.
-    const release = (event: PointerEvent) => { this.pointers.delete(event.pointerId); };
+    const release = (event: PointerEvent) => {
+      const tap = this.taps.get(event.pointerId);
+      if (!tap) return;
+      this.taps.delete(event.pointerId);
+      if (event.type === 'pointerup' && performance.now() - tap.time < TAP_MS && this.state === 'running') this.burstQueued = true;
+    };
     window.addEventListener('pointerup', release);
     window.addEventListener('pointercancel', release);
     trackPointer(host, {
@@ -310,7 +365,7 @@ export class RidgeGlider {
     // Gates: glowing rings plus a soft halo, both instanced.
     // The ring's opacity rides on its colour (a fading ring fades out), on the fog distance and on the
     // distance to the camera, so the ring the glider just flew through never fills the screen.
-    this.gates = new THREE.InstancedMesh(new THREE.TorusGeometry(1, 0.075, 8, 44), new THREE.ShaderMaterial({
+    this.gates = new THREE.InstancedMesh(new THREE.TorusGeometry(1, 0.075, 8, 32), new THREE.ShaderMaterial({
       transparent: true, toneMapped: false,
       uniforms: { uFar: { value: 1100 } },
       vertexShader: /* glsl */`
@@ -532,8 +587,9 @@ export class RidgeGlider {
     this.run = createRun(this.course);
     this.gateFx = [];
     for (const chunk of this.chunks) chunk.index = -999;
+    this.terrainFirst = NaN;
     this.cloudPlaces = [];
-    for (const list of this.trailPoints) list.length = 0;
+    this.trailCount = 0;
     const f = this.run.flight;
     this.camYaw = f.heading;
     this.camPitch = 0;
@@ -553,8 +609,11 @@ export class RidgeGlider {
   start(): void {
     this.setCourse((Date.now() ^ (Math.random() * 1e9)) >>> 0);
     this.keys.clear();
-    this.pointers.clear();
+    this.taps.clear();
     this.burstQueued = false;
+    this.warnState = createWarning();
+    this.warning = null;
+    this.warnClock = 0;
     this.state = 'running';
     this.time = 0;
     this.shake = 0;
@@ -566,7 +625,7 @@ export class RidgeGlider {
   }
 
   pause(): void { if (this.state === 'running') { this.state = 'paused'; this.stick.active = false; this.onStick(this.stick); } }
-  resume(): void { if (this.state === 'paused') { this.keys.clear(); this.pointers.clear(); this.burstQueued = false; this.state = 'running'; } }
+  resume(): void { if (this.state === 'paused') { this.keys.clear(); this.taps.clear(); this.burstQueued = false; this.state = 'running'; } }
 
   /** Fires a burst (keyboard Space, the on-screen button or a second finger). */
   burst(): void { if (this.state === 'running') this.burstQueued = true; }
@@ -612,8 +671,12 @@ export class RidgeGlider {
 
     // Re-read the state: a crash during this step has already switched it to 'dying' and hidden the marker.
     if (this.state === 'running') {
-      this.warnTimer -= dt;
-      if (this.warnTimer <= 0) { this.warnTimer = 0.1; this.warning = this.computeWarning(); }
+      // The look-ahead assumes the pilot keeps the current input for a reaction time, then pulls all out.
+      this.warnClock += dt;
+      if (this.warnClock >= WARN_EVERY) {
+        this.warning = updateWarning(this.warnState, this.run, this.lastControls, this.warnClock);
+        this.warnClock = 0;
+      }
       this.hudTimer -= dt;
       if (this.hudTimer <= 0) { this.hudTimer = 0.1; this.emitHud(); }
       this.emitMarker();
@@ -621,6 +684,7 @@ export class RidgeGlider {
   }
 
   private controls(): Controls {
+    if (this.auto) return autopilot(this.course, this.run.flight, { mode: 'line' });
     let pitch = (this.keys.isDown('ArrowUp', 'KeyW') ? 1 : 0) - (this.keys.isDown('ArrowDown', 'KeyS') ? 1 : 0);
     let roll = (this.keys.isDown('ArrowRight', 'KeyD') ? 1 : 0) - (this.keys.isDown('ArrowLeft', 'KeyA') ? 1 : 0);
     if (this.stick.active) {
@@ -630,13 +694,6 @@ export class RidgeGlider {
       roll = dead(this.stick.dx);
     }
     return { pitch: this.invert ? -pitch : pitch, roll };
-  }
-
-  private computeWarning(): Hud['warning'] {
-    const f = this.run.flight;
-    if (f.v < 19) return 'stall';
-    if (this.run.time >= GRACE_TIME && f.climb < -3 && escapeClearance(this.course, f, 2.2) < 3) return 'pull';
-    return null;
   }
 
   private handleEvents(): void {
@@ -662,13 +719,13 @@ export class RidgeGlider {
         this.emitDust(f.x, f.y - 6, -f.s, 26, 8);
         this.emitSparks(f.x, f.y, -f.s, 30, [1, 1, 1], 10, 0.7);
       } else if (event.type === 'crash') {
-        this.crash(event.wall);
+        this.crash(event.cause);
       }
       this.onEvent(event);
     }
   }
 
-  private crash(wall: boolean): void {
+  private crash(cause: CrashCause): void {
     const f = this.run.flight;
     this.state = 'dying';
     this.dyingTime = 0;
@@ -679,8 +736,7 @@ export class RidgeGlider {
     const camS = f.s - Math.cos(f.heading) * 24;
     const camX = f.x - Math.sin(f.heading) * 24;
     this.crashCam.set(camX, Math.max(f.y + 11, surfaceHeight(this.course, camS, camX) + 6), -camS);
-    const onRidge = this.course.ridges.some(r => Math.abs(f.s - r.s) < r.half * 0.8);
-    this.cause = wall ? 'wall' : onRidge ? 'ridge' : 'ground';
+    this.cause = cause;
     this.emitSparks(f.x, f.y, -f.s, 90, [1, 0.45, 0.15], 22, 1.2);
     this.emitDust(f.x, f.y, -f.s, 60, 14);
     this.warning = null;
@@ -706,6 +762,9 @@ export class RidgeGlider {
 
   private updateTerrain(force: boolean): void {
     const first = Math.floor((this.run.flight.s - 70) / CHUNK_LENGTH);
+    // Nothing to do until the glider crosses into the next chunk (or a rebuild is still pending).
+    if (!force && first === this.terrainFirst && this.terrainDone) return;
+    this.terrainFirst = first;
     const wanted = new Set<number>();
     for (let i = 0; i < CHUNKS; i++) wanted.add(first + i);
     const free = this.chunks.filter(chunk => !wanted.has(chunk.index));
@@ -713,11 +772,14 @@ export class RidgeGlider {
     // Rebuild the nearest missing chunk first; outside a reset, at most one per frame.
     const missing = [...wanted].sort((a, b) => a - b);
     let budget = force ? CHUNKS : 1;
+    let built = 0;
     for (const index of missing) {
       const chunk = free.shift();
       if (!chunk || budget-- <= 0) break;
       this.buildChunk(chunk, index);
+      built++;
     }
+    this.terrainDone = built === missing.length;
   }
 
   private buildChunk(chunk: Chunk, index: number): void {
@@ -726,11 +788,11 @@ export class RidgeGlider {
     ensureCourse(course, s0 + CHUNK_LENGTH + 200);
     const p = chunkLattice(course, s0, ROWS_PER_CHUNK, this.lattice);
     const c = this.latticeColor;
-    const grassA = new THREE.Color('#5f8d3b'), grassB = new THREE.Color('#86a24a'), forest = new THREE.Color('#2e5a2e');
-    const rockA = new THREE.Color('#80776d'), rockB = new THREE.Color('#5a544f'), scree = new THREE.Color('#a08f73');
-    const snow = new THREE.Color('#f1f5fa'), tmp = new THREE.Color(), tmp2 = new THREE.Color();
+    const { grassA, grassB, forest, rockA, rockB, scree } = this.palette;
+    const snow = SNOW, tmp = this.c1, tmp2 = this.c2;
     const rows = ROWS_PER_CHUNK + 1;
     for (let iy = 0; iy < rows; iy++) {
+      const snowLine = this.setPalette(s0 + (rows - 1 - iy) * ROW);
       for (let ix = 0; ix < COLUMNS; ix++) {
         const i = iy * COLUMNS + ix;
         const x = p[i * 3], y = p[i * 3 + 1], s = -p[i * 3 + 2];
@@ -747,7 +809,7 @@ export class RidgeGlider {
         tmp2.copy(rockA).lerp(rockB, n1);
         tmp.lerp(scree, smoothstep(0.3, 0.55, steep) * 0.7);
         tmp.lerp(tmp2, smoothstep(0.5, 0.95, steep));
-        tmp.lerp(snow, smoothstep(190, 250, rel + n2 * 45) * (1 - smoothstep(1.3, 2.2, steep) * 0.6));
+        tmp.lerp(snow, smoothstep(snowLine, snowLine + 60, rel + n2 * 45) * (1 - smoothstep(1.3, 2.2, steep) * 0.6));
         // Darker toward the valley floor's centre for depth, lighter up high.
         const shade = 0.86 + 0.14 * smoothstep(0, 60, rel);
         c[i * 3] = tmp.r * shade;
@@ -786,6 +848,17 @@ export class RidgeGlider {
     chunk.index = index;
   }
 
+  /** Sets `palette` to the ground colours at `s` (a blend while a new biome comes in) and returns the snow line. */
+  private setPalette(s: number): number {
+    const segment = segmentIndex(s);
+    const now = BIOMES[biomeOf(segment)];
+    const before = BIOMES[biomeOf(Math.max(0, segment - 1))];
+    const t = now === before ? 1 : clamp((s - segmentStart(segment)) / 220, 0, 1);
+    const p = this.palette;
+    for (const key of ['grassA', 'grassB', 'forest', 'rockA', 'rockB', 'scree'] as const) p[key].copy(before[key]).lerp(now[key], t);
+    return lerp(before.snow, now.snow, t);
+  }
+
   private setSky(segment: number, instant: boolean): void {
     const sky = SKIES[Math.min(segment, SKIES.length - 1)];
     this.targetTop.set(sky.top);
@@ -822,30 +895,32 @@ export class RidgeGlider {
       if (gate.s > f.s + 1000) break;
       if (!this.gateFx.some(fx => fx.gate === gate)) this.gateFx.push({ gate, state: 'open', t: 0 });
     }
-    this.gateFx = this.gateFx.filter(fx => (fx.state === 'open' ? fx.gate.s > f.s - 40 : fx.t < 0.7));
+    // Drop the rings that are behind (or done fading), in place.
+    let kept = 0;
+    for (const fx of this.gateFx) if (fx.state === 'open' ? fx.gate.s > f.s - 40 : fx.t < 0.7) this.gateFx[kept++] = fx;
+    this.gateFx.length = kept;
     this.gateFx.sort((a, b) => a.gate.s - b.gate.s);
-    const matrix = new THREE.Matrix4();
-    const quaternion = new THREE.Quaternion();
-    const scale = new THREE.Vector3();
-    const position = new THREE.Vector3();
-    const forward = new THREE.Vector3(0, 0, -1);
-    const dir = new THREE.Vector3();
-    const color = new THREE.Color();
-    const halo = new THREE.Color();
+    const matrix = this.m4;
+    const quaternion = this.quat;
+    const scale = this.v1;
+    const position = this.v2;
+    const dir = this.v3;
+    const color = this.c1;
+    const halo = this.c2;
     const next = course.gates[this.run.nextGate];
     const pulse = this.reducedMotion ? 1 : 0.85 + 0.15 * Math.sin(this.time * 2 * Math.PI * 1.2);
     let n = 0;
-    for (const fx of this.gateFx) {
+    for (let ahead = 0; ahead < this.gateFx.length; ahead++) {
+      const fx = this.gateFx[ahead];
       if (n >= GATE_SLOTS) break;
       fx.t += dt;
       const gate = fx.gate;
       dir.set(gate.dx, gate.dy, -1).normalize();
-      quaternion.setFromUnitVectors(forward, dir);
+      quaternion.setFromUnitVectors(FORWARD, dir);
       position.set(gate.x, gate.y, -gate.s);
       let size = gate.r;
       if (fx.state === 'open') {
         const isNext = gate === next;
-        const ahead = this.gateFx.indexOf(fx);
         color.setRGB(1, 0.78, 0.28).multiplyScalar(isNext ? 1.6 * pulse : Math.max(0.45, 1 - ahead * 0.12));
         halo.setRGB(1, 0.7, 0.25).multiplyScalar(isNext ? 0.9 * pulse : 0.28);
       } else if (fx.state === 'passed') {
@@ -877,8 +952,13 @@ export class RidgeGlider {
 
   private updateThermals(dt: number, elapsed: number): void {
     const f = this.run.flight;
-    const visible = this.course.thermals.filter(t => t.s + t.rs > f.s - 60 && t.s - t.rs < f.s + 1100).slice(0, THERMAL_SLOTS);
-    const matrix = new THREE.Matrix4();
+    const visible = this.visibleThermals;
+    visible.length = 0;
+    for (const t of this.course.thermals) {
+      if (t.s - t.rs >= f.s + 1100 || visible.length >= THERMAL_SLOTS) break;
+      if (t.s + t.rs > f.s - 60) visible.push(t);
+    }
+    const matrix = this.m4;
     for (let i = 0; i < visible.length; i++) {
       const t = visible[i];
       matrix.makeScale(t.rx, t.top - t.base, t.rs);
@@ -908,8 +988,12 @@ export class RidgeGlider {
 
   private updateClouds(): void {
     const f = this.run.flight;
-    this.cloudPlaces = this.cloudPlaces.filter(c => c.s > f.s - 150);
-    let far = this.cloudPlaces.reduce((m, c) => Math.max(m, c.s), f.s - 100);
+    let kept = 0;
+    let far = f.s - 100;
+    for (const c of this.cloudPlaces) if (c.s > f.s - 150) { this.cloudPlaces[kept++] = c; far = Math.max(far, c.s); }
+    // The clouds only move when one is recycled; skip the matrix upload otherwise.
+    if (kept === CLOUDS) return;
+    this.cloudPlaces.length = kept;
     while (this.cloudPlaces.length < CLOUDS) {
       far += 70 + Math.random() * 90;
       const side = Math.random() < 0.5 ? -1 : 1;
@@ -923,15 +1007,16 @@ export class RidgeGlider {
         spin: Math.random() * Math.PI,
       });
     }
-    const matrix = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const pos = new THREE.Vector3();
-    const scale = new THREE.Vector3();
-    this.cloudPlaces.forEach((c, i) => {
+    const matrix = this.m4;
+    const q = this.quat;
+    const pos = this.v1;
+    const scale = this.v2;
+    for (let i = 0; i < this.cloudPlaces.length; i++) {
+      const c = this.cloudPlaces[i];
       q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, c.spin);
       matrix.compose(pos.set(c.x, c.y, -c.s), q, scale.set(c.sx, c.sy, c.sz));
       this.clouds.setMatrixAt(i, matrix);
-    });
+    }
     this.clouds.instanceMatrix.needsUpdate = true;
   }
 
@@ -954,26 +1039,24 @@ export class RidgeGlider {
     if (simulating && this.player.visible) {
       this.trailTimer -= dt;
       if (this.trailTimer <= 0) {
+        // A new sample: advance the ring buffer (the oldest point is overwritten).
         this.trailTimer = 0.035;
-        this.player.updateMatrixWorld();
-        for (let side = 0; side < 2; side++) {
-          const foot = new THREE.Vector3(side ? 0.24 : -0.24, 0.02, 1.62).applyMatrix4(this.player.matrixWorld);
-          const list = this.trailPoints[side];
-          list.unshift(foot);
-          if (list.length > TRAIL) list.pop();
-        }
-      } else {
-        // The newest point follows the feet smoothly between samples.
-        this.player.updateMatrixWorld();
-        for (let side = 0; side < 2; side++) {
-          const list = this.trailPoints[side];
-          if (list.length) list[0].set(side ? 0.24 : -0.24, 0.02, 1.62).applyMatrix4(this.player.matrixWorld);
-        }
+        this.trailHead = (this.trailHead + 1) % TRAIL;
+        this.trailCount = Math.min(TRAIL, this.trailCount + 1);
       }
+      // The newest point follows the feet smoothly between samples.
+      this.player.updateMatrixWorld();
+      for (let side = 0; side < 2; side++) this.trailPoints[side][this.trailHead].set(side ? 0.24 : -0.24, 0.02, 1.62).applyMatrix4(this.player.matrixWorld);
     }
     this.updateTrail();
-    if (this.run.flight.burst > 0) this.trail.material.uniforms.uColor.value.set('#7ee8ff');
-    else this.trail.material.uniforms.uColor.value.lerp(new THREE.Color('#ff9a5c'), damp(3, dt));
+    const tint = this.trail.material.uniforms.uColor.value as THREE.Color;
+    if (this.run.flight.burst > 0) tint.copy(TRAIL_BURST_TINT);
+    else tint.lerp(TRAIL_TINT, damp(3, dt));
+  }
+
+  /** The i-th newest point of a smoke ribbon (0 is the feet). */
+  private trailPoint(strip: number, i: number): THREE.Vector3 {
+    return this.trailPoints[strip][(this.trailHead - Math.min(i, this.trailCount - 1) + TRAIL) % TRAIL];
   }
 
   private updateTrail(): void {
@@ -981,16 +1064,15 @@ export class RidgeGlider {
     const alpha = this.trail.geometry.getAttribute('alpha') as THREE.BufferAttribute;
     const cam = this.stage.camera.position;
     const playerDistance = Math.max(4, cam.distanceTo(this.player.position));
-    const tangent = new THREE.Vector3();
-    const toCam = new THREE.Vector3();
-    const side = new THREE.Vector3();
+    const tangent = this.v1;
+    const toCam = this.v2;
+    const side = this.v3;
     for (let strip = 0; strip < 2; strip++) {
-      const list = this.trailPoints[strip];
       const base = strip * TRAIL * 2;
       for (let i = 0; i < TRAIL; i++) {
-        const p = list[Math.min(i, list.length - 1)];
-        if (!p || !this.player.visible && i === 0 && list.length === 0) { position.setXYZ(base + i * 2, 0, -1e5, 0); position.setXYZ(base + i * 2 + 1, 0, -1e5, 0); alpha.setX(base + i * 2, 0); alpha.setX(base + i * 2 + 1, 0); continue; }
-        const q = list[Math.min(i + 1, list.length - 1)];
+        if (this.trailCount === 0) { position.setXYZ(base + i * 2, 0, -1e5, 0); position.setXYZ(base + i * 2 + 1, 0, -1e5, 0); alpha.setX(base + i * 2, 0); alpha.setX(base + i * 2 + 1, 0); continue; }
+        const p = this.trailPoint(strip, i);
+        const q = this.trailPoint(strip, i + 1);
         tangent.subVectors(p, q);
         if (tangent.lengthSq() < 1e-6) tangent.set(0, 0, 1);
         toCam.subVectors(cam, p);
@@ -1001,7 +1083,7 @@ export class RidgeGlider {
         position.setXYZ(base + i * 2 + 1, p.x - side.x * width, p.y - side.y * width, p.z - side.z * width);
         // Fade the old smoke out before it reaches the chase camera, so it never smears across the view.
         const near = clamp((toCam.length() - playerDistance * 0.6) / (playerDistance * 0.3), 0, 1);
-        const a = i >= list.length ? 0 : 0.5 * (1 - age) * (1 - age) * near;
+        const a = i >= this.trailCount ? 0 : 0.5 * (1 - age) * (1 - age) * near;
         alpha.setX(base + i * 2, a);
         alpha.setX(base + i * 2 + 1, a);
       }
@@ -1020,7 +1102,7 @@ export class RidgeGlider {
   private updateCamera(dt: number): void {
     const { camera } = this.stage;
     const f = this.run.flight;
-    const target = new THREE.Vector3(f.x, f.y, -f.s);
+    const target = this.v1.set(f.x, f.y, -f.s);
     if (this.state === 'dying' || this.state === 'over') {
       // Ease back to a three-quarter view of the crash site and look at it.
       camera.position.lerp(this.crashCam, damp(2.4, dt));
@@ -1028,10 +1110,11 @@ export class RidgeGlider {
       camera.lookAt(this.lookAt);
     } else {
       this.camYaw = lerp(this.camYaw, f.heading, damp(3.5, dt));
-      this.camPitch = lerp(this.camPitch, f.gamma * 0.55, damp(3, dt));
-      this.camRoll = lerp(this.camRoll, f.bank * 0.32, damp(4, dt));
+      // With reduced motion the horizon barely rolls and the view follows climbs and dives more gently.
+      this.camPitch = lerp(this.camPitch, f.gamma * (this.reducedMotion ? 0.3 : 0.55), damp(this.reducedMotion ? 1.6 : 3, dt));
+      this.camRoll = lerp(this.camRoll, f.bank * (this.reducedMotion ? 0.06 : 0.32), damp(4, dt));
       const cy = Math.cos(this.camPitch);
-      const dir = new THREE.Vector3(Math.sin(this.camYaw) * cy, Math.sin(this.camPitch), -Math.cos(this.camYaw) * cy);
+      const dir = this.v2.set(Math.sin(this.camYaw) * cy, Math.sin(this.camPitch), -Math.cos(this.camYaw) * cy);
       let back = 9.5 + clamp((f.v - 35) * 0.04, 0, 1.6);
       let lift = 2.6;
       if (this.state === 'idle') {
@@ -1042,7 +1125,7 @@ export class RidgeGlider {
         back = 13;
         lift = 3.5;
       }
-      const desired = target.clone().addScaledVector(dir, -back);
+      const desired = this.v3.copy(target).addScaledVector(dir, -back);
       desired.y += lift;
       const ground = surfaceHeight(this.course, -desired.z, desired.x) + 2.5;
       if (desired.y < ground) desired.y = ground;
@@ -1224,7 +1307,7 @@ export class RidgeGlider {
     const gate = this.course.gates[this.run.nextGate];
     const { camera } = this.stage;
     if (!gate) { this.onMarker({ x: 0, y: 0, onScreen: false, angle: 0, visible: false }); return; }
-    const v = new THREE.Vector3(gate.x, gate.y, -gate.s).project(camera);
+    const v = this.v4.set(gate.x, gate.y, -gate.s).project(camera);
     const behind = v.z > 1;
     const onScreen = !behind && Math.abs(v.x) < 0.92 && Math.abs(v.y) < 0.88;
     let x = v.x, y = v.y;
@@ -1246,11 +1329,15 @@ export class RidgeGlider {
       score: run.score, chain: run.chain, charges: run.charges, gatesPassed: run.gatesPassed, gatesMissed: run.gatesMissed,
       lineX: lineX(this.course, f.s + 40), lineY: lineY(this.course, f.s + 40), calls: this.stage.renderer.info.render.calls,
       triangles: this.stage.renderer.info.render.triangles, burst: f.burst, controls: { ...this.lastControls }, stick: { ...this.stick }, maxSpeed: V_MAX, burstTime: BURST_TIME, maxCharges: MAX_CHARGES,
+      warning: this.warning, camRoll: this.camRoll, bank: f.bank, segment: run.segment + 1, nextGate: run.nextGate,
     };
   }
 
   /** The autopilot's suggestion for the current state, for scripted play-throughs. */
   debugSuggest(): Controls { return autopilot(this.course, this.run.flight, { mode: 'line' }); }
+
+  /** Lets the racing-line autopilot fly the run instead of the player's input. */
+  debugAuto(on: boolean): void { this.auto = on; }
 
   /** Stops (or restarts) the real-time clock, so a scripted test steps the game only through debugAdvance. */
   debugManual(on: boolean): void { this.manual = on; }

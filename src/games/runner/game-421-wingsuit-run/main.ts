@@ -1,6 +1,6 @@
 import { Sfx, best, setupI18n, focusIfActive, onFocusLost, bindSoundButton, prefersTouch, prefersReducedMotion } from '../../../shared/three/kit';
 import { RidgeGlider, type Hud, type Result, type Marker, type Stick } from './game';
-import { MAX_CHARGES, segmentInfo, type RunEvent } from './logic';
+import { MAX_CHARGES, segmentNews, type RunEvent, type SegmentNews } from './logic';
 import { translations } from './i18n';
 
 const BEST_KEY = 'afg-ridge-glider-best';
@@ -23,6 +23,8 @@ const marker = $('marker');
 const stickEl = $('stick');
 const stickKnob = $('stick-knob');
 const pops = $('pops');
+const panel = overlay.querySelector('.g3d-panel') as HTMLElement;
+const stickDesc = $('touch-stick-desc');
 const touch = prefersTouch();
 const reducedMotion = prefersReducedMotion();
 const sfx = new Sfx();
@@ -41,8 +43,9 @@ const t = setupI18n(translations, languageSelect, () => { renderOverlay(); rende
 
 function showToast(text: string, tone: '' | 'warn' | 'good' = '', ms = 1300) {
   toast.textContent = text;
-  toast.classList.toggle('warn', tone === 'warn');
-  toast.classList.toggle('good', tone === 'good');
+  // Tone classes are prefixed so they never pick up the "Pull up!" pill's styles.
+  toast.classList.toggle('tone-warn', tone === 'warn');
+  toast.classList.toggle('tone-good', tone === 'good');
   toast.classList.add('show');
   window.clearTimeout(Number(toast.dataset.timer));
   toast.dataset.timer = String(window.setTimeout(() => toast.classList.remove('show'), ms));
@@ -62,8 +65,9 @@ let hint: HintStep = 'dive';
 let hintTimer = 0;
 let gateResults = 0;
 
-function climbKey() { return touch ? '⇡' : invert ? '↓' : '↑'; }
-function diveKey() { return touch ? '⇣' : invert ? '↑' : '↓'; }
+// With "Invert pitch" the stick (touch too) and the keys swap: the hints show what actually climbs or dives.
+function climbKey() { return touch ? (invert ? '⇣' : '⇡') : invert ? '↓' : '↑'; }
+function diveKey() { return touch ? (invert ? '⇡' : '⇣') : invert ? '↑' : '↓'; }
 
 function renderHint() {
   const playing = mode === 'playing';
@@ -159,6 +163,10 @@ function renderStick(s: Stick) {
 function renderKeys() {
   $('key-climb').textContent = invert ? '↓ / S' : '↑ / W';
   $('key-dive').textContent = invert ? '↑ / W' : '↓ / S';
+  // data-i18n follows the setting, so a language switch keeps the right text.
+  stickDesc.dataset.i18n = invert ? 'game.touchStickDescInv' : 'game.touchStickDesc';
+  stickDesc.textContent = t(stickDesc.dataset.i18n);
+  renderHint();
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -170,6 +178,8 @@ function renderOverlay() {
   const lead = $('overlay-lead');
   // The results screen stays compact: the controls are already known by then.
   const compact = mode === 'over' && !!lastResult;
+  panel.classList.toggle('is-result', compact);
+  panel.classList.toggle('is-paused', mode === 'paused');
   $('controls').hidden = compact;
   $('tip').hidden = compact;
   $('invert-row').hidden = compact || !game;
@@ -227,6 +237,17 @@ function setMode(next: typeof mode, focusStart = true) {
 const PENTATONIC = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 const note = (step: number) => 392 * Math.pow(2, PENTATONIC[Math.min(step, PENTATONIC.length - 1)] / 12);
 let thermalToasts = 0;
+const NEWS_KEYS: Record<NonNullable<SegmentNews>, string> = {
+  ridges: 'game.segRidges', wind: 'game.segWind', narrow: 'game.segNarrow', rings: 'game.segRings',
+  gusts: 'game.segGusts', saddles: 'game.segSaddles', top: 'game.segTop',
+};
+
+/** A broken chain: a falling minor third, never the multiplier fanfare. */
+function chainBroken(chain: number) {
+  sfx.tone(392, 0.16, { type: 'triangle', gain: 0.08 });
+  sfx.tone(311, 0.32, { type: 'triangle', gain: 0.08, delay: 0.12, slideTo: 260 });
+  showToast(t('game.chainBroken', { n: chain }), 'warn');
+}
 
 function onEvent(event: RunEvent) {
   switch (event.type) {
@@ -240,12 +261,14 @@ function onEvent(event: RunEvent) {
       break;
     }
     case 'miss':
-      sfx.tone(196, 0.22, { type: 'sine', gain: 0.1, slideTo: 150 });
-      if (event.chain >= 3) showToast(t('game.chainBroken'), 'warn');
+      if (event.chain >= 3) chainBroken(event.chain);
+      else sfx.tone(196, 0.22, { type: 'sine', gain: 0.1, slideTo: 150 });
       gateResults++;
       if (hint === 'dive') setHint('pull');
       break;
     case 'mult':
+      // Only a rising multiplier gets the fanfare (logic.ts reports breaks as 'miss' or 'bounce').
+      if (event.mult <= 1) break;
       [0, 4, 7, 12].forEach((n, i) => sfx.tone(523 * Math.pow(2, n / 12), 0.14, { type: 'square', gain: 0.05, delay: i * 0.06 }));
       showToast(t('game.multToast', { n: event.mult }), 'good');
       break;
@@ -271,11 +294,12 @@ function onEvent(event: RunEvent) {
       }
       break;
     case 'segment': {
-      [0, 4, 7].forEach(n => sfx.tone(330 * Math.pow(2, n / 12), 0.7, { type: 'triangle', gain: 0.06 }));
-      const now = segmentInfo(event.index);
-      const before = segmentInfo(Math.max(0, event.index - 1));
-      const detail = now.ridges && !before.ridges ? t('game.segRidges') : now.wind && !before.wind ? t('game.segWind') : now.halfWidth < before.halfWidth ? t('game.segNarrow') : '';
-      showToast(detail ? `${t('game.segmentToast', { n: event.index + 1 })} · ${detail}` : t('game.segmentToast', { n: event.index + 1 }), '', 2400);
+      // The chord climbs a step with every segment, so the deeper stretches sound tenser too.
+      const root = 330 * Math.pow(2, Math.min(event.index - 1, 12) / 12);
+      [0, 4, 7].forEach((n, i) => sfx.tone(root * Math.pow(2, n / 12), 0.7, { type: 'triangle', gain: 0.06, delay: i * 0.05 }));
+      const news = segmentNews(event.index);
+      const title = t('game.segmentToast', { n: event.index + 1 });
+      showToast(news ? `${title} · ${t(NEWS_KEYS[news])}` : title, '', 2600);
       break;
     }
     case 'stall':
@@ -300,20 +324,28 @@ function onEvent(event: RunEvent) {
   }
 }
 
-/** The kit has no looping source, so the wind is short overlapping noise grains whose filter follows the airspeed. */
+/**
+ * The kit has no looping voice, so the wind is overlapping noise grains whose filter follows the airspeed.
+ * Six grains overlap at any moment (0.3 s every 50 ms), so the kit's per-grain fade-out sums to a steady roar
+ * with about 2 dB of ripple instead of a 5 Hz chuff.
+ */
+const WIND_EVERY = 50;
+const WIND_GRAIN = 0.3;
 let varioPhase = 0;
+let windTick = 0;
 window.setInterval(() => {
   if (mode !== 'playing' || !lastHud || !game || game.status !== 'running' || sfx.muted) return;
   const v = lastHud.speed / 3.6;
-  sfx.noise(0.42, { gain: 0.015 + Math.min(1, v / 75) * 0.075, frequency: 260 + v * 16, type: 'bandpass' });
-  // A soft vario chirp while climbing, at most 2.5 per second.
+  sfx.noise(WIND_GRAIN, { gain: (0.015 + Math.min(1, v / 75) * 0.075) * 0.58, frequency: 260 + v * 16, type: 'bandpass' });
+  // A soft vario chirp while climbing, at most 2.5 per second (checked every 200 ms).
+  if (++windTick % 4) return;
   varioPhase += 0.2 * Math.min(2.5, 0.8 + lastHud.climb * 0.3);
   if (lastHud.climb > 1 && varioPhase >= 1) {
     varioPhase = 0;
     sfx.tone(600 + Math.min(10, lastHud.climb) * 40, 0.07, { type: 'sine', gain: 0.05 });
   }
   if (varioPhase > 1) varioPhase = 1;
-}, 200);
+}, WIND_EVERY);
 
 // ---------------------------------------------------------------------------------------------------
 // Wiring
@@ -400,6 +432,7 @@ if (!game) {
       advance: (seconds: number) => game.debugAdvance(seconds),
       suggest: () => game.debugSuggest(),
       manual: (on: boolean) => game.debugManual(on),
+      auto: (on: boolean) => game.debugAuto(on),
     };
   }
 }

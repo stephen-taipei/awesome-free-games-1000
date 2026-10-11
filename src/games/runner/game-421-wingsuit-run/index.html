@@ -21,7 +21,7 @@
     <div class="g3d-hud">
       <div class="g3d-stats">
         <div class="g3d-chip accent"><small data-i18n="game.score">Score</small><b id="score">0</b></div>
-        <div class="g3d-chip mult-chip" id="mult-chip"><small data-i18n="game.chain">Chain</small><b>×<span id="mult">1</span></b></div>
+        <div class="g3d-chip mult-chip" id="mult-chip"><small data-i18n="game.multiplier">Multiplier</small><b>×<span id="mult">1</span></b></div>
         <div class="g3d-chip"><small data-i18n="game.speed">Speed</small><b><span id="speed">0</span><em>km/h</em></b></div>
         <div class="g3d-chip height-chip" id="height-chip"><small data-i18n="game.height">Height</small><b><span id="agl">0</span><em>m</em><i id="vario" class="vario" aria-hidden="true"></i></b></div>
         <div class="g3d-chip"><small data-i18n="game.burst">Burst</small><b class="pips" id="charges" role="img" aria-label="3/3"></b></div>
@@ -39,7 +39,7 @@
       </div>
     </div>
 
-    <div id="warn" class="warn" role="alert" hidden></div>
+    <div id="warn" class="pull-warn" role="alert" hidden></div>
     <div id="hint" class="hint" aria-live="polite" hidden><span id="hint-text"></span><small id="grace" hidden></small></div>
     <div id="toast" class="g3d-toast" role="status" aria-live="polite"></div>
 
@@ -70,7 +70,7 @@
               <li><kbd>← → / A D</kbd><span data-i18n="game.keyBank"></span></li>
               <li><kbd>Space</kbd><span data-i18n="game.keyBurst"></span></li>
               <li><kbd>P / Esc</kbd><span data-i18n="game.keyPause"></span></li>
-              <li class="touch-only"><kbd data-i18n="game.touchStick"></kbd><span data-i18n="game.touchStickDesc"></span></li>
+              <li class="touch-only"><kbd data-i18n="game.touchStick"></kbd><span id="touch-stick-desc" data-i18n="game.touchStickDesc"></span></li>
               <li class="touch-only"><kbd data-i18n="game.touchBurst"></kbd><span data-i18n="game.keyBurst"></span></li>
             </ul>
             <label class="invert-row" id="invert-row"><input type="checkbox" id="invert" /><span data-i18n="game.invert"></span></label>

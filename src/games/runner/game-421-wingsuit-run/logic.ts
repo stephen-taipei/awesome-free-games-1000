@@ -32,14 +32,22 @@ export const GAMMA_MAX = 1.05;
 export const BANK_MAX = 1.2;
 export const BANK_RATE = 2.8;
 export const HEADING_MAX = 1.05;
-/** With the stick neutral the suit holds this flight-path angle (a steady glide near TRIM_SPEED). */
-export const GLIDE_GAMMA = -0.2;
-export const TRIM_SPEED = 33;
+/**
+ * With the stick neutral the suit holds this flight-path angle: a fast, steady glide of about 4.5 : 1 near
+ * TRIM_SPEED. It sinks faster than the valley floor falls, so a hands-off flight runs out of height; slowing to
+ * the best glide (about 5.5 : 1 near 27 m/s) and riding thermals is what keeps a pilot up.
+ */
+export const GLIDE_GAMMA = -0.22;
+export const TRIM_SPEED = 37;
 const HOLD_GAIN = 1.2;
 const PITCH_RAMP = 4.5;
 const ROLL_RAMP = 6;
 const ASSIST_GAIN = 2.4;
 export const STALL_SPEED = 19;
+/** A stalled wing flies again once the dive has built this much speed above STALL_SPEED. */
+export const STALL_RECOVERY = 5;
+/** Extra drag of a stalled wing (m/s^2): the stall is a costly mistake, not a slow, efficient glide. */
+export const STALL_DRAG = 3.5;
 export const BURST_ACCEL = 13;
 export const BURST_TIME = 1;
 export const MAX_CHARGES = 3;
@@ -75,6 +83,8 @@ export interface Flight {
   rollIn: number;
   /** Vertical speed over the ground of the last step, m/s. */
   climb: number;
+  /** The wing has stalled: it carries less than 1 g and the nose falls until the speed is back. */
+  stalled: boolean;
 }
 
 export interface Controls {
@@ -122,7 +132,7 @@ export function pitchFor(f: Flight, lift: number): number {
 }
 
 export function createFlight(s: number, x: number, y: number, v: number, gamma: number, heading: number): Flight {
-  return { s, x, y, v, gamma, heading, bank: 0, lift: G, burst: 0, pitchIn: 0, rollIn: 0, climb: 0 };
+  return { s, x, y, v, gamma, heading, bank: 0, lift: G, burst: 0, pitchIn: 0, rollIn: 0, climb: 0, stalled: v < STALL_SPEED };
 }
 
 /**
@@ -143,20 +153,24 @@ export function stepFlight(f: Flight, controls: Controls, dt: number, air: Air, 
 
   const v = f.v;
   const cosG = Math.cos(f.gamma);
+  if (v < STALL_SPEED) f.stalled = true;
+  else if (v > STALL_SPEED + STALL_RECOVERY) f.stalled = false;
   // Pitch sets the lift in the vertical plane; bank sets a sideways lift of g tan(bank), so banking always turns
   // toward the low wing, pushing or pulling. Both share the lift the wing has at this airspeed.
   let up = liftFor(f, f.pitchIn);
+  // A stalled wing lets go: well under 1 g whatever the stick says, so holding a full pull ends in a dive.
+  if (f.stalled) up = Math.min(up, 0.55 * G * cosG);
   let side = G * Math.tan(f.bank);
   const cap = liftRange(v)[1];
   const total = Math.hypot(up, side);
   if (total > cap) { up *= cap / total; side *= cap / total; }
   f.lift = Math.hypot(up, side);
   let gammaRate = (up - G * cosG) / v;
-  // Below stall speed the wing lets go and the nose drops, whatever the stick says.
-  if (v < STALL_SPEED && f.gamma > -0.7) gammaRate -= (STALL_SPEED - v) * 0.12;
+  // ...and the nose drops until the dive has the speed back.
+  if (f.stalled && f.gamma > -0.75) gammaRate -= 0.8;
   const headingRate = side / (v * Math.max(cosG, 0.25));
   const lift2 = up * up + side * side;
-  const drag = K_DRAG * v * v + (K_INDUCED * Math.min(lift2, G * G) + K_PULL * Math.max(0, lift2 - G * G)) / (v * v);
+  const drag = K_DRAG * v * v + (K_INDUCED * Math.min(lift2, G * G) + K_PULL * Math.max(0, lift2 - G * G)) / (v * v) + (f.stalled ? STALL_DRAG : 0);
   const accel = -drag - G * Math.sin(f.gamma) + (f.burst > 0 ? BURST_ACCEL : 0);
 
   const vh = v * cosG;
@@ -186,17 +200,25 @@ export const energyHeight = (f: Flight) => f.y + (f.v * f.v) / (2 * G);
 export const FIRST_SEGMENT = 760;
 export const SEGMENT_LENGTH = 900;
 const BLEND = 220;
-/** Difficulty tables, by segment (the last entry repeats). */
-const DESCENT = [0.3, 0.21, 0.18, 0.16, 0.145, 0.13, 0.12, 0.112, 0.105];
-const HALF_WIDTH = [92, 82, 74, 66, 58, 51, 45, 39, 34];
-const GATE_RADIUS = [9, 8.4, 7.8, 7.3, 6.8, 6.4, 6, 5.7, 5.5];
-const GATE_SPACING = [150, 145, 140, 135, 130, 125, 120, 115, 110];
-const RIDGE_HEIGHT = [0, 22, 30, 36, 42, 47, 51, 54, 56];
-const RIDGE_EVERY = [0, 620, 560, 520, 480, 450, 430, 410, 400];
-const THERMAL_EVERY = [250, 270, 290, 305, 320, 335, 350, 365, 380];
-const THERMAL_STRENGTH = [22, 21.5, 21, 20.5, 20, 19.5, 19, 18.5, 18];
-const THERMAL_TOP = [130, 128, 126, 124, 122, 120, 118, 116, 114];
-const WIND = [0, 0, 2.5, 3.5, 4.5, 5.5, 6.5, 7, 7.5];
+/**
+ * Difficulty tables, by segment. Every column keeps tightening through segment 15 (about 13 km); after that
+ * the last entry repeats, a ceiling the tests prove is still flyable.
+ */
+const DESCENT = [0.19, 0.175, 0.165, 0.155, 0.145, 0.135, 0.125, 0.117, 0.11, 0.107, 0.105, 0.104, 0.103, 0.102, 0.102];
+const HALF_WIDTH = [92, 82, 74, 66, 58, 51, 45, 39, 34, 32.5, 31, 30, 29, 28.5, 28];
+const GATE_RADIUS = [9, 8.4, 7.8, 7.3, 6.8, 6.4, 6, 5.7, 5.5, 5.3, 5.15, 5, 4.85, 4.7, 4.6];
+const GATE_SPACING = [150, 145, 140, 135, 130, 125, 120, 115, 110, 108, 106, 104, 102, 100, 100];
+const RIDGE_HEIGHT = [0, 22, 30, 36, 42, 47, 51, 54, 56, 58, 60, 62, 63, 64, 65];
+/** Ridges get wider (half-length, m) and their saddles narrower (m) deep in the canyon. */
+const RIDGE_HALF = [70, 70, 70, 70, 70, 70, 70, 70, 70, 74, 78, 82, 86, 90, 94];
+const NOTCH_WIDTH = [16, 16, 16, 16, 16, 16, 16, 16, 16, 15.4, 14.8, 14.2, 13.6, 13, 12.5];
+const RIDGE_EVERY = [0, 620, 560, 520, 480, 450, 430, 410, 400, 385, 370, 355, 340, 330, 320];
+const THERMAL_EVERY = [250, 270, 290, 305, 320, 335, 350, 365, 380, 385, 390, 393, 396, 398, 400];
+const THERMAL_STRENGTH = [22, 21.5, 21, 20.5, 20, 19.5, 19, 18.5, 18, 18, 18, 18, 18, 18, 18];
+const THERMAL_TOP = [130, 128, 126, 124, 122, 120, 118, 116, 114, 114, 114, 114, 114, 114, 114];
+const WIND = [0, 0, 2.5, 3.5, 4.5, 5.5, 6.5, 7, 7.5, 7.6, 7.7, 7.8, 7.85, 7.9, 8];
+/** Share of the crosswind that comes in quick gusts (a 230 m wave instead of 1.2 km), harder to crab against. */
+const GUST = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.12, 0.2, 0.27, 0.33, 0.38, 0.42];
 export const SEGMENT_COUNT = DESCENT.length;
 
 export const segmentIndex = (s: number) => (s < FIRST_SEGMENT ? 0 : 1 + Math.floor((s - FIRST_SEGMENT) / SEGMENT_LENGTH));
@@ -216,12 +238,28 @@ export const halfWidthAt = (s: number) => param(HALF_WIDTH, s);
 export const gateRadiusAt = (s: number) => param(GATE_RADIUS, s);
 export const thermalTopAt = (s: number) => param(THERMAL_TOP, s);
 export const maxWindAt = (s: number) => param(WIND, s);
+export const gustAt = (s: number) => param(GUST, s);
 export const descentAt = (s: number) => param(DESCENT, s);
 
 export interface SegmentInfo { index: number; ridges: boolean; wind: boolean; gateRadius: number; halfWidth: number; }
 export function segmentInfo(index: number): SegmentInfo {
   const k = tier(index);
   return { index, ridges: RIDGE_HEIGHT[k] > 0, wind: WIND[k] > 0, gateRadius: GATE_RADIUS[k], halfWidth: HALF_WIDTH[k] };
+}
+
+/** The headline change a segment brings, for its toast: what to expect, or 'top' once the tables stop. */
+export type SegmentNews = 'ridges' | 'wind' | 'narrow' | 'rings' | 'gusts' | 'saddles' | 'top' | null;
+export function segmentNews(index: number): SegmentNews {
+  if (index <= 0) return null;
+  if (index >= SEGMENT_COUNT - 1) return index === SEGMENT_COUNT - 1 ? 'top' : null;
+  const now = segmentInfo(index);
+  const before = segmentInfo(index - 1);
+  if (now.ridges && !before.ridges) return 'ridges';
+  if (now.wind && !before.wind) return 'wind';
+  // Past the old ceiling everything keeps tightening a little; the toast names one change in turn.
+  const first = GUST.findIndex(g => g > 0);
+  if (index >= first) return (['gusts', 'rings', 'saddles'] as const)[(index - first) % 3];
+  return now.halfWidth < before.halfWidth ? 'narrow' : null;
 }
 
 const floorAtStart: number[] = [0];
@@ -432,6 +470,16 @@ function ridgeHeight(course: Course, s: number, d: number): number {
   return h;
 }
 
+/**
+ * What a crash at (s, x) hit: the wall outside the valley floor, a ridge where one raises the ground by more
+ * than a few metres, otherwise the floor.
+ */
+export function crashCause(course: Course, s: number, x: number): CrashCause {
+  const d = x - centerX(course, s);
+  if (Math.abs(d) > halfWidthAt(s)) return 'wall';
+  return ridgeHeight(course, s, d) > 4 ? 'ridge' : 'ground';
+}
+
 /** Height of the terrain at a lattice point (the mesh interpolates between them; see surfaceHeight). */
 export function terrainHeight(course: Course, s: number, x: number): number {
   if (course.ridgeCursor < s + 400) generateRidges(course, s + 800);
@@ -518,8 +566,8 @@ function generateRidges(course: Course, upTo: number): void {
     let at = from, best = -Infinity;
     for (let t = from; t <= from + 260; t += 10) { const w = waveAt(course, t); if (w > best) { best = w; at = t; } }
     const height = RIDGE_HEIGHT[k] * (0.65 + 0.35 * random());
-    const half = 70 + 30 * random();
-    const notchWidth = 16 + 5 * random();
+    const half = RIDGE_HALF[k] + 30 * random();
+    const notchWidth = NOTCH_WIDTH[k] + 5 * random();
     // The saddle (where the racing line crosses) stays low enough that a ring on the line clears it.
     let allowed = Infinity;
     for (let u = -half; u <= half; u += 4) {
@@ -533,6 +581,11 @@ function generateRidges(course: Course, upTo: number): void {
     course.ridgeCursor = at + Math.max(2 * half + 80, RIDGE_EVERY[k] * (0.8 + 0.4 * random()));
   }
 }
+
+/** Thermal columns sit on the racing line (the rings lead through them), narrow across it. */
+const THERMAL_JITTER = 3;
+const THERMAL_RX = 11;
+const THERMAL_GAIN = 1.3;
 
 function generateThermals(course: Course, upTo: number): void {
   const random = course.thermalRandom;
@@ -549,9 +602,9 @@ function generateThermals(course: Course, upTo: number): void {
     const floor = floorY(s);
     course.thermals.push({
       s,
-      x: lineX(course, s) + (random() * 2 - 1) * 6,
+      x: lineX(course, s) + (random() * 2 - 1) * THERMAL_JITTER,
       rs: 48 + 16 * random(),
-      rx: 18 + 5 * random(),
+      rx: THERMAL_RX + 3 * random(),
       strength: THERMAL_STRENGTH[k] * (0.92 + 0.16 * random()),
       base: floor - 14,
       top: floor + thermalTopAt(s),
@@ -624,7 +677,9 @@ export function thermalLift(course: Course, s: number, x: number, y: number): nu
     const b = (x - t.x) / t.rx;
     const u = a * a + b * b;
     if (u >= 1 || y > t.top) continue;
-    lift += t.strength * (1 - u * u) * clamp((t.top - y) / 30, 0, 1);
+    // A narrow core: a pass through the middle gets the full push, a clipped edge very little.
+    const core = 1 - u;
+    lift += t.strength * THERMAL_GAIN * core * core * clamp((t.top - y) / 30, 0, 1);
   }
   return lift;
 }
@@ -645,7 +700,8 @@ export function windAt(course: Course, s: number): number {
   const max = maxWindAt(s);
   if (max <= 0) return 0;
   const ph = course.phase;
-  return max * (0.65 * Math.sin(s / 190 + ph[6]) + 0.35 * Math.sin(s / 83 + ph[7]));
+  const gust = gustAt(s);
+  return max * ((1 - gust) * (0.65 * Math.sin(s / 190 + ph[6]) + 0.35 * Math.sin(s / 83 + ph[7])) + gust * Math.sin(s / 37 + ph[6] * 3));
 }
 
 // ---------------------------------------------------------------------------------------------------------
@@ -687,8 +743,11 @@ export type RunEvent =
   | { type: 'stall'; on: boolean }
   | { type: 'skim'; on: boolean }
   | { type: 'grace-over' }
-  | { type: 'bounce' }
-  | { type: 'crash'; wall: boolean };
+  | { type: 'bounce'; chain: number }
+  | { type: 'crash'; wall: boolean; cause: CrashCause };
+
+/** What the glider hit: the canyon wall, a ridge (the terrain there is raised by one) or the valley floor. */
+export type CrashCause = 'wall' | 'ridge' | 'ground';
 
 export interface Run {
   course: Course;
@@ -794,8 +853,8 @@ function subStep(run: Run, controls: Controls, dt: number, events: RunEvent[]): 
       run.gatesMissed += 1;
       const lost = run.chain;
       run.chain = 0;
+      // Only the 'miss' event reports a broken chain: 'mult' is the reward for a multiplier going up.
       events.push({ type: 'miss', gate, chain: lost });
-      if (lost >= 3) events.push({ type: 'mult', mult: 1 });
     }
   }
 
@@ -803,8 +862,7 @@ function subStep(run: Run, controls: Controls, dt: number, events: RunEvent[]): 
   if (segment !== run.segment) { run.segment = segment; events.push({ type: 'segment', index: segment }); }
   const inThermal = run.air.lift > 1.5;
   if (inThermal !== run.inThermal) { run.inThermal = inThermal; events.push({ type: 'thermal', on: inThermal }); }
-  const stalled = f.v < STALL_SPEED;
-  if (stalled !== run.stalled) { run.stalled = stalled; events.push({ type: 'stall', on: stalled }); }
+  if (f.stalled !== run.stalled) { run.stalled = f.stalled; events.push({ type: 'stall', on: f.stalled }); }
 
   if (run.agl < CLEARANCE) {
     if (graceBefore) {
@@ -816,13 +874,13 @@ function subStep(run: Run, controls: Controls, dt: number, events: RunEvent[]): 
       f.bank = 0;
       run.agl = 7;
       run.bounces += 1;
-      if (run.chain >= 3) events.push({ type: 'mult', mult: 1 });
+      const lost = run.chain;
       run.chain = 0;
-      events.push({ type: 'bounce' });
+      events.push({ type: 'bounce', chain: lost });
     } else {
       run.crashed = true;
-      const d = Math.abs(f.x - centerX(course, f.s));
-      events.push({ type: 'crash', wall: d > halfWidthAt(f.s) });
+      const cause = crashCause(course, f.s, f.x);
+      events.push({ type: 'crash', wall: cause === 'wall', cause });
     }
   }
 }
@@ -854,6 +912,55 @@ export function escapeClearance(course: Course, f: Flight, horizon = 2.6): numbe
     if (probe.gamma > 0.15 && probe.climb > 0) break;
   }
   return min;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Warnings: the HUD's "Pull up!" and "Stall!" telegraphs.
+
+/** The warning assumes the pilot keeps the current input this long (reaction time plus the pitch ramp)... */
+export const WARN_REACTION = 0.45;
+/** ...then pulls all out; it fires when that recovery would pass closer to the ground than this (m). */
+export const WARN_MARGIN = 6;
+/** Once on, a warning stays up at least this long, so it never flickers. */
+export const WARN_HOLD = 0.6;
+const WARN_STEP = 1 / 40;
+const PULL_OUT: Controls = { pitch: 1, roll: 0 };
+
+/**
+ * Lowest ground clearance over the next `horizon` seconds if the pilot keeps `controls` for `reaction` seconds
+ * and then pulls all out with the wings levelled. Still air; a look-ahead, not the simulation.
+ */
+export function recoveryClearance(course: Course, f: Flight, controls: Controls, reaction = WARN_REACTION, horizon = 3.5): number {
+  const probe: Flight = { ...f };
+  const air: Air = { wind: windAt(course, f.s), lift: 0 };
+  let min = probe.y - surfaceHeight(course, probe.s, probe.x);
+  for (let t = 0; t < horizon - 1e-9; t += WARN_STEP) {
+    stepFlight(probe, t < reaction ? controls : PULL_OUT, WARN_STEP, air, courseHeading(course, probe.s));
+    min = Math.min(min, probe.y - surfaceHeight(course, probe.s, probe.x));
+    if (min < 0 || (t >= reaction && probe.gamma > 0.12 && probe.climb > 0)) break;
+  }
+  return min;
+}
+
+export type Warning = 'pull' | 'stall' | null;
+export interface WarningState { level: Warning; hold: number; }
+export const createWarning = (): WarningState => ({ level: null, hold: 0 });
+
+/**
+ * Updates the HUD warning. "Pull up!" comes on when a pull starting after a human reaction would pass within
+ * WARN_MARGIN of the ground (and closer than the glider is now, so level skimming does not nag); it stays on
+ * for WARN_HOLD and needs 2 m more to clear. "Stall!" shows while stalled or pulling hard just above stall.
+ */
+export function updateWarning(state: WarningState, run: Run, controls: Controls, dt: number): Warning {
+  const f = run.flight;
+  const margin = WARN_MARGIN + (state.level === 'pull' ? 2 : 0);
+  let next: Warning = null;
+  const clearance = recoveryClearance(run.course, f, controls);
+  if (clearance < margin && clearance < run.agl - 1.5) next = 'pull';
+  else if (f.stalled || (f.v < STALL_SPEED + 3 && f.pitchIn > 0.25)) next = 'stall';
+  if (next) { state.level = next; state.hold = WARN_HOLD; }
+  else { state.hold -= dt; if (state.hold <= 0) state.level = null; }
+  return state.level;
 }
 
 export function autopilot(course: Course, f: Flight, options: AutopilotOptions = { mode: 'line' }): Controls {

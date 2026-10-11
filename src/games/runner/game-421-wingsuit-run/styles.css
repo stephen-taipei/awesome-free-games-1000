@@ -12,9 +12,9 @@
 .g3d-title { background: linear-gradient(180deg, #fff6dc 10%, #ffc857 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .g3d-overlay { background: radial-gradient(ellipse at 50% 40%, rgba(8, 20, 36, 0.18), rgba(4, 10, 20, 0.72)); }
 .g3d-chip b em { font-style: normal; font-size: 0.62em; font-weight: 600; color: var(--muted); margin-left: 3px; }
-.g3d-toast { color: #fff7e0; }
-.g3d-toast.warn { color: #ffb0a4; }
-.g3d-toast.good { color: var(--good); }
+.g3d-toast { color: #fff7e0; width: max-content; max-width: min(calc(100% - 32px), 36rem); text-align: center; line-height: 1.25; }
+.g3d-toast.tone-warn { color: #ffb0a4; }
+.g3d-toast.tone-good { color: var(--good); }
 
 .pips { display: flex; gap: 5px; align-items: center; height: 1.45rem; }
 .pips i { width: 11px; height: 16px; border-radius: 3px 3px 6px 6px; border: 1px solid rgba(255, 255, 255, 0.35); }
@@ -37,12 +37,14 @@
 .danger { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; transition: opacity 0.25s ease; background: radial-gradient(ellipse 80% 75% at 50% 50%, transparent 55%, rgba(255, 50, 30, 0.42) 100%); }
 .danger.on { opacity: 1; }
 
-.warn {
+/* The "Pull up!" / "Stall!" pill (only the #warn element: toasts have their own tone classes). */
+.pull-warn {
   position: absolute; left: 50%; top: 34%; transform: translate(-50%, -50%); z-index: 6; pointer-events: none;
+  width: max-content; max-width: calc(100% - 32px); text-align: center;
   padding: 6px 16px; border-radius: 999px; background: rgba(60, 6, 0, 0.55); border: 1px solid rgba(255, 122, 102, 0.6);
-  color: #ffd6cf; font-weight: 800; letter-spacing: 0.08em; font-size: clamp(1rem, 3.4vw, 1.35rem); white-space: nowrap;
+  color: #ffd6cf; font-weight: 800; letter-spacing: 0.08em; font-size: clamp(1rem, 3.4vw, 1.35rem);
 }
-.warn.stall { background: rgba(50, 36, 0, 0.55); border-color: rgba(255, 200, 87, 0.6); color: #ffe7b0; }
+.pull-warn.stall { background: rgba(50, 36, 0, 0.55); border-color: rgba(255, 200, 87, 0.6); color: #ffe7b0; }
 
 .hint {
   position: absolute; left: 50%; bottom: max(150px, calc(env(safe-area-inset-bottom) + 150px)); transform: translateX(-50%); z-index: 5; pointer-events: none;
@@ -67,6 +69,8 @@ body.is-playing .g3d-touch { visibility: visible; }
 .burst-btn.empty { opacity: 0.45; }
 
 .result-line { margin: 10px 0 14px; color: var(--text); font-weight: 600; }
+/* Paused: the lead is hidden, so the title needs its own gap above the controls. */
+.g3d-panel.is-paused .g3d-title { margin-bottom: 16px; }
 .g3d-result { grid-template-columns: repeat(auto-fit, minmax(6.4rem, 1fr)); }
 .g3d-result b { font-size: 1.3rem; }
 .best-cell .g3d-badge { display: table; margin: 4px 0 0; white-space: nowrap; }
@@ -94,7 +98,11 @@ body.is-playing .g3d-touch { visibility: visible; }
   .g3d-note { font-size: 0.74rem; }
   .hint { bottom: max(66px, calc(env(safe-area-inset-bottom) + 62px)); font-size: 0.82rem; padding: 5px 12px; max-width: min(60%, 30rem); }
   .g3d-toast { top: max(30%, 96px); font-size: 1.15rem; }
-  .warn { top: 46%; }
+  .pull-warn { top: 46%; }
+  /* Results: one column, the five numbers in a row and the button under them. */
+  .g3d-panel.is-result { grid-template-columns: 1fr; width: min(100%, 44rem); padding-top: 14px; padding-bottom: 14px; }
+  .g3d-panel.is-result .panel-actions { grid-column: 1; grid-row: 2; margin-top: 12px; }
+  .g3d-panel.is-result .g3d-result { grid-template-columns: repeat(5, 1fr); }
   .result-line { margin: 6px 0 10px; font-size: 0.9rem; }
   .g3d-result { grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 0; }
   .g3d-result div { padding: 5px 9px; border-radius: 10px; }
@@ -104,15 +112,16 @@ body.is-playing .g3d-touch { visibility: visible; }
 }
 @media (max-width: 680px) {
   .g3d-overlay { padding-top: calc(max(12px, env(safe-area-inset-top)) + 112px); }
-  .g3d-toast { top: max(26%, calc(max(12px, env(safe-area-inset-top)) + 150px)); width: max-content; max-width: calc(100% - 32px); text-align: center; }
-  .warn { top: 40%; }
+  .g3d-toast { top: max(26%, calc(max(12px, env(safe-area-inset-top)) + 150px)); }
+  .pull-warn { top: 40%; letter-spacing: 0.04em; }
 }
 @media (max-width: 560px) {
   .g3d-stats { display: grid; grid-template-columns: repeat(3, auto); gap: 6px; }
   .g3d-chip { min-width: 0; padding: 4px 8px 5px; }
   .g3d-chip small { font-size: 0.58rem; letter-spacing: 0.06em; white-space: nowrap; }
   .g3d-chip b { font-size: 0.98rem; }
-  .wind-chip { display: none !important; }
+  /* The wind chip stays (it fills the sixth cell of the 3 x 2 grid); only its unit goes. */
+  .wind-chip b em { display: none; }
   .g3d-result { grid-template-columns: repeat(2, 1fr); }
   .g3d-panel { padding: 20px 18px; }
   .g3d-lead { font-size: 0.92rem; margin: 10px 0 14px; }

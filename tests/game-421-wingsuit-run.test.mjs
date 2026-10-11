@@ -14,16 +14,26 @@ function rng(seed) {
 }
 const still = { wind: 0, lift: 0 };
 const fly = (f, controls, seconds, air = still) => { for (let i = 0; i < Math.round(seconds * 120); i++) L.stepFlight(f, controls, 1 / 120, air); };
-const trimmed = () => { const f = L.createFlight(0, 0, 2000, 33, -0.2, 0); fly(f, { pitch: 0, roll: 0 }, 30); return f; };
+const trimmed = () => { const f = L.createFlight(0, 0, 2000, L.TRIM_SPEED, L.GLIDE_GAMMA, 0); fly(f, { pitch: 0, roll: 0 }, 30); return f; };
 
-test('a neutral stick settles into a steady glide of about 5 : 1', () => {
+test('a neutral stick settles into a steady glide of about 4.5 : 1, and flying slower glides further', () => {
   for (const [v, gamma] of [[20, 0.3], [36, -0.1], [70, -0.9]]) {
     const f = L.createFlight(0, 0, 3000, v, gamma, 0);
     fly(f, { pitch: 0, roll: 0 }, 40);
     assert.ok(Math.abs(f.v - L.TRIM_SPEED) < 2, `settles near trim speed from ${v} m/s (got ${f.v.toFixed(1)})`);
     const ratio = 1 / Math.tan(-f.gamma);
-    assert.ok(ratio > 4.5 && ratio < 5.5, `glide ratio ${ratio.toFixed(2)}`);
+    assert.ok(ratio > 4.2 && ratio < 4.8, `glide ratio ${ratio.toFixed(2)}`);
   }
+  // A light, steady pull slows the suit toward its best glide: hands-off is never the most efficient way to fly.
+  let best = 0;
+  for (let pitch = 0.05; pitch <= 0.6; pitch += 0.05) {
+    const f = trimmed();
+    fly(f, { pitch, roll: 0 }, 20);
+    const s = f.s, y = f.y;
+    fly(f, { pitch, roll: 0 }, 20);
+    if (!f.stalled) best = Math.max(best, (f.s - s) / (y - f.y));
+  }
+  assert.ok(best > 5.2, `best glide ${best.toFixed(2)} : 1 beats the neutral 4.5 : 1`);
 });
 
 test('lift grows with the square of airspeed, so a fast glider can climb and a slow one cannot', () => {
@@ -72,11 +82,26 @@ test('energy (height plus speed) never rises in still air, whatever the stick do
   }
 });
 
-test('a stalled wing drops its nose even at full pull', () => {
+test('a stalled wing drops its nose even at full pull, and holding a full pull glides worse than letting go', () => {
   const f = L.createFlight(0, 0, 1000, 14, 0.4, 0);
   const gamma = f.gamma;
   fly(f, { pitch: 1, roll: 0 }, 0.8);
+  assert.ok(f.stalled, 'below stall speed the wing is stalled');
   assert.ok(f.gamma < gamma - 0.3, `nose dropped from ${gamma} to ${f.gamma.toFixed(2)}`);
+  fly(f, { pitch: 0, roll: 0 }, 6);
+  assert.ok(!f.stalled && f.v > L.STALL_SPEED + L.STALL_RECOVERY, 'the dive gets the speed back and the wing flies again');
+  // Hold a full pull from a trimmed glide: it ends in a cycle of stalls and dives that wastes height.
+  const held = trimmed();
+  const s0 = held.s, y0 = held.y;
+  let stalls = 0, wasStalled = false;
+  for (let i = 0; i < 120 * 60; i++) {
+    L.stepFlight(held, { pitch: 1, roll: 0 }, 1 / 120, still);
+    if (held.stalled && !wasStalled) stalls++;
+    wasStalled = held.stalled;
+  }
+  const ratio = (held.s - s0) / (y0 - held.y);
+  assert.ok(stalls >= 5, `${stalls} stalls in a minute`);
+  assert.ok(ratio < 3.6, `holding full pull glides only ${ratio.toFixed(2)} : 1`);
 });
 
 test('banking turns toward the low wing whether pushing or pulling, and the assist levels out', () => {
@@ -88,7 +113,7 @@ test('banking turns toward the low wing whether pushing or pulling, and the assi
   const f = trimmed();
   fly(f, { pitch: 0, roll: -1 }, 1);
   assert.ok(f.heading < -0.2);
-  fly(f, { pitch: 0, roll: 0 }, 6);
+  fly(f, { pitch: 0, roll: 0 }, 8);
   assert.ok(Math.abs(f.heading) < 0.05 && Math.abs(f.bank) < 0.05, 'with the stick centred the suit levels and lines up with the valley');
 });
 
@@ -267,14 +292,16 @@ test('no unavoidable terrain collision: a gliding policy that rides thermals sur
     const run = L.createRun(course);
     const events = [];
     let lowest = Infinity;
-    while (run.flight.s < 12000 && !run.crashed) {
+    // 16 km reaches past segment 15, where the difficulty tables stop: the hardest course is still flyable.
+    while (run.flight.s < 16000 && !run.crashed) {
       events.length = 0;
       L.stepRun(run, L.autopilot(course, run.flight, { mode: 'survive' }), 1 / 30, events);
       lowest = Math.min(lowest, run.agl);
     }
     assert.equal(run.crashed, false, `seed ${seed} crashed at s ${run.flight.s.toFixed(0)}`);
+    assert.ok(run.segment >= L.SEGMENT_COUNT, `seed ${seed} reached segment ${run.segment + 1}`);
     assert.equal(run.bounces, 0);
-    assert.ok(lowest > 20, `seed ${seed}: lowest ${lowest.toFixed(1)} m above ground`);
+    assert.ok(lowest > 15, `seed ${seed}: lowest ${lowest.toFixed(1)} m above ground`);
   }
 });
 
@@ -330,14 +357,32 @@ test('the first segment teaches the rhythm: dive gate, climb gate, then a therma
 
 test('difficulty rises by segment: tighter gates, narrower valley, flatter floor, wind and ridges', () => {
   let previous = null;
-  for (let index = 0; index < 12; index++) {
+  for (let index = 0; index < L.SEGMENT_COUNT + 3; index++) {
     const s = L.segmentStart(index) + 400;
-    const now = { r: L.gateRadiusAt(s), w: L.halfWidthAt(s), descent: L.descentAt(s), wind: L.maxWindAt(s) };
+    const now = { r: L.gateRadiusAt(s), w: L.halfWidthAt(s), descent: L.descentAt(s), wind: L.maxWindAt(s), gust: L.gustAt(s) };
     if (previous) {
-      assert.ok(now.r <= previous.r && now.w <= previous.w && now.descent <= previous.descent && now.wind >= previous.wind, `segment ${index}`);
+      assert.ok(now.r <= previous.r && now.w <= previous.w && now.descent <= previous.descent && now.wind >= previous.wind && now.gust >= previous.gust, `segment ${index}`);
+      // Past segment 9 it keeps tightening every segment until the tables stop.
+      if (index >= 9 && index < L.SEGMENT_COUNT) assert.ok(now.r < previous.r && now.wind > previous.wind && now.gust > previous.gust, `segment ${index + 1} still gets harder`);
+      if (index >= L.SEGMENT_COUNT) assert.deepEqual(now, previous, 'then it holds at the ceiling');
     }
     previous = now;
   }
+  // Every new segment's toast names what changed, and the last step announces the top difficulty.
+  for (let index = 1; index < L.SEGMENT_COUNT; index++) assert.notEqual(L.segmentNews(index), null, `segment ${index + 1} has news`);
+  assert.equal(L.segmentNews(1), 'ridges');
+  assert.equal(L.segmentNews(2), 'wind');
+  assert.equal(L.segmentNews(L.SEGMENT_COUNT - 1), 'top');
+  assert.equal(L.segmentNews(L.SEGMENT_COUNT + 2), null);
+  // Deep in the canyon the ridges are higher and wider, with narrower saddles.
+  const course = L.createCourse(12, rng);
+  L.ensureCourse(course, 16000);
+  const ridges = (a, b) => course.ridges.filter(r => r.s > L.segmentStart(a) && r.s < L.segmentStart(b));
+  const mean = (list, f) => list.reduce((sum, r) => sum + f(r), 0) / list.length;
+  const early = ridges(3, 7), late = ridges(12, 16);
+  assert.ok(mean(late, r => r.height) > mean(early, r => r.height) + 10, 'higher ridges');
+  assert.ok(mean(late, r => r.half) > mean(early, r => r.half) + 10, 'wider ridges');
+  assert.ok(mean(late, r => r.notchWidth) < mean(early, r => r.notchWidth) - 2, 'narrower saddles');
   assert.equal(L.segmentInfo(0).ridges, false);
   assert.equal(L.segmentInfo(1).ridges, true);
   assert.equal(L.segmentInfo(1).wind, false);
@@ -350,6 +395,7 @@ test('difficulty rises by segment: tighter gates, narrower valley, flatter floor
   }
   // Crosswind never outruns what crabbing at stall speed can cancel.
   assert.ok(L.maxWindAt(1e6) < L.STALL_SPEED * Math.sin(L.HEADING_MAX) * 0.5);
+  for (let s = 0; s < 20000; s += 7) assert.ok(Math.abs(L.windAt(course, s)) <= L.maxWindAt(s) + 1e-9, 'gusts never exceed the segment\'s wind');
 });
 
 test('courses are reproducible from a seed, whatever order they are queried in', () => {
@@ -379,4 +425,202 @@ test('scoring: distance times the chain multiplier, doubled while skimming the g
   const s2 = run.flight.s;
   L.stepRun(run, { pitch: 0, roll: 0 }, 0.5, events);
   assert.ok(Math.abs(run.score - before - 3 * (run.flight.s - s2)) < 1e-6, 'x3 at a chain of six');
+});
+
+// ---------------------------------------------------------------------------------------------------------
+// Balance and telegraphs
+
+/** Flies a run with `policy(run, course, memory)` at 60 Hz until it crashes or `maxTime` passes. */
+function flyRun(seed, policy, maxTime = 400) {
+  const course = L.createCourse(seed, rng);
+  const run = L.createRun(course);
+  const events = [];
+  const memory = { history: [] };
+  while (!run.crashed && run.time < maxTime) {
+    events.length = 0;
+    L.stepRun(run, policy(run, course, memory), 1 / 60, events);
+  }
+  return run;
+}
+
+const handsOff = () => ({ pitch: 0, roll: 0 });
+
+/**
+ * A sloppy ring chaser on a keyboard: full on/off keys aimed at the next ring, seeing the world `lag` seconds
+ * late, no thermal hunting, no burst. It knows nothing about the ground except the HUD: once "Pull up!" has
+ * been showing for `reaction` seconds it pulls until the warning clears.
+ */
+const sloppy = (reaction = 0.3, lag = 0.25) => (run, course, m) => {
+  const f = run.flight;
+  m.history.push({ s: f.s, x: f.x, y: f.y, gamma: f.gamma, heading: f.heading, v: f.v });
+  if (m.history.length > 60) m.history.shift();
+  const seen = m.history[Math.max(0, m.history.length - 1 - Math.round(lag * 60))];
+  m.warning ??= L.createWarning();
+  m.clock = (m.clock ?? 0) + 1 / 60;
+  if (m.clock >= 0.05) {
+    if (L.updateWarning(m.warning, run, m.last ?? { pitch: 0, roll: 0 }, m.clock) === 'pull') m.since ??= run.time;
+    else m.since = null;
+    m.clock = 0;
+  }
+  let pitch = 0, roll = 0;
+  const gate = course.gates[run.nextGate];
+  if (gate) {
+    const ds = Math.max(5, gate.s - seen.s);
+    const climb = Math.atan((gate.y - seen.y) / ds), turn = Math.atan((gate.x - seen.x) / ds);
+    pitch = seen.gamma < climb - 0.06 ? 1 : seen.gamma > climb + 0.06 ? -1 : 0;
+    roll = seen.heading < turn - 0.06 ? 1 : seen.heading > turn + 0.06 ? -1 : 0;
+  }
+  if (seen.v < 21 && pitch > 0) pitch = 0;
+  if (m.since != null && run.time - m.since >= reaction) { pitch = 1; roll = 0; }
+  m.last = { pitch, roll };
+  return m.last;
+};
+
+test('hands-off flight does not last: a neutral stick runs out of height within about a minute after the warm-up', () => {
+  const times = [];
+  for (let seed = 1; seed <= 8; seed++) {
+    const run = flyRun(seed, handsOff);
+    assert.ok(run.crashed, `seed ${seed}: the hands-off glide ends`);
+    times.push(run.time);
+    // Holding a full pull is no better: the stalls eat the height even sooner.
+    const pulled = flyRun(seed, () => ({ pitch: 1, roll: 0 }));
+    assert.ok(pulled.crashed && pulled.time < 45, `seed ${seed}: holding a full pull lasts ${pulled.time.toFixed(0)} s`);
+  }
+  times.sort((a, b) => a - b);
+  assert.ok(times[4] < 90, `median hands-off flight ${times[4].toFixed(0)} s`);
+  assert.ok(times[7] < 160, `longest hands-off flight ${times[7].toFixed(0)} s`);
+  // In every segment the floor falls more slowly than the neutral glide sinks: no free ride on the descent.
+  for (let index = 0; index < L.SEGMENT_COUNT; index++) assert.ok(L.descentAt(L.segmentStart(index) + 400) < -Math.tan(L.GLIDE_GAMMA) - 0.02, `segment ${index + 1}`);
+});
+
+test('a sloppy ring chaser who answers the warning outlasts and outscores the hands-off run on every course', () => {
+  for (let seed = 1; seed <= 5; seed++) {
+    const passive = flyRun(seed, handsOff);
+    const chaser = flyRun(seed, sloppy(0.35));
+    assert.ok(chaser.time > passive.time * 1.3, `seed ${seed}: ${chaser.time.toFixed(0)} s vs ${passive.time.toFixed(0)} s hands-off`);
+    assert.ok(chaser.score > passive.score * 1.3, `seed ${seed}: ${Math.floor(chaser.score)} vs ${Math.floor(passive.score)} hands-off`);
+    assert.ok(chaser.gatesPassed > 8, `seed ${seed}: threads ${chaser.gatesPassed} rings`);
+  }
+});
+
+test('"Pull up!" comes early enough to act on: a full pull 0.3 s after it shows clears the ground', () => {
+  const DT = 1 / 60;
+  let dives = 0, saved = 0;
+  const leads = [];
+  for (let seed = 1; seed <= 10; seed++) {
+    for (const start of [24, 45, 70]) {
+      // Fly the racing line to the start, then push over and keep pushing.
+      const course = L.createCourse(seed, rng);
+      const base = L.createRun(course);
+      const events = [];
+      while (base.time < start) { events.length = 0; L.stepRun(base, L.autopilot(course, base.flight, { mode: 'line' }), DT, events); }
+      for (const push of [1, 0.5]) {
+        for (const reaction of [null, 0.3]) {
+          const run = { ...base, flight: { ...base.flight }, air: { ...base.air } };
+          const warning = L.createWarning();
+          let warnedAt = null, clock = 0, t = 0;
+          while (!run.crashed && t < 20 && !(warnedAt !== null && reaction !== null && t > warnedAt + reaction + 4)) {
+            const controls = warnedAt !== null && reaction !== null && t >= warnedAt + reaction ? { pitch: 1, roll: 0 } : { pitch: -push, roll: 0 };
+            clock += DT;
+            if (clock >= 0.05) { if (L.updateWarning(warning, run, controls, clock) === 'pull') warnedAt ??= t; clock = 0; }
+            events.length = 0;
+            L.stepRun(run, controls, DT, events);
+            t += DT;
+          }
+          if (reaction === null) {
+            assert.ok(run.crashed && warnedAt !== null, `seed ${seed} t ${start}: the dive is warned before it hits`);
+            leads.push(t - warnedAt);
+          } else {
+            dives++;
+            if (!run.crashed) saved++;
+          }
+        }
+      }
+    }
+  }
+  leads.sort((a, b) => a - b);
+  assert.ok(leads[0] > 0.8, `the warning shows at least ${leads[0].toFixed(2)} s before impact`);
+  assert.ok(leads[leads.length >> 1] > 1, `median lead ${leads[leads.length >> 1].toFixed(2)} s`);
+  assert.ok(saved / dives >= 0.9, `${saved}/${dives} dives saved by pulling 0.3 s after the warning`);
+});
+
+test('the warning does not flicker and does not nag level skimming', () => {
+  // Skimming level a few metres over the warm-up's flat floor (a ridge-free stretch) is not a warning.
+  const course = L.createCourse(5, rng);
+  const run = L.createRun(course);
+  run.time = L.GRACE_TIME;
+  const s = 300;
+  const x = L.centerX(course, s);
+  run.flight = L.createFlight(s, x, L.surfaceHeight(course, s, x) + 5, 40, -Math.atan(L.descentAt(s)), L.courseHeading(course, s));
+  run.agl = 5;
+  const warning = L.createWarning();
+  assert.equal(L.updateWarning(warning, run, { pitch: 0.2, roll: 0 }, 0.05), null, 'level at 5 m: no warning');
+  // Random stick work over many runs: once on, a warning stays on for at least WARN_HOLD.
+  const random = rng(8);
+  let periods = 0;
+  for (let seed = 1; seed <= 6; seed++) {
+    const r = L.createRun(L.createCourse(seed, rng));
+    const w = L.createWarning();
+    const events = [];
+    let controls = { pitch: 0, roll: 0 }, onSince = null, clock = 0;
+    while (!r.crashed && r.time < 90) {
+      if (Math.floor(r.time * 60) % 30 === 0) controls = { pitch: random() * 2 - 1.1, roll: random() * 2 - 1 };
+      clock += 1 / 60;
+      if (clock >= 0.05) {
+        const level = L.updateWarning(w, r, controls, clock);
+        clock = 0;
+        if (level && onSince === null) onSince = r.time;
+        if (!level && onSince !== null) { assert.ok(r.time - onSince >= L.WARN_HOLD - 1e-9, `on for only ${(r.time - onSince).toFixed(2)} s`); onSince = null; periods++; }
+      }
+      events.length = 0;
+      L.stepRun(r, controls, 1 / 60, events);
+    }
+  }
+  assert.ok(periods > 5, `${periods} warnings checked`);
+});
+
+test('a broken chain is reported as a miss, never as a multiplier event', () => {
+  const course = L.createCourse(5, rng);
+  const run = L.createRun(course);
+  const events = [];
+  while (run.chain < 4) { events.length = 0; L.stepRun(run, L.autopilot(course, run.flight, { mode: 'line' }), 1 / 60, events); }
+  // Now fly 25 m above the line, so the next ring passes underneath.
+  run.flight.y += 25;
+  let missStep = null;
+  while (!missStep && !run.crashed) {
+    events.length = 0;
+    L.stepRun(run, { pitch: 0, roll: 0 }, 1 / 60, events);
+    if (events.some(e => e.type === 'miss')) missStep = [...events];
+  }
+  assert.ok(missStep, 'the ring was missed');
+  assert.equal(missStep.find(e => e.type === 'miss').chain, 4, 'the miss carries the chain it broke');
+  assert.equal(missStep.some(e => e.type === 'mult'), false, 'no multiplier fanfare for a broken chain');
+  assert.equal(run.chain, 0);
+  // A warm-up bounce resets the chain the same way.
+  const bounceRun = L.createRun(L.createCourse(4, rng));
+  bounceRun.chain = 5;
+  const bounceEvents = [];
+  while (!bounceEvents.some(e => e.type === 'bounce')) L.stepRun(bounceRun, { pitch: -1, roll: 0 }, 1 / 60, bounceEvents);
+  assert.equal(bounceEvents.find(e => e.type === 'bounce').chain, 5);
+  assert.equal(bounceEvents.some(e => e.type === 'mult'), false);
+});
+
+test('the crash cause names what was hit: the wall, a ridge flank or the valley floor', () => {
+  const course = L.createCourse(9, rng);
+  L.ensureCourse(course, 6000);
+  const ridge = course.ridges.find(r => r.s > 1500);
+  const flankX = L.lineX(course, ridge.s) + (L.swayAt(course, ridge.s) > 0 ? -1 : 1) * 30;
+  assert.equal(L.crashCause(course, ridge.s, flankX), 'ridge');
+  // The foot of a ridge, where it barely raises the ground, is the floor.
+  assert.equal(L.crashCause(course, ridge.s - ridge.half * 0.97, L.centerX(course, ridge.s - ridge.half * 0.97)), 'ground');
+  const between = (ridge.s + ridge.half + course.ridges[course.ridges.indexOf(ridge) + 1].s - course.ridges[course.ridges.indexOf(ridge) + 1].half) / 2;
+  assert.equal(L.crashCause(course, between, L.centerX(course, between)), 'ground');
+  assert.equal(L.crashCause(course, between, L.centerX(course, between) + L.halfWidthAt(between) + 3), 'wall');
+  // And the run reports it: diving straight down onto the floor is a ground crash, wherever it happens.
+  const run = L.createRun(L.createCourse(9, rng));
+  run.time = L.GRACE_TIME;
+  const events = [];
+  while (!run.crashed) L.stepRun(run, { pitch: -1, roll: 0 }, 1 / 60, events);
+  const crash = events.find(e => e.type === 'crash');
+  assert.equal(crash.cause, L.crashCause(run.course, run.flight.s, run.flight.x));
 });
