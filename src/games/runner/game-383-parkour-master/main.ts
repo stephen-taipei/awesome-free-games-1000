@@ -1,501 +1,225 @@
-import { ParkourMasterGame, GameState, Obstacle, Collectible, Particle } from "./game";
-import { translations } from "./i18n";
-import { i18n, type Locale } from "../../../shared/i18n";
+import { Sfx, best, setupI18n, focusIfActive, onFocusLost, bindSoundButton, clamp, prefersTouch } from '../../../shared/three/kit';
+import { SkylineGetaway, type Hud, type Result, type GameEvent } from './game';
+import { LEAD_MAX, LEAD_WARN, districtKey } from './logic';
+import { translations } from './i18n';
 
-const languageSelect = document.getElementById("language-select") as HTMLSelectElement;
-const scoreDisplay = document.getElementById("score-display")!;
-const distanceDisplay = document.getElementById("distance-display")!;
-const skillsDisplay = document.getElementById("skills-display")!;
-const medalsDisplay = document.getElementById("medals-display")!;
-const canvas = document.getElementById("game-canvas") as HTMLCanvasElement;
-const ctx = canvas.getContext("2d")!;
-const overlay = document.getElementById("game-overlay")!;
-const overlayTitle = document.getElementById("overlay-title")!;
-const overlayMsg = document.getElementById("overlay-msg")!;
-const finalScoreDisplay = document.getElementById("final-score")!;
-const statsGrid = document.getElementById("stats-grid")!;
-const startBtn = document.getElementById("start-btn")!;
+const BEST_KEY = 'afg-skyline-getaway-best';
+/** Combo notes climb a major pentatonic scale. */
+const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const stageEl = $('stage');
+const overlay = $('overlay');
+const startBtn = $<HTMLButtonElement>('start-btn');
+const pauseBtn = $<HTMLButtonElement>('pause-btn');
+const soundBtn = $<HTMLButtonElement>('sound-btn');
+const languageSelect = $<HTMLSelectElement>('language-select');
+const toast = $('toast');
+const glare = $('glare');
+const speedChip = $('speed-chip');
+const marginChip = $('margin-chip');
+const comboEl = $('combo');
+const sfx = new Sfx();
+let mode: 'menu' | 'playing' | 'paused' | 'over' = 'menu';
+let lastResult: (Result & { best: number; isNew: boolean }) | null = null;
+let lastHud: Hud = { distance: 0, speed: 0, top: 8, floor: 4.8, drone: 6.6, lead: 18, combo: 0, district: 0 };
+let armedAt = 0;
+let sirenAt = 0;
+let sirenHigh = false;
+let runs = 0;
 
-let game: ParkourMasterGame;
-let animationFrame: number | null = null;
-let buildings: { x: number; height: number; width: number }[] = [];
-let clouds: { x: number; y: number; width: number; speed: number }[] = [];
+const t = setupI18n(translations, languageSelect, () => { renderOverlay(); renderHud(lastHud); });
+const districtName = (district: number) => t(`game.districts.${districtKey(district)}`);
 
-function initI18n(): void {
-  Object.entries(translations).forEach(([locale, trans]) => i18n.loadTranslations(locale as Locale, trans));
-  const browserLang = navigator.language;
-  if (browserLang.includes("zh")) i18n.setLocale("zh-TW");
-  else if (browserLang.includes("ja")) i18n.setLocale("ja");
-  else i18n.setLocale("en");
-  languageSelect.value = i18n.getLocale();
-  updateTexts();
-  languageSelect.addEventListener("change", () => { i18n.setLocale(languageSelect.value as Locale); updateTexts(); });
+// One toast at a time; a district banner is not cut short by a move callout.
+let toastUntil = 0;
+let toastPriority = 0;
+function showToast(text: string, kind: '' | 'good' | 'warn' | 'big' = '', ms = 900, priority = 0) {
+  const now = performance.now();
+  if (now < toastUntil && priority < toastPriority) return;
+  toastUntil = now + ms;
+  toastPriority = priority;
+  toast.textContent = text;
+  toast.className = `g3d-toast show ${kind}`;
+  window.clearTimeout(Number(toast.dataset.timer));
+  toast.dataset.timer = String(window.setTimeout(() => toast.classList.remove('show'), ms));
 }
 
-function updateTexts(): void {
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    const key = el.getAttribute("data-i18n");
-    if (key) el.textContent = i18n.t(key);
-  });
-}
-
-function initGame(): void {
-  resizeCanvas();
-  initBackground();
-  game = new ParkourMasterGame();
-  game.onStateChange = (state: GameState) => {
-    updateUI(state);
-    if (state.phase === "gameover") showGameOverOverlay(state);
-  };
-  window.addEventListener("keydown", (e) => {
-    if (["Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.code)) e.preventDefault();
-    game.handleKeyDown(e.code);
-  });
-  setupMobileControls();
-  window.addEventListener("resize", resizeCanvas);
-  startRenderLoop();
-}
-
-function initBackground(): void {
-  // Initialize background buildings
-  buildings = [];
-  for (let i = 0; i < 8; i++) {
-    buildings.push({
-      x: i * 120,
-      height: 100 + Math.random() * 100,
-      width: 80 + Math.random() * 40,
-    });
-  }
-
-  // Initialize clouds
-  clouds = [];
-  for (let i = 0; i < 5; i++) {
-    clouds.push({
-      x: Math.random() * 450,
-      y: 20 + Math.random() * 80,
-      width: 40 + Math.random() * 40,
-      speed: 0.2 + Math.random() * 0.3,
-    });
-  }
-}
-
-function setupMobileControls(): void {
-  const leftBtn = document.getElementById("left-btn");
-  const rightBtn = document.getElementById("right-btn");
-  const jumpBtn = document.getElementById("jump-btn");
-  const slideBtn = document.getElementById("slide-btn");
-
-  leftBtn?.addEventListener("touchstart", (e) => { e.preventDefault(); game.moveLeft(); });
-  rightBtn?.addEventListener("touchstart", (e) => { e.preventDefault(); game.moveRight(); });
-  jumpBtn?.addEventListener("touchstart", (e) => { e.preventDefault(); game.jump(); });
-  slideBtn?.addEventListener("touchstart", (e) => { e.preventDefault(); game.slide(); });
-}
-
-function resizeCanvas(): void {
-  canvas.width = Math.min(canvas.parentElement!.getBoundingClientRect().width, 450);
-  canvas.height = 400;
-}
-
-function startRenderLoop(): void {
-  const render = () => {
-    drawGame(game.getState());
-    animationFrame = requestAnimationFrame(render);
-  };
-  animationFrame = requestAnimationFrame(render);
-}
-
-function drawGame(state: GameState): void {
-  const { width, height } = canvas;
-
-  // Sky gradient - sunset theme
-  const skyGradient = ctx.createLinearGradient(0, 0, 0, height);
-  skyGradient.addColorStop(0, "#ff6b6b");
-  skyGradient.addColorStop(0.4, "#ff9f43");
-  skyGradient.addColorStop(0.7, "#feca57");
-  skyGradient.addColorStop(1, "#48dbfb");
-  ctx.fillStyle = skyGradient;
-  ctx.fillRect(0, 0, width, height);
-
-  // Sun
-  ctx.fillStyle = "rgba(255, 200, 87, 0.7)";
-  ctx.beginPath();
-  ctx.arc(width - 80, 60, 40, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Clouds
-  const speed = state.phase === "playing" ? state.speed * 0.05 : 0.2;
-  clouds.forEach(cloud => {
-    cloud.x -= cloud.speed * speed;
-    if (cloud.x < -cloud.width) {
-      cloud.x = width + cloud.width;
-      cloud.y = 20 + Math.random() * 80;
-    }
-    drawCloud(cloud.x, cloud.y, cloud.width);
-  });
-
-  // Background buildings (parallax)
-  const buildingSpeed = state.phase === "playing" ? state.speed * 0.15 : 0;
-  buildings.forEach(building => {
-    building.x -= buildingSpeed;
-    if (building.x < -building.width) {
-      building.x = width + Math.random() * 50;
-      building.height = 100 + Math.random() * 100;
-      building.width = 80 + Math.random() * 40;
-    }
-    drawBackgroundBuilding(building.x, building.height, building.width);
-  });
-
-  // Current rooftop platform
-  const groundY = height - 80;
-  const roofGradient = ctx.createLinearGradient(0, groundY, 0, groundY + 30);
-  roofGradient.addColorStop(0, "#34495e");
-  roofGradient.addColorStop(1, "#2c3e50");
-  ctx.fillStyle = roofGradient;
-  ctx.fillRect(0, groundY, width, 30);
-
-  // Rooftop details (concrete texture)
-  ctx.fillStyle = "#2c3e50";
-  for (let i = 0; i < width; i += 60) {
-    ctx.fillRect(i, groundY, 1, 30);
-  }
-
-  // Building edge
-  ctx.fillStyle = "#1a252f";
-  ctx.fillRect(0, groundY + 30, width, 50);
-
-  // Lane lines (subtle markers)
-  ctx.strokeStyle = "rgba(52, 73, 94, 0.3)";
-  ctx.lineWidth = 2;
-  for (let i = 1; i < 3; i++) {
-    ctx.setLineDash([10, 10]);
-    ctx.beginPath();
-    ctx.moveTo(i * (width / 3), groundY - 60);
-    ctx.lineTo(i * (width / 3), groundY);
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-
-  if (state.phase === "idle") {
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.font = "18px 'Segoe UI'";
-    ctx.textAlign = "center";
-    ctx.fillText(i18n.t("game.controls"), width / 2, height / 2);
-    return;
-  }
-
-  // Particles
-  state.particles.forEach(p => {
-    ctx.globalAlpha = p.life / p.maxLife;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  });
-
-  // Collectibles
-  state.collectibles.forEach(col => drawCollectible(col));
-
-  // Obstacles
-  state.obstacles.forEach(obs => drawObstacle(obs, groundY));
-
-  // Player
-  drawPlayer(state);
-}
-
-function drawCloud(x: number, y: number, width: number): void {
-  ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-  ctx.beginPath();
-  ctx.arc(x, y, width * 0.3, 0, Math.PI * 2);
-  ctx.arc(x + width * 0.3, y - width * 0.1, width * 0.35, 0, Math.PI * 2);
-  ctx.arc(x + width * 0.6, y, width * 0.3, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawBackgroundBuilding(x: number, height: number, width: number): void {
-  const y = canvas.height - 80 - height;
-
-  // Building body
-  ctx.fillStyle = "rgba(44, 62, 80, 0.3)";
-  ctx.fillRect(x, y, width, height);
-
-  // Windows
-  ctx.fillStyle = "rgba(241, 196, 15, 0.4)";
-  for (let row = 0; row < height / 20; row++) {
-    for (let col = 0; col < 3; col++) {
-      if (Math.random() > 0.3) {
-        ctx.fillRect(x + 10 + col * 20, y + 10 + row * 20, 12, 12);
-      }
+function renderHud(hud: Hud) {
+  lastHud = hud;
+  $('distance').textContent = String(hud.distance);
+  $('speed').textContent = String(Math.round(hud.speed * 3.6));
+  // Speed is the life bar: below the drone's tick, the light gains on you.
+  const low = hud.floor * 0.9;
+  const span = Math.max(0.1, hud.top - low);
+  $('speed-fill').style.transform = `scaleX(${clamp((hud.speed - low) / span, 0.03, 1).toFixed(3)})`;
+  $('drone-tick').style.left = `${(clamp((hud.drone - low) / span, 0, 1) * 100).toFixed(1)}%`;
+  speedChip.classList.toggle('slow', hud.speed < hud.drone - 0.05);
+  $('margin').textContent = String(Math.max(0, Math.round(hud.lead)));
+  $('margin-fill').style.transform = `scaleX(${clamp(hud.lead / LEAD_MAX, 0, 1).toFixed(3)})`;
+  marginChip.classList.toggle('danger', hud.lead < LEAD_WARN);
+  comboEl.textContent = `×${hud.combo}`;
+  $('district-name').textContent = districtName(hud.district);
+  glare.style.opacity = mode === 'playing' ? clamp((11 - hud.lead) / 11, 0, 1).toFixed(2) : '0';
+  // A two-tone siren, slower than 2 Hz, while the drone is close.
+  if (mode === 'playing' && hud.lead < LEAD_WARN && hud.lead > 0) {
+    const now = performance.now();
+    if (now >= sirenAt) {
+      sirenAt = now + 560;
+      sirenHigh = !sirenHigh;
+      sfx.tone(sirenHigh ? 920 : 690, 0.45, { type: 'triangle', gain: 0.035 + 0.05 * (1 - hud.lead / LEAD_WARN) });
     }
   }
 }
 
-function drawPlayer(state: GameState): void {
-  const { player } = state;
-  ctx.save();
-  ctx.translate(player.x, player.y);
-
-  // Athletic parkour character
-  if (player.isSliding) {
-    // Sliding pose - horizontal
-    ctx.rotate(Math.PI / 2);
-    ctx.fillStyle = "#e74c3c";
-    ctx.fillRect(-20, -10, 40, 20);
-    ctx.fillStyle = "#c0392b";
-    ctx.beginPath();
-    ctx.arc(-10, 0, 8, 0, Math.PI * 2);
-    ctx.fill();
+function renderOverlay() {
+  const result = $('result');
+  const lead = $('overlay-lead');
+  if (mode === 'over' && lastResult) {
+    const r = lastResult;
+    $('overlay-title').textContent = t(r.cause === 'caught' ? 'game.caught' : 'game.fell');
+    // A fall explains itself: ran off the edge, came up short, or jumped past the landing.
+    const cause = r.cause === 'caught' ? 'game.causeCaught' : r.fall === 'long' ? 'game.causeLong' : r.fall === 'runoff' ? 'game.causeRunoff' : 'game.causeShort';
+    lead.textContent = t(cause, { n: r.distance });
+    lead.hidden = false;
+    $('result-distance').textContent = String(r.distance);
+    $('result-best').textContent = String(r.best);
+    $('new-best').hidden = !r.isNew;
+    $('result-district').textContent = `${r.district} · ${districtName(r.district - 1)}`;
+    $('result-perfects').textContent = String(r.perfects);
+    $('result-combo').textContent = `×${r.bestCombo}`;
+    $('result-speed').textContent = String(r.topSpeed);
+    result.hidden = false;
+    startBtn.textContent = t('game.again');
+  } else if (mode === 'paused') {
+    $('overlay-title').textContent = t('game.paused');
+    result.hidden = true;
+    lead.hidden = true;
+    startBtn.textContent = t('game.resume');
   } else {
-    // Running/jumping pose
-    const legAngle = player.isJumping ? 0.3 : Math.sin(Date.now() * 0.02) * 0.3;
-
-    // Body
-    ctx.fillStyle = "#e74c3c";
-    ctx.fillRect(-12, -15, 24, 30);
-
-    // Head
-    ctx.fillStyle = "#ffcc99";
-    ctx.beginPath();
-    ctx.arc(0, -25, 10, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Headband
-    ctx.fillStyle = "#f39c12";
-    ctx.fillRect(-10, -28, 20, 4);
-
-    // Arms - dynamic
-    ctx.strokeStyle = "#c0392b";
-    ctx.lineWidth = 5;
-    ctx.lineCap = "round";
-
-    // Left arm
-    ctx.beginPath();
-    ctx.moveTo(-10, -10);
-    ctx.lineTo(-18, player.isJumping ? -5 : 5);
-    ctx.stroke();
-
-    // Right arm
-    ctx.beginPath();
-    ctx.moveTo(10, -10);
-    ctx.lineTo(18, player.isJumping ? -5 : 5);
-    ctx.stroke();
-
-    // Legs
-    ctx.strokeStyle = "#2c3e50";
-    ctx.lineWidth = 6;
-
-    // Left leg
-    ctx.beginPath();
-    ctx.moveTo(-6, 15);
-    ctx.lineTo(-10 - Math.cos(legAngle) * 10, 28 + Math.sin(legAngle) * 5);
-    ctx.stroke();
-
-    // Right leg
-    ctx.beginPath();
-    ctx.moveTo(6, 15);
-    ctx.lineTo(10 + Math.cos(legAngle) * 10, 28 - Math.sin(legAngle) * 5);
-    ctx.stroke();
+    $('overlay-title').textContent = t('game.title');
+    lead.textContent = t('game.lead');
+    lead.hidden = false;
+    result.hidden = true;
+    startBtn.textContent = t('game.start');
   }
-
-  ctx.restore();
 }
 
-function drawObstacle(obs: Obstacle, groundY: number): void {
-  ctx.save();
-  ctx.translate(obs.x, obs.y);
+function setMode(next: typeof mode, focusStart = true) {
+  mode = next;
+  overlay.hidden = next === 'playing';
+  overlay.classList.toggle('is-over', next === 'over');
+  // A panel scrolled to reach Start earlier would otherwise open part-way down.
+  overlay.scrollTop = 0;
+  pauseBtn.disabled = next !== 'playing';
+  if (next !== 'playing') glare.style.opacity = '0';
+  renderOverlay();
+  if (overlay.hidden) (document.activeElement as HTMLElement | null)?.blur();
+  else if (focusStart) focusIfActive(startBtn);
+}
 
-  switch (obs.type) {
-    case "gap":
-      // Gap between buildings
-      ctx.fillStyle = "#1a252f";
-      ctx.fillRect(-obs.width / 2, 0, obs.width, 70);
-      ctx.strokeStyle = "#95a5a6";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-obs.width / 2, 0, obs.width, 70);
+function playEvent(event: GameEvent) {
+  switch (event.type) {
+    case 'step': sfx.noise(0.03, { gain: 0.05, frequency: 1700, type: 'bandpass' }); break;
+    case 'jump': sfx.tone(250, 0.14, { type: 'triangle', slideTo: 520, gain: 0.09 }); break;
+    case 'land':
+      if (event.hard) { sfx.noise(0.2, { gain: 0.32, frequency: 380 }); sfx.tone(95, 0.2, { type: 'sine', slideTo: 48, gain: 0.22 }); }
+      else sfx.noise(0.07, { gain: 0.14, frequency: 700 });
       break;
-
-    case "ac-unit":
-      // Air conditioning unit
-      ctx.fillStyle = "#7f8c8d";
-      ctx.fillRect(-25, -20, 50, 40);
-      ctx.fillStyle = "#95a5a6";
-      ctx.fillRect(-20, -15, 40, 30);
-      // Fan grille
-      ctx.strokeStyle = "#2c3e50";
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 4; i++) {
-        ctx.beginPath();
-        ctx.moveTo(-15 + i * 10, -10);
-        ctx.lineTo(-15 + i * 10, 15);
-        ctx.stroke();
-      }
+    case 'perfect': {
+      const combo = Math.max(1, event.combo ?? 1);
+      const f = 523.25 * Math.pow(2, SCALE[Math.min(combo - 1, SCALE.length - 1)] / 12);
+      sfx.tone(f, 0.16, { type: 'triangle', gain: 0.13 });
+      sfx.tone(f * 1.5, 0.14, { type: 'sine', gain: 0.07, delay: 0.05 });
+      const name = t(`game.moves.${event.move ?? 'vault'}`);
+      showToast(combo >= 2 ? `${name} ×${combo}` : name, 'good', 650);
+      comboEl.parentElement?.classList.add('bump');
+      window.setTimeout(() => comboEl.parentElement?.classList.remove('bump'), 160);
       break;
-
-    case "antenna":
-      // Radio antenna
-      ctx.strokeStyle = "#95a5a6";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(0, 40);
-      ctx.lineTo(0, -40);
-      ctx.stroke();
-      // Crossbars
-      ctx.strokeStyle = "#7f8c8d";
-      ctx.lineWidth = 2;
-      for (let i = -30; i <= 30; i += 20) {
-        ctx.beginPath();
-        ctx.moveTo(-10, i);
-        ctx.lineTo(10, i);
-        ctx.stroke();
-      }
+    }
+    case 'stumble':
+      sfx.tone(190, 0.22, { type: 'sawtooth', slideTo: 80, gain: 0.1 });
+      sfx.noise(0.16, { gain: 0.2, frequency: 600 });
+      showToast(t('game.stumble'), 'warn', 700);
       break;
-
-    case "fence":
-      // Chain link fence
-      ctx.fillStyle = "#34495e";
-      ctx.fillRect(-20, -30, 5, 60);
-      ctx.fillRect(15, -30, 5, 60);
-      ctx.strokeStyle = "#7f8c8d";
-      ctx.lineWidth = 2;
-      for (let i = -25; i <= 25; i += 10) {
-        ctx.beginPath();
-        ctx.moveTo(-15, i);
-        ctx.lineTo(15, i);
-        ctx.stroke();
-      }
+    case 'slide': sfx.noise(0.34, { gain: 0.1, frequency: 2400, type: 'bandpass' }); break;
+    case 'roll': sfx.noise(0.25, { gain: 0.14, frequency: 520 }); sfx.tone(220, 0.2, { type: 'sine', slideTo: 330, gain: 0.07 }); break;
+    case 'vault': sfx.tone(400, 0.1, { type: 'square', slideTo: 620, gain: 0.05 }); sfx.noise(0.06, { gain: 0.12, frequency: 1200 }); break;
+    case 'kick': sfx.noise(0.08, { gain: 0.28, frequency: 420 }); sfx.tone(330, 0.16, { type: 'square', slideTo: 660, gain: 0.06 }); break;
+    case 'crack': sfx.noise(0.12, { gain: 0.22, frequency: 4200, type: 'highpass' }); break;
+    case 'collapse': sfx.noise(0.8, { gain: 0.38, frequency: 900 }); sfx.noise(0.45, { gain: 0.16, frequency: 5200, type: 'highpass' }); break;
+    case 'zip': sfx.tone(880, 0.6, { type: 'sawtooth', slideTo: 1500, gain: 0.035 }); sfx.noise(0.55, { gain: 0.07, frequency: 3200, type: 'bandpass' }); break;
+    case 'release': sfx.tone(700, 0.12, { type: 'triangle', slideTo: 1050, gain: 0.07 }); break;
+    case 'district': {
+      const d = event.district ?? 0;
+      [0, 4, 7, 12].forEach((step, i) => sfx.tone(392 * Math.pow(2, step / 12), 0.22, { type: 'triangle', gain: 0.1, delay: i * 0.09 }));
+      showToast(t('game.districtToast', { n: d + 1, name: districtName(d) }), 'big', 2200, 2);
       break;
-
-    case "billboard":
-      // Billboard sign
-      ctx.fillStyle = "#34495e";
-      ctx.fillRect(-30, -25, 60, 50);
-      ctx.fillStyle = "#f39c12";
-      ctx.fillRect(-25, -20, 50, 40);
-      ctx.fillStyle = "#e67e22";
-      ctx.font = "bold 16px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText("AD", 0, 5);
-      // Support poles
-      ctx.fillStyle = "#7f8c8d";
-      ctx.fillRect(-25, 20, 5, 30);
-      ctx.fillRect(20, 20, 5, 30);
-      break;
-
-    case "water-tank":
-      // Water tank
-      ctx.fillStyle = "#3498db";
-      ctx.beginPath();
-      ctx.arc(0, -5, 25, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#2980b9";
-      ctx.fillRect(-25, -5, 50, 25);
-      // Support legs
-      ctx.fillStyle = "#7f8c8d";
-      ctx.fillRect(-20, 20, 6, 15);
-      ctx.fillRect(14, 20, 6, 15);
-      break;
+    }
+    case 'warn': showToast(t('game.warn'), 'warn', 1200, 1); break;
+    case 'bonk': sfx.noise(0.22, { gain: 0.4, frequency: 300 }); sfx.tone(120, 0.3, { type: 'square', slideTo: 60, gain: 0.09 }); break;
+    case 'caught': sfx.tone(940, 0.9, { type: 'sawtooth', slideTo: 240, gain: 0.07 }); sfx.noise(0.5, { gain: 0.15, frequency: 2000 }); break;
+    case 'fell': sfx.tone(720, 1.1, { type: 'sine', slideTo: 90, gain: 0.13 }); break;
+    default: break;
   }
-
-  ctx.restore();
 }
 
-function drawCollectible(col: Collectible): void {
-  ctx.save();
-  ctx.translate(col.x, col.y);
+const game = SkylineGetaway.create(stageEl);
 
-  const pulse = Math.sin(Date.now() * 0.006) * 0.15 + 1;
-  ctx.scale(pulse, pulse);
+if (!game) {
+  const note = document.createElement('div');
+  note.className = 'g3d-fallback';
+  note.setAttribute('role', 'alert');
+  note.dataset.i18n = 'game.fallback';
+  note.textContent = t('game.fallback');
+  // In the menu panel, where the Start button would be.
+  startBtn.after(note);
+  startBtn.disabled = true;
+  startBtn.hidden = true;
+  pauseBtn.disabled = true;
+} else {
+  // Headless checks read the run through this handle; it is not used by the page itself.
+  if (new URLSearchParams(location.search).has('autotest')) (window as unknown as { skyline: SkylineGetaway }).skyline = game;
+  game.onHud = renderHud;
+  // Keep the drone out from under the HUD chips, which wrap onto more rows on narrow screens.
+  const stats = document.querySelector<HTMLElement>('.g3d-stats');
+  const measureHud = () => { if (stats) game.safeTop = (stats.getBoundingClientRect().bottom + 34) / Math.max(1, stageEl.clientHeight); };
+  window.addEventListener('resize', measureHud);
+  if (stats && 'ResizeObserver' in window) new ResizeObserver(measureHud).observe(stats);
+  measureHud();
+  game.onEvent = playEvent;
+  game.onOver = result => {
+    const record = best.submit(BEST_KEY, result.distance);
+    lastResult = { ...result, best: record.best, isNew: record.isNew };
+    // A jump key mashed through the fall must not click Again the moment it appears.
+    armedAt = performance.now() + 500;
+    setMode('over');
+  };
 
-  switch (col.type) {
-    case "energy-drink":
-      // Energy drink can
-      ctx.fillStyle = "#3498db";
-      ctx.fillRect(-8, -12, 16, 24);
-      ctx.fillStyle = "#2980b9";
-      ctx.fillRect(-8, -12, 16, 4);
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 10px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText("E", 0, 2);
-      break;
-
-    case "medal":
-      // Gold medal
-      ctx.fillStyle = "#f1c40f";
-      ctx.beginPath();
-      ctx.arc(0, 0, 12, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#f39c12";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = "#e67e22";
-      ctx.beginPath();
-      ctx.arc(0, 0, 7, 0, Math.PI * 2);
-      ctx.fill();
-      // Ribbon
-      ctx.fillStyle = "#e74c3c";
-      ctx.fillRect(-3, -15, 6, 10);
-      break;
-
-    case "skill-point":
-      // Skill star
-      ctx.fillStyle = "#e74c3c";
-      ctx.strokeStyle = "#c0392b";
-      ctx.lineWidth = 2;
-      drawStar(0, 0, 5, 14, 7);
-      ctx.fill();
-      ctx.stroke();
-      break;
-  }
-
-  ctx.restore();
+  startBtn.addEventListener('click', () => {
+    if (performance.now() < armedAt) return;
+    sfx.unlock();
+    if (mode === 'paused') game.resume();
+    else {
+      game.start();
+      runs++;
+      if (runs === 1 && prefersTouch()) showToast(`${t('game.touchJump')} · ${t('game.touchSlide')}`, '', 1800, 1);
+    }
+    setMode('playing');
+  });
+  // Mode stays 'playing' through the fall or capture; there is nothing to pause until the result.
+  const pause = (focusResume = true) => { if (mode === 'playing' && game.state === 'running') { game.pause(); setMode('paused', focusResume); } };
+  pauseBtn.addEventListener('click', () => pause());
+  window.addEventListener('keydown', event => {
+    if ((event.code === 'KeyP' || event.code === 'Escape') && mode === 'playing') pause();
+    else if (event.code === 'Escape' && mode === 'paused') { game.resume(); setMode('playing'); }
+  });
+  onFocusLost(() => pause());
+  // Keys ignores every key while the language select has focus, so a run would go on with no
+  // controls. Pause instead, and leave focus on the select so its picker stays open.
+  languageSelect.addEventListener('focus', () => pause(false));
 }
 
-function drawStar(cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number): void {
-  let rot = Math.PI / 2 * 3;
-  const step = Math.PI / spikes;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - outerRadius);
-  for (let i = 0; i < spikes; i++) {
-    ctx.lineTo(cx + Math.cos(rot) * outerRadius, cy + Math.sin(rot) * outerRadius);
-    rot += step;
-    ctx.lineTo(cx + Math.cos(rot) * innerRadius, cy + Math.sin(rot) * innerRadius);
-    rot += step;
-  }
-  ctx.lineTo(cx, cy - outerRadius);
-  ctx.closePath();
-}
+bindSoundButton(soundBtn, sfx);
 
-function updateUI(state: GameState): void {
-  scoreDisplay.textContent = state.score.toString();
-  distanceDisplay.textContent = Math.floor(state.distance).toString() + "m";
-  skillsDisplay.textContent = state.skillPoints.toString();
-  medalsDisplay.textContent = state.medals.toString();
-}
-
-function showGameOverOverlay(state: GameState): void {
-  overlay.style.display = "flex";
-  overlayTitle.textContent = i18n.t("game.gameover");
-  overlayMsg.textContent = i18n.t("game.finalScore");
-  finalScoreDisplay.textContent = state.score.toString();
-  finalScoreDisplay.style.display = "block";
-  statsGrid.innerHTML = `
-    <div class="stat-item"><div class="stat-label">${i18n.t("game.distance")}</div><div class="stat-value">${Math.floor(state.distance)}m</div></div>
-    <div class="stat-item"><div class="stat-label">${i18n.t("game.skills")}</div><div class="stat-value">${state.skillPoints}</div></div>
-    <div class="stat-item"><div class="stat-label">${i18n.t("game.medals")}</div><div class="stat-value">${state.medals}</div></div>
-  `;
-  statsGrid.style.display = "grid";
-  startBtn.textContent = i18n.t("game.restart");
-}
-
-function startGame(): void {
-  overlay.style.display = "none";
-  finalScoreDisplay.style.display = "none";
-  statsGrid.style.display = "none";
-  game.start();
-}
-
-startBtn.addEventListener("click", startGame);
-window.addEventListener("beforeunload", () => { game?.destroy(); if (animationFrame) cancelAnimationFrame(animationFrame); });
-initI18n();
-initGame();
+renderHud(lastHud);
+setMode('menu');

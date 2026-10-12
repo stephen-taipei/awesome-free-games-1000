@@ -1,134 +1,204 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+:root {
+  --accent: #9ef0ff;
+  --accent-ink: #062430;
+  --bg: #0b1830;
+  --gold: #ffd36a;
+  --danger: #ff6b6b;
+  --focus: #fff1bf;
 }
+.g3d-panel { background: rgba(8, 16, 34, 0.74); }
+.g3d-title { text-shadow: 0 0 28px rgba(158, 240, 255, 0.32); }
+.g3d-result { grid-template-columns: repeat(auto-fit, minmax(6.4rem, 1fr)); }
+.g3d-result b { white-space: nowrap; }
+.g3d-keys kbd { min-width: 7.2rem; }
+.g3d-note { line-height: 1.55; }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, sans-serif;
-  background: linear-gradient(135deg, #1a3a2a 0%, #2a5a4a 50%, #4a8a7a 100%);
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem;
+/* Score with the cut multiplier beside it; the meter under it is the multiplier's timer. */
+.score-chip b { display: flex; align-items: baseline; gap: 6px; }
+.combo {
+  font-style: normal;
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 0 6px;
+  border-radius: 99px;
+  color: var(--accent-ink);
+  background: var(--gold);
 }
+.combo.hot { background: #ff9a52; box-shadow: 0 0 12px rgba(255, 154, 82, 0.7); }
+.combo-meter > i { background: var(--gold); transition: transform 0.1s linear; }
+.focus-meter { height: 4px; margin-top: 4px; }
+.focus-meter > i { background: var(--focus); transition: transform 0.1s linear; }
 
-.game-container {
-  max-width: 500px;
-  width: 100%;
-}
+/* The stats give way before the buttons do: language, sound and pause always stay on screen. */
+.g3d-stats { min-width: 0; flex: 0 1 auto; }
+.g3d-actions { flex: none; }
 
-.game-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  color: white;
-}
-
-.game-header h1 {
-  font-size: 1.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.header-controls select {
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: none;
-  background: white;
-  cursor: pointer;
-}
-
-.game-controls {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
-.stats-card {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  display: flex;
-  gap: 0.5rem;
-  color: #b0ffcc;
-  border: 1px solid rgba(150, 255, 180, 0.3);
-}
-
-.game-area {
+.hearts, .dashes { display: flex; gap: 5px; align-items: center; height: 1.45rem; }
+.hearts i {
   position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  background: #0a1a10;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
+  width: 14px;
+  height: 13px;
 }
-
-canvas {
-  width: 100%;
-  height: 100%;
-}
-
-.overlay {
+.hearts i::before {
+  content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(26, 58, 42, 0.95);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-  border-radius: 16px;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.16);
+  clip-path: path("M7 13 L1.2 6.8 A3.4 3.4 0 0 1 7 2.4 A3.4 3.4 0 0 1 12.8 6.8 Z");
 }
+.hearts i.on::before { background: #ff5d73; }
+.hearts.low i.on::before { background: #ff3d57; }
+.dashes i {
+  width: 9px;
+  height: 17px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  transform: skewX(-18deg);
+  background: linear-gradient(to top, color-mix(in srgb, var(--accent) 55%, transparent) calc(var(--p, 0) * 100%), transparent 0);
+}
+.dashes i.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px var(--accent); }
 
-.overlay-content {
+/* Slow motion cools the edges of the screen; a hit flushes them red once (a fade, never a blink). */
+.vignette, .hurt { position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0; }
+.vignette {
+  background: radial-gradient(ellipse 80% 75% at 50% 52%, transparent 45%, rgba(30, 100, 160, 0.55) 100%);
+  transition: opacity 0.15s linear;
+}
+.hurt { background: radial-gradient(ellipse 80% 75% at 50% 52%, transparent 50%, rgba(255, 40, 70, 0.5) 100%); }
+.hurt.hit { animation: hurt-fade 0.8s ease-out; }
+@keyframes hurt-fade { from { opacity: 1; } to { opacity: 0; } }
+
+.g3d-toast {
+  top: max(22%, calc(var(--hud-bottom, 72px) + 44px));
+  width: max-content;
+  max-width: calc(100% - 32px);
   text-align: center;
-  color: white;
-  padding: 2rem;
+  color: #f2fbff;
 }
+.g3d-toast.big { font-size: clamp(1.3rem, 4.6vw, 2.3rem); color: var(--accent); }
+.g3d-toast.gold { color: var(--gold); }
+.g3d-toast.warn { color: #ffb0a8; font-size: clamp(1rem, 3.4vw, 1.4rem); }
 
-.overlay-title {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-  color: #88ffaa;
+.hint {
+  position: absolute;
+  left: 50%;
+  top: calc(max(22%, calc(var(--hud-bottom, 72px) + 44px)) + clamp(2rem, 6vw, 3rem));
+  transform: translateX(-50%);
+  z-index: 6;
+  width: max-content;
+  max-width: min(34rem, calc(100% - 32px));
+  padding: 7px 14px;
+  border-radius: 14px;
+  background: rgba(6, 12, 26, 0.62);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 0.92rem;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
+.hint.show { opacity: 1; }
 
-.overlay-msg {
-  margin-bottom: 1.5rem;
-  opacity: 0.9;
-}
-
-.btn {
-  padding: 0.75rem 2rem;
-  border: none;
-  border-radius: 8px;
+.popups { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.pop {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
   font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(158, 240, 255, 0.8), 0 2px 6px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  animation: pop-rise 0.95s ease-out forwards;
+}
+.pop.deflect { color: #fff3b0; font-size: 0.85rem; }
+.pop.bonus { color: var(--gold); font-size: 1.35rem; text-shadow: 0 0 14px rgba(255, 211, 106, 0.7), 0 2px 6px rgba(0, 0, 0, 0.8); }
+.pop.hurt { color: var(--danger); }
+.pop.multi { color: var(--gold); }
+/* Arrows at the screen edge pointing at foes the follow camera leaves out of view (phones). */
+.marks { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.mark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  margin: -10px 0 0 -17px;
+  border-left: 17px solid #f2fbff;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  transform-origin: 17px 10px;
+  filter: drop-shadow(0 0 1px #050a18) drop-shadow(0 0 3px rgba(5, 10, 24, 0.85));
+}
+.mark.danger { border-left-color: #ff6a4a; }
+.mark.spawn { opacity: 0.55; }
+@keyframes pop-rise {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  20% { transform: translate(-50%, -80%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -200%); }
 }
 
-.btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+.touch-only { display: none !important; }
+@media (hover: none), (pointer: coarse) {
+  .touch-only { display: flex !important; }
+  .g3d-keys li:not(.touch-only) { display: none; }
 }
 
-.btn.primary {
-  background: linear-gradient(135deg, #44cc77, #339966);
-  color: white;
+/* The menu starts below the HUD (the buttons sit above the overlay). */
+.g3d-overlay { padding-top: calc(var(--hud-bottom, 62px) + 12px); }
+/* Wide screens: the menu sits left and the island slides right of it. */
+@media (min-width: 900px) and (min-aspect-ratio: 23/20) {
+  .g3d-overlay { place-items: center start; padding-left: max(5vw, 32px); }
 }
-
-.controls-hint {
-  margin-top: 1rem;
-  opacity: 0.7;
+@media (max-width: 560px) {
+  .g3d-stats { display: grid; grid-template-columns: repeat(2, auto); gap: 6px; }
+  .combo-meter { width: 4.4rem; }
+  .focus-meter { width: 3.6rem; }
+  .g3d-chip { min-width: 0; }
+  .g3d-result { grid-template-columns: repeat(2, 1fr); }
+  .g3d-keys kbd { min-width: 5.6rem; }
+}
+/* Phones up to 414px wide: the language select sits above the sound and pause buttons. */
+@media (max-width: 420px) {
+  .g3d-hud { gap: 8px; }
+  /* The multiplier badge rides on the label row, so a long score and a ×30 badge never widen the chip. */
+  .score-chip { position: relative; min-width: 6.4rem; }
+  .score-chip b { font-size: 0.98rem; }
+  .score-chip .combo { position: absolute; top: 4px; right: 6px; font-size: 0.68rem; line-height: 1.3; padding: 0 5px; }
+  .g3d-stats { grid-template-columns: repeat(2, max-content); }
+  .g3d-actions { display: grid; grid-template-columns: repeat(2, auto); }
+  .g3d-actions .g3d-select { grid-column: 1 / -1; width: 100%; max-width: none; }
+  .g3d-actions .g3d-icon { padding: 0 6px; }
+}
+/* Short landscape screens: stats down the left edge, buttons down the right, the island between them. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .g3d-hud { top: max(8px, env(safe-area-inset-top)); }
+  .g3d-stats { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 5px; }
+  .g3d-chip { min-width: 0; padding: 3px 9px 4px; }
+  .g3d-chip small { font-size: 0.6rem; }
+  .g3d-chip b { font-size: 0.98rem; }
+  .combo-meter { width: 4.4rem; margin-top: 3px; }
+  .focus-meter { width: 4.4rem; margin-top: 3px; }
+  .g3d-actions { display: flex; flex-direction: column; align-items: stretch; }
+  .g3d-select { max-width: 6.2rem; }
+  /* The bottom padding keeps the panel clear of the site navigation bar. */
+  .g3d-overlay { padding: 10px max(116px, 15vw) max(10px, var(--nav-clear, 10px)); }
+  .g3d-panel { padding: 12px 18px; }
+  .g3d-kicker { margin-bottom: 2px; font-size: 0.68rem; }
+  .g3d-title { font-size: 1.6rem; }
+  .g3d-lead { margin: 4px 0 8px; font-size: 0.84rem; line-height: 1.42; }
+  .g3d-keys { gap: 3px; margin-bottom: 10px; font-size: 0.84rem; }
+  .g3d-btn { min-height: 44px; }
+  .g3d-result { margin-bottom: 12px; gap: 6px; grid-template-columns: repeat(3, 1fr); }
+  .g3d-result div { padding: 6px 10px; }
+  .g3d-result b { font-size: 1.15rem; }
+  /* The foe notes come up as hints in play; here the panel must fit the screen. */
+  .g3d-note { display: none; }
+  .g3d-toast { top: 16%; }
+  .hint { top: calc(16% + 2.4rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pop { animation-duration: 0.65s; }
+  .hurt.hit { animation-duration: 0.5s; }
+  .combo-meter > i, .focus-meter > i, .vignette, .hint { transition: none; }
 }

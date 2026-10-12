@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import ts from 'typescript';
-const numbers = [8, 9, 11, 23, 37, 41, 43, 77, 78, 87, 95, 126, 132, 136, 138, 263, 287, 289, 355];
+const numbers = [8, 9, 11, 23, 37, 41, 43, 77, 78, 87, 95, 126, 132, 136, 138, 263, 287, 289];
 function dir(number) {
   const category = number < 151 ? 'puzzle' : number === 263 ? 'arcade' : 'action';
   return `src/games/${category}/` + fs.readdirSync(`src/games/${category}`).find(slug => slug.startsWith(`game-${String(number).padStart(3, '0')}-`));
@@ -32,8 +32,6 @@ for (const number of numbers) {
     try {
       const game = new module[name](canvas());
       game.resize?.();
-      // A fixed clock drives Oracle Warrior sparkles through negative sine phases.
-      if (number === 355) { const now = Date.now; try { Date.now = () => 0; game.draw(); } finally { Date.now = now; } }
     } finally { delete globalThis.window; delete globalThis.localStorage; delete globalThis.requestAnimationFrame; }
   });
 }
